@@ -224,4 +224,24 @@ func TestDuplicateInfohashConflictsAreConservativeAndOrderIndependent(t *testing
 	}
 }
 
+func TestDuplicateInfohashUnknownDoesNotEraseKnownMetadata(t *testing.T) {
+	known := Observation{
+		Title: "Known title", ContentType: "movie", Seeders: intPtr(7),
+		AdultMetadata: boolPtr(false), Languages: []string{"en"},
+	}
+	unknown := Observation{}
+	for _, observations := range [][]Observation{{known, unknown}, {unknown, known}} {
+		merged := observations[0]
+		mergeObservationMetadata(&merged, observations[1])
+		if merged.Title != "Known title" || merged.ContentType != "movie" || merged.Seeders == nil || *merged.Seeders != 7 || merged.AdultMetadata == nil || *merged.AdultMetadata || !reflect.DeepEqual(merged.Languages, []string{"en"}) {
+			t.Fatalf("unknown metadata erased known observation: %#v", merged)
+		}
+		if len(merged.ConflictingMetadata) != 0 {
+			t.Fatalf("missing metadata incorrectly marked as a conflict: %v", merged.ConflictingMetadata)
+		}
+	}
+}
+
 func intPtr(v int) *int { return &v }
+
+func boolPtr(v bool) *bool { return &v }
