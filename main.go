@@ -226,7 +226,7 @@ func main() {
 	if err := validateListenAuth(*addr, user, password); err != nil {
 		log.Fatal(err)
 	}
-	server := &http.Server{Addr: *addr, Handler: authenticated(handler(), user, password), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 30 * time.Second}
+	server := &http.Server{Addr: *addr, Handler: authenticated(handler(), user, password), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: sweepHTTPWriteTimeout, IdleTimeout: 30 * time.Second}
 	log.Printf("concept explorer prototype listening on %s", *addr)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(fmt.Errorf("serve: %w", err))

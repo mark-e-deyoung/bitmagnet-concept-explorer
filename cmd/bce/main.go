@@ -11,9 +11,12 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
+
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/deadline"
 )
 
+// Keep the client open beyond the server's bounded sweep deadline and write
+// allowance so callers receive the final full/partial response when available.
 func main() {
 	service := flag.String("server", "http://127.0.0.1:3086", "Concept Explorer origin")
 	query := flag.String("query", "", "Literal query for plan/execute")
@@ -47,7 +50,7 @@ func main() {
 		os.Exit(2)
 	}
 	serviceOrigin := strings.TrimSuffix(*service, "/")
-	client := &http.Client{Timeout: 25 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}
+	client := &http.Client{Timeout: deadline.ClientTimeout, CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}
 	var req *http.Request
 	var err error
 	switch *operation {

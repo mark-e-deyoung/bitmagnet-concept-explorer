@@ -16,7 +16,23 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/deadline"
 )
+
+// The admitted worst case is 12 Bitmagnet terms at fanout 4 and 8s/request
+// (24s), followed by 3 SearXNG requests at 8s each with 2s between starts
+// (28s). The 55s deadline leaves 3s for serialization and scheduling.
+const (
+	sweepExecutionDeadline = 55 * time.Second
+	sweepHTTPWriteTimeout  = 60 * time.Second
+	sweepClientTimeout     = deadline.ClientTimeout
+	maxConcurrentSweeps    = 1
+)
+
+// At most one whole sweep may occupy the local backends at once. This is
+// separate from the existing per-source provider admission limits.
+var activeSweepSlots = make(chan struct{}, maxConcurrentSweeps)
 
 // Sweep requests are one-shot and bounded. There is no daemon, crawler,
 // scheduler, provider account integration, autonomous model invocation, or CPE
@@ -56,6 +72,7 @@ type SweepExternalObservation struct {
 }
 type SweepResult struct {
 	State             string                     `json:"state"`
+	DeadlineSeconds   int                        `json:"deadline_seconds"`
 	Plan              SweepPlan                  `json:"plan"`
 	Bitmagnet         *Execution                 `json:"bitmagnet,omitempty"`
 	External          []SweepExternalObservation `json:"external"`
@@ -272,7 +289,7 @@ func runSweep(ctx context.Context, req SweepRequest) (SweepResult, error) {
 	if e != nil {
 		return SweepResult{}, e
 	}
-	result := SweepResult{State: "complete", Plan: plan, External: []SweepExternalObservation{}, Failures: []string{}, Evidence: []SweepDiscoveryEvidence{}, ResearchProposals: []SweepDiscoveryDraft{}, CPEWrite: false,
+	result := SweepResult{State: "complete", DeadlineSeconds: int(sweepExecutionDeadline / time.Second), Plan: plan, External: []SweepExternalObservation{}, Failures: []string{}, Evidence: []SweepDiscoveryEvidence{}, ResearchProposals: []SweepDiscoveryDraft{}, CPEWrite: false,
 		Warning: "Research/metadata retrieval only. External results are independent neutral observations; enrichment requires CPE #202 review, grounding, counterexamples and promotion authority."}
 	if len(plan.Bitmagnet) > 0 {
 		q := Request{Query: plan.Bitmagnet[0].Term, Filters: req.Filters, Expansions: []Expansion{}}
@@ -372,7 +389,14 @@ func registerSweeps(mux *http.ServeMux) {
 			writeJSON(w, 200, plan)
 			return
 		}
-		ctx, cancel := context.WithTimeout(r.Context(), 35*time.Second)
+		select {
+		case activeSweepSlots <- struct{}{}:
+			defer func() { <-activeSweepSlots }()
+		default:
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "sweep capacity is busy; no work started and no automatic retry was made"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), sweepExecutionDeadline)
 		defer cancel()
 		result, e := runSweep(ctx, request)
 		if e != nil {

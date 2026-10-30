@@ -24,6 +24,12 @@ sha256sum ./graph.json
 
 When updating the projection, replace the versioned file and update its digest together, then restart the app. A mismatch fails closed. The current TrueNAS package does not expose a projection file mount or these settings, so it cannot yet load an operator-provided graph from the catalog UI. No graph is bundled as policy data. A usable CPE projection must first be published and accepted by the upstream Concept Policy Engine authority.
 
+## Sweep time and admission
+
+Sweep execution has a 55-second end-to-end server deadline, one active sweep per process, and a 60-second HTTP write allowance. The browser and command-line client share a 65-second timeout. Each sweep is bounded to at most 12 Bitmagnet terms (fanout four, eight seconds per request) and three sequential SearXNG requests (eight seconds per request, existing two-second pacing, process-local quota). The configured deadline covers the conservative 52-second sum of those limits plus scheduling and serialization margin. A saturated server rejects a new sweep with HTTP 503 before backend work starts; clients do not retry automatically. Other Bitmagnet API traffic shares the local backend admission slots, so the deadline may yield an explicit partial or failed result under contention rather than guaranteeing full completion.
+
+If the deadline expires after some source results arrive, the API returns a `partial` result with failures and the explicit deadline. If no source result arrives it returns `failed`. A disconnected or canceled caller receives no final response; cancellation propagates to in-flight source requests and is not retried. None of these outcomes establishes corpus absence.
+
 ## Build and test
 
 The project uses the Go standard library. With Go 1.27.1, run:
