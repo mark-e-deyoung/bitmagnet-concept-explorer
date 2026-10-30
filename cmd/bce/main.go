@@ -7,11 +7,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/deadline"
 )
 
@@ -33,15 +35,11 @@ func main() {
 	conceptID := flag.String("concept-id", "", "Exact concept ID for inspect operation")
 	selectedConcepts := flag.String("concept-ids", "", "Comma-separated exact IDs from pinned provisional graph, opt-in")
 	facetGroups := flag.String("facet-groups", "contentType,language,genre", "Comma-separated native groups for -operation facets (1-4)")
-	inputJSON := flag.String("input", "-", "JSON input file or - for stdin for observed-graph, cpe-preflight and infer")
+	inputJSON := flag.String("input", "-", "JSON input file or - for stdin for observed-graph, cpe-preflight, infer, sweep-plan, sweep and discovery-preview")
 	flag.Parse()
-	serviceURL, urlErr := url.Parse(*service)
-	if urlErr != nil || serviceURL.Host == "" || serviceURL.User != nil || serviceURL.RawQuery != "" || serviceURL.Fragment != "" || serviceURL.Path != "" && serviceURL.Path != "/" || (serviceURL.Scheme != "http" && serviceURL.Scheme != "https") {
-		fmt.Fprintln(os.Stderr, "-server must be a valid HTTP(S) origin without credentials, path, query, or fragment")
-		os.Exit(2)
-	}
-	if serviceURL.Scheme == "http" && serviceURL.Host != "127.0.0.1:3086" && serviceURL.Host != "localhost:3086" && serviceURL.Host != "[::1]:3086" {
-		fmt.Fprintln(os.Stderr, "non-loopback service URLs require HTTPS")
+	serviceURL, urlErr := validateServiceOrigin(*service)
+	if urlErr != nil {
+		fmt.Fprintln(os.Stderr, urlErr)
 		os.Exit(2)
 	}
 	authUser, authPassword := os.Getenv("BCE_AUTH_USER"), os.Getenv("BCE_AUTH_PASSWORD")
@@ -49,7 +47,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "BCE_AUTH_USER and BCE_AUTH_PASSWORD must be configured together")
 		os.Exit(2)
 	}
-	serviceOrigin := strings.TrimSuffix(*service, "/")
+	serviceOrigin := strings.TrimSuffix(serviceURL.String(), "/")
 	client := &http.Client{Timeout: deadline.ClientTimeout, CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}
 	var req *http.Request
 	var err error
@@ -82,9 +80,9 @@ func main() {
 			defer file.Close()
 			r = file
 		}
-		body, err = io.ReadAll(io.LimitReader(r, (1<<20)+1))
-		if err != nil || len(body) == 0 || len(body) > (1<<20) {
-			fmt.Fprintln(os.Stderr, "bounded JSON input required (maximum 1 MiB)")
+		body, err = readOperationInput(r, *operation)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(2)
 		}
 		route := map[string]string{"observed-graph": "/api/v1/query/observed-graph", "cpe-preflight": "/api/v1/cpe/adapter-plan/preflight", "infer": "/api/v1/inference/propose", "sweep-plan": "/api/v1/sweeps/plan", "sweep": "/api/v1/sweeps/execute", "discovery-preview": "/api/v1/sweeps/discovery/preview"}[*operation]
@@ -180,4 +178,39 @@ func main() {
 	if resp.StatusCode >= 400 {
 		os.Exit(4)
 	}
+}
+
+func validateServiceOrigin(raw string) (*url.URL, error) {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") || (u.Scheme != "http" && u.Scheme != "https") {
+		return nil, fmt.Errorf("-server must be a valid HTTP(S) origin without credentials, path, query, or fragment")
+	}
+	if u.Scheme == "http" && !isLoopbackHost(u.Hostname()) {
+		return nil, fmt.Errorf("non-loopback service URLs require HTTPS")
+	}
+	return u, nil
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+func operationInputLimit(operation string) (int64, bool) {
+	return contracts.CLIInputLimit(operation)
+}
+
+func readOperationInput(r io.Reader, operation string) ([]byte, error) {
+	limit, ok := operationInputLimit(operation)
+	if !ok {
+		return nil, fmt.Errorf("operation %q has no JSON input contract", operation)
+	}
+	body, err := io.ReadAll(io.LimitReader(r, limit+1))
+	if err != nil || len(body) == 0 || int64(len(body)) > limit {
+		return nil, fmt.Errorf("bounded JSON input required for %s (maximum %d bytes)", operation, limit)
+	}
+	return body, nil
 }

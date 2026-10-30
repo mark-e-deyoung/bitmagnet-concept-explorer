@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"io"
 	"net"
 	"net/http"
@@ -398,7 +399,7 @@ func registerExecution(mux *http.ServeMux) {
 			writeJSON(w, 503, map[string]string{"error": err.Error()})
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 16384)
+		r.Body = http.MaxBytesReader(w, r.Body, contracts.QueryJSONBytes)
 		defer r.Body.Close()
 		d := json.NewDecoder(r.Body)
 		d.DisallowUnknownFields()

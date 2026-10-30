@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"io"
 	"net/http"
 	"sort"
@@ -157,7 +158,7 @@ func buildObservedGraph(catalog ConceptCatalog, records []Observation) (Observed
 }
 func registerObservedGraph(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/query/observed-graph", func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+		r.Body = http.MaxBytesReader(w, r.Body, contracts.ObservedGraphJSONBytes)
 		defer r.Body.Close()
 		d := json.NewDecoder(r.Body)
 		d.DisallowUnknownFields()

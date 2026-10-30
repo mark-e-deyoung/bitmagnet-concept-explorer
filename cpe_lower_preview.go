@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"io"
 	"net/http"
 	"strings"
@@ -36,37 +37,44 @@ type HistoricalLowerPreview struct {
 // Reject rather than silently distort hyphens, apostrophes or meta syntax.
 // Each form is a distinct candidate-retrieval query, not a MUST conjunction.
 func bitmagnetSafeLiteral(term string) (string, error) {
+	if err := validateBitmagnetSafeLiteral(term); err != nil {
+		return "", err
+	}
+	return `"` + term + `"`, nil
+}
+
+func validateBitmagnetSafeLiteral(term string) error {
 	if term != strings.TrimSpace(term) {
-		return "", errors.New("lexical term has leading/trailing whitespace or control formatting")
+		return errors.New("lexical term has leading/trailing whitespace or control formatting")
 	}
 	if term == "" || len([]rune(term)) > 160 {
-		return "", errors.New("lexical term empty or over budget")
+		return errors.New("lexical term empty or over budget")
 	}
 	lastSpace := false
 	hasLexeme := false
 	for _, r := range term {
 		if unicode.IsControl(r) {
-			return "", errors.New("lexical term includes controls")
+			return errors.New("lexical term includes controls")
 		}
 		if r == ' ' {
 			if lastSpace {
-				return "", errors.New("lexical term contains repeated whitespace")
+				return errors.New("lexical term contains repeated whitespace")
 			}
 			lastSpace = true
 			continue
 		}
 		lastSpace = false
 		if !unicode.IsLetter(r) && !unicode.IsMark(r) && !unicode.IsDigit(r) {
-			return "", errors.New("lexical term cannot be lowered without parser ambiguity")
+			return errors.New("lexical term cannot be lowered without parser ambiguity")
 		}
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {
 			hasLexeme = true
 		}
 	}
 	if !hasLexeme {
-		return "", errors.New("lexical term has no searchable lexemes")
+		return errors.New("lexical term has no searchable lexemes")
 	}
-	return `"` + term + `"`, nil
+	return nil
 }
 func lowerHistoricalCPEPreview(p HistoricalAdapterPlan) (HistoricalLowerPreview, error) {
 	result := HistoricalLowerPreview{
@@ -115,7 +123,7 @@ func lowerHistoricalCPEPreview(p HistoricalAdapterPlan) (HistoricalLowerPreview,
 }
 func registerHistoricalCPELowerPreview(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/cpe/adapter-plan/lower-preview", func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 32768)
+		r.Body = http.MaxBytesReader(w, r.Body, contracts.CPELowerPreviewJSONBytes)
 		defer r.Body.Close()
 		d := json.NewDecoder(r.Body)
 		d.DisallowUnknownFields()

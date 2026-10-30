@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"io"
 	"net"
 	"net/http"
@@ -196,7 +197,7 @@ func inferSovereign(ctx context.Context, in SovereignInput) (SovereignResult, er
 }
 func registerSovereign(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/inference/propose", func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 8192)
+		r.Body = http.MaxBytesReader(w, r.Body, contracts.InferenceJSONBytes)
 		defer r.Body.Close()
 		d := json.NewDecoder(r.Body)
 		d.DisallowUnknownFields()

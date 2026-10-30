@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/deadline"
 )
 
@@ -213,6 +215,11 @@ func makeSweepPlan(r SweepRequest) (SweepPlan, error) {
 		if v == "" || utf8.RuneCountInString(v) > 512 {
 			return SweepPlan{}, errors.New("invalid sweep term")
 		}
+		if isPinnedProjectionProvenance(f.Provenance) {
+			if err := validateBitmagnetSafeLiteral(f.Term); err != nil {
+				return SweepPlan{}, fmt.Errorf("CPE-generated lexicalization is not admitted as a native FTS literal: %w", err)
+			}
+		}
 		key := strings.ToLower(v)
 		if seenLocal[key] {
 			continue
@@ -367,7 +374,7 @@ func runSweep(ctx context.Context, req SweepRequest) (SweepResult, error) {
 }
 func registerSweeps(mux *http.ServeMux) {
 	route := func(w http.ResponseWriter, r *http.Request, execute bool) {
-		r.Body = http.MaxBytesReader(w, r.Body, 16384)
+		r.Body = http.MaxBytesReader(w, r.Body, contracts.SweepJSONBytes)
 		defer r.Body.Close()
 		d := json.NewDecoder(r.Body)
 		d.DisallowUnknownFields()

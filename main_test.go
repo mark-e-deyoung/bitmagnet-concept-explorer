@@ -80,6 +80,35 @@ func TestAuthenticationProtectsAllButHealth(t *testing.T) {
 	}
 }
 
+func TestUserFTSStaysNativeWhilePinnedLexicalizationsRejectOperators(t *testing.T) {
+	plan, err := makePlan(Request{
+		Query: "fiction | !alternate",
+		Expansions: []Expansion{{
+			Term: "science fiction", ConceptID: "media.test", Provenance: "digest-pinned-preview:test-v0",
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Tracks[0].Terms[0] != "fiction | !alternate" || plan.Tracks[1].Terms[0] != "science fiction" {
+		t.Fatalf("native FTS or literal candidate was rewritten: %#v", plan.Tracks)
+	}
+	for _, term := range []string{"fiction | !alternate", "game (2025)", "ani*", "science-fiction", `quoted "phrase"`, " space ", "two  spaces"} {
+		_, err := makePlan(Request{Query: "animation", Expansions: []Expansion{{
+			Term: term, ConceptID: "media.test", Provenance: "digest-pinned-preview:test-v0",
+		}}})
+		if err == nil {
+			t.Errorf("pinned lexicalization %q unexpectedly accepted", term)
+		}
+	}
+	manual, err := makePlan(Request{Query: "animation", Expansions: []Expansion{{
+		Term: "fiction | !alternate", ConceptID: "manual", Provenance: "manual-unverified",
+	}}})
+	if err != nil || manual.Tracks[1].Terms[0] != "fiction | !alternate" {
+		t.Fatalf("manual expansion was rewritten or rejected as CPE-generated: plan=%#v err=%v", manual, err)
+	}
+}
+
 func TestContainerHealthcheck(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

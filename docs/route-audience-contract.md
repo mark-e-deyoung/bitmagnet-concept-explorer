@@ -1,0 +1,9 @@
+# Route and audience contract
+
+`GET /healthz` is the only unauthenticated route when Basic Auth is configured. The browser, CLI, and agent-facing API share the same authenticated HTTP handler; each registered GET/POST path is covered by `TestAuthenticationCoversRegisteredRouteMatrix`. With a syntactically configured local target, each malformed authenticated POST in the matrix returns HTTP 400 before backend work. Unauthenticated requests receive HTTP 401, a Basic Auth challenge, and `Cache-Control: no-store`.
+
+The browser has direct controls for capabilities, concepts, query plan/execute, observed-result graph, inference proposals, metadata facets, sweep plan/execute, and sweep limits. The CLI covers those main workflows plus concepts by ID and its JSON-input operations. The API also keeps specialist routes without dedicated browser controls: historical adapter-plan preflight/lower-preview and the legacy discovery-proposal preview. Historical preflight and sweep discovery preview accept CLI JSON input; lower-preview and legacy proposal preview remain API-only. These are deliberate research interfaces, not missing general-user actions. The static browser currently offers no widget to edit a CPE projection or to call a standalone discovery-preview route.
+
+JSON request budgets come from `internal/contracts` and are shared by API handlers and CLI input checks: query plan/execute 16 KiB, facets 8 KiB, observed graph 1 MiB, historical preflight/lower-preview 32 KiB, inference and legacy discovery 8 KiB, sweep plan/execute/discovery preview 16 KiB. CLI-supported JSON operations use their route's exact cap and reject cap+1 locally.
+
+Capabilities list product-level affordances; route inventory and specialized exceptions are recorded here so the three audiences do not imply equivalent UI for every research endpoint.

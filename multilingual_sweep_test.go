@@ -33,6 +33,23 @@ func TestSweepPlanLanguageSelectionBudgetAndDedup(t *testing.T) {
 		t.Fatal("projection digest missing")
 	}
 }
+
+func TestSweepPlanKeepsUserFTSAndRejectsUnsafePinnedLexicalization(t *testing.T) {
+	setupFixtureGraph(t, sweepFixture)
+	plan, err := makeSweepPlan(SweepRequest{Query: "fiction | !alternate", ConceptIDs: []string{"media.animation"}, Languages: []string{"en"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Bitmagnet[0].Term != "fiction | !alternate" {
+		t.Fatalf("user-authored native FTS was rewritten: %#v", plan.Bitmagnet)
+	}
+	unsafeGraph := `{"schema_version":"bce-graph-preview-v1","snapshot_id":"fictional-pinned","concepts":[{"id":"media.animation","label":"Animation","lexicalizations":[{"language":"en","term":"game (2025)"}]}]}`
+	setupFixtureGraph(t, unsafeGraph)
+	if _, err := makeSweepPlan(SweepRequest{Query: "animation", ConceptIDs: []string{"media.animation"}, Languages: []string{"en"}}); err == nil {
+		t.Fatal("operator-bearing pinned lexicalization accepted as native FTS")
+	}
+}
+
 func TestExternalSweepRequiresConsentOperatorAndPrivateTarget(t *testing.T) {
 	setupFixtureGraph(t, sweepFixture)
 	req := SweepRequest{Query: "animation", ConceptIDs: []string{"media.animation"}, Languages: []string{"en", "de"}, IncludeSearxng: true}
