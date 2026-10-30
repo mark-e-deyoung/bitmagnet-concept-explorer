@@ -1,0 +1,17 @@
+explorer:
+  auth_user: fixture-user
+  auth_password: fixture-password-not-for-deployment
+
+bitmagnet:
+  graphql_url: ""
+
+network:
+  web_port:
+    bind_mode: exposed
+    port_number: 3086
+    host_ips: []
+
+resources:
+  limits:
+    cpus: 2
+    memory: 1024

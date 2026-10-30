@@ -1,0 +1,50 @@
+{
+  "schema_version": "bce-graph-preview-v1",
+  "snapshot_id": "synthetic-ui-fixture-only-001",
+  "concepts": [
+    {
+      "id": "fixture.media",
+      "label": "Media",
+      "definition": "Synthetic root used to test navigation; not CPE authority",
+      "lexicalizations": [{"language":"de","term":"Medien"},{"language":"th","term":"สื่อ"}],
+      "relations": [
+        {"predicate":"has_example","target_id":"fixture.movie"},
+        {"predicate":"has_example","target_id":"fixture.book"},
+        {"predicate":"has_example","target_id":"fixture.game"}
+      ]
+    },
+    {
+      "id": "fixture.movie",
+      "label": "Movie",
+      "definition": "Synthetic film category, not a rating or SFW decision",
+      "lexicalizations": [{"language":"de","term":"Film"},{"language":"th","term":"ภาพยนตร์"}],
+      "relations": [{"predicate":"related","target_id":"fixture.animation"}]
+    },
+    {
+      "id": "fixture.book",
+      "label": "Book",
+      "lexicalizations": [{"language":"de","term":"Buch"},{"language":"th","term":"หนังสือ"}],
+      "relations": [{"predicate":"related","target_id":"fixture.audiobook"}]
+    },
+    {
+      "id": "fixture.audiobook",
+      "label": "Audiobook",
+      "relations": [{"predicate":"related","target_id":"fixture.book"}]
+    },
+    {
+      "id": "fixture.game",
+      "label": "Game",
+      "relations": [{"predicate":"related","target_id":"fixture.rom"}]
+    },
+    {
+      "id": "fixture.rom",
+      "label": "ROM",
+      "definition": "A synthetic file-format concept; not a native Bitmagnet ContentType"
+    },
+    {
+      "id": "fixture.animation",
+      "label": "Animation",
+      "relations": [{"predicate":"related","target_id":"fixture.movie"}]
+    }
+  ]
+}

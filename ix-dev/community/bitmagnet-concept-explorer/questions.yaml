@@ -1,0 +1,111 @@
+groups:
+  - name: Authentication
+    description: Credentials required for network access to the app.
+  - name: Bitmagnet Integration
+    description: Optional read-only Bitmagnet endpoint.
+  - name: Network Configuration
+    description: Web interface port.
+  - name: Resources Configuration
+    description: CPU and memory limits.
+
+questions:
+  - variable: explorer
+    label: Concept Explorer Settings
+    group: Authentication
+    schema:
+      type: dict
+      attrs:
+        - variable: auth_user
+          label: Login User
+          schema:
+            type: string
+            default: explorer
+            required: true
+        - variable: auth_password
+          label: Login Password
+          schema:
+            type: string
+            private: true
+            required: true
+            min_length: 16
+
+  - variable: bitmagnet
+    label: Bitmagnet Integration
+    group: Bitmagnet Integration
+    schema:
+      type: dict
+      attrs:
+        - variable: graphql_url
+          label: Bitmagnet GraphQL URL
+          description: Optional private or loopback IP or localhost URL ending in /graphql. Other DNS names and public addresses are rejected by the app.
+          schema:
+            type: string
+            default: ""
+            required: false
+
+  - variable: network
+    label: Network Settings
+    group: Network Configuration
+    schema:
+      type: dict
+      attrs:
+        - variable: web_port
+          label: Internal Web Service
+          schema:
+            type: dict
+            attrs:
+              - variable: bind_mode
+                label: Service Exposure
+                schema:
+                  type: string
+                  default: exposed
+                  enum:
+                    - value: exposed
+                      description: Expose for access through an app or TLS terminating reverse proxy.
+                    - value: ""
+                      description: Do not expose the port.
+              - variable: port_number
+                label: Service Port
+                schema:
+                  type: int
+                  default: 3086
+                  min: 1
+                  max: 65535
+                  required: true
+              - variable: host_ips
+                label: Host IPs
+                schema:
+                  type: list
+                  default: []
+                  items:
+                    - variable: host_ip
+                      label: Host IP
+                      schema:
+                        type: string
+                        required: true
+
+  - variable: resources
+    label: Resource Limits
+    group: Resources Configuration
+    schema:
+      type: dict
+      attrs:
+        - variable: limits
+          label: Limits
+          schema:
+            type: dict
+            attrs:
+              - variable: cpus
+                label: CPU Limit
+                schema:
+                  type: int
+                  default: 2
+                  min: 1
+                  max: 8
+              - variable: memory
+                label: Memory Limit (MiB)
+                schema:
+                  type: int
+                  default: 1024
+                  min: 256
+                  max: 8192

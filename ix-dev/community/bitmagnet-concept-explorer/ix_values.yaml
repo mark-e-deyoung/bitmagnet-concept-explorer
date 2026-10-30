@@ -1,0 +1,8 @@
+images:
+  image:
+    repository: ghcr.io/mark-e-deyoung/bitmagnet-concept-explorer
+    tag: 0.0.1
+
+consts:
+  container_name: bitmagnet-concept-explorer
+  internal_web_port: 3086

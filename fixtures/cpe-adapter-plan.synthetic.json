@@ -1,0 +1,65 @@
+{
+  "schema_version": "experimental-v0",
+  "execution_id": "synthetic-cpe-adapter:1",
+  "search_plan_ref": "synthetic-cpe-search",
+  "target_capability_profile_ref": "bitmagnet-v0.10.0.synthetic",
+  "status": "ready",
+  "required_target_capabilities": [
+    "keyword_search",
+    "unicode_query",
+    "json_results"
+  ],
+  "optional_target_capabilities": [],
+  "tactical_ir": {
+    "clauses": [
+      {
+        "clause_id": "synthetic-movie-must",
+        "concept_id": "fixture.media.movie",
+        "purpose": "candidate_retrieval",
+        "relation": "must",
+        "forms": [
+          {
+            "value": "movie",
+            "language": "en",
+            "form_type": "preferred_term",
+            "provenance_ref": "synthetic-lexicon-en",
+            "collision_risk": "moderate"
+          },
+          {
+            "value": "Film",
+            "language": "de",
+            "form_type": "alias",
+            "provenance_ref": "synthetic-lexicon-de",
+            "collision_risk": "high"
+          },
+          {
+            "value": "ภาพยนตร์",
+            "language": "th",
+            "form_type": "preferred_term",
+            "provenance_ref": "synthetic-lexicon-th",
+            "collision_risk": "moderate"
+          }
+        ]
+      }
+    ]
+  },
+  "execution_constraints": {
+    "mutation_allowed": false,
+    "max_queries": 3,
+    "authenticated_execution_allowed": false
+  },
+  "privacy_effect": {
+    "external_disclosure": "none",
+    "authentication": "none",
+    "cross_surface_identifier": false,
+    "local_query_history": "none",
+    "target_retention": "unknown",
+    "correlation_risk": "low",
+    "residual_risks": []
+  },
+  "observation_requirements": {
+    "emit_normalized_observations": true,
+    "preserve_target_coverage": true,
+    "no_match_is_negative_evidence": false
+  }
+}

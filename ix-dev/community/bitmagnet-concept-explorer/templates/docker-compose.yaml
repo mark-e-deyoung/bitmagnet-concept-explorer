@@ -1,0 +1,16 @@
+{% set tpl = ix_lib.base.render.Render(values) %}
+{% set app = tpl.add_container(values.consts.container_name, "image") %}
+
+{% do app.set_user(65532, 65532) %}
+{% do app.set_read_only(true) %}
+{% do app.healthcheck.use_built_in() %}
+{% do app.add_port(values.network.web_port, {"container_port": values.consts.internal_web_port}) %}
+{% do app.environment.add_env("BCE_LISTEN", "0.0.0.0:3086") %}
+{% do app.environment.add_env("BCE_AUTH_USER", values.explorer.auth_user) %}
+{% do app.environment.add_env("BCE_AUTH_PASSWORD", values.explorer.auth_password) %}
+
+{% if values.bitmagnet.graphql_url %}
+  {% do app.environment.add_env("BCE_BITMAGNET_GRAPHQL", values.bitmagnet.graphql_url) %}
+{% endif %}
+
+{{ tpl.render() | tojson }}
