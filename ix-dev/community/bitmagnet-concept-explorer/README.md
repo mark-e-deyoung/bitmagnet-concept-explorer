@@ -7,3 +7,6 @@ The UI and API require Basic Auth credentials. Basic Auth does not encrypt traff
 
 <b>Release status</b><br>
 Version 0.0.1 is a public source preview. Foundry lifecycle qualification and official TrueNAS catalog review remain outstanding.
+
+<b>Concept graph data</b><br>
+The optional graph loader accepts only a digest-pinned provisional display/query-expansion snapshot, not policy rules or an accepted CPE decision model. The TrueNAS package does not currently expose a graph file mount or digest setting, so operator-provided graph data cannot yet be loaded through the catalog UI.

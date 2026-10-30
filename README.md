@@ -10,6 +10,20 @@ A read-only Go application for exploring metadata indexed by Bitmagnet. It provi
 - SearXNG is an explicit opt-in; selected query terms may be forwarded by its configured engines to third parties.
 - The app runs as UID/GID 65532 with a read-only root filesystem in the TrueNAS package.
 
+## Concept graph data
+
+The graph loader accepts a **provisional display/query-expansion snapshot**, not policy rules or an accepted CPE decision model. It reads JSON with schema `bce-graph-preview-v1` from `BCE_CPE_GRAPH_FILE` and requires `BCE_CPE_GRAPH_SHA256` to match the file's SHA-256 (64 hexadecimal characters, without the `sha256:` prefix). The file is limited to 2 MiB. The API reports `pinned-preview-not-normative`; it never assesses or promotes concepts. The bundled graph fixtures are synthetic tests only.
+
+For a standalone container, place an approved projection in a read-only mount, compute its digest, then set both values together when starting the container:
+
+```sh
+sha256sum ./graph.json
+# Set BCE_CPE_GRAPH_FILE=/data/graph.json and BCE_CPE_GRAPH_SHA256=<64-hex digest>
+# Mount the directory read-only at /data and restart with both settings.
+```
+
+When updating the projection, replace the versioned file and update its digest together, then restart the app. A mismatch fails closed. The current TrueNAS package does not expose a projection file mount or these settings, so it cannot yet load an operator-provided graph from the catalog UI. No graph is bundled as policy data. A usable CPE projection must first be published and accepted by the upstream Concept Policy Engine authority.
+
 ## Build and test
 
 The project uses the Go standard library. With Go 1.27.1, run:
