@@ -30,43 +30,61 @@ var searXNGPace = struct {
 }{Next: map[string]time.Time{}, BlockedUntil: map[string]time.Time{}, Recent: map[string][]time.Time{}}
 
 func paceSearXNG(ctx context.Context, endpoint string) error {
-	searXNGPace.Lock()
-	now := time.Now()
-	if until := searXNGPace.BlockedUntil[endpoint]; now.Before(until) {
-		searXNGPace.Unlock()
-		return fmt.Errorf("%w: endpoint cooling down after refusal", errSearXNGBackoff)
-	}
-	// SearXNG's documented default automated JSON API limiter is four per
-	// rolling hour. Our conservative process ceiling is THREE per hour.
-	recent := searXNGPace.Recent[endpoint]
-	pruned := recent[:0]
-	for _, t := range recent {
-		if now.Sub(t) < time.Hour {
-			pruned = append(pruned, t)
-		}
-	}
-	searXNGPace.Recent[endpoint] = pruned
-	if len(pruned) >= 3 {
-		searXNGPace.Unlock()
-		return fmt.Errorf("%w: local SearXNG JSON hourly request budget exhausted", errSearXNGBackoff)
-	}
-	start := now
-	if next := searXNGPace.Next[endpoint]; next.After(start) {
-		start = next
-	}
-	searXNGPace.Recent[endpoint] = append(searXNGPace.Recent[endpoint], start)
-	searXNGPace.Next[endpoint] = start.Add(2 * time.Second)
-	searXNGPace.Unlock()
-	if delay := time.Until(start); delay > 0 {
-		timer := time.NewTimer(delay)
-		defer timer.Stop()
-		select {
-		case <-timer.C:
-		case <-ctx.Done():
+	for {
+		if ctx.Err() != nil {
 			return fmt.Errorf("%w: pacing canceled", errSearXNGBackoff)
 		}
+		searXNGPace.Lock()
+		now := time.Now()
+		if until := searXNGPace.BlockedUntil[endpoint]; now.Before(until) {
+			searXNGPace.Unlock()
+			return fmt.Errorf("%w: endpoint cooling down after refusal", errSearXNGBackoff)
+		}
+		// SearXNG's documented default automated JSON API limiter is four per
+		// rolling hour. Our conservative process ceiling is THREE per hour.
+		recent := searXNGPace.Recent[endpoint]
+		pruned := recent[:0]
+		for _, t := range recent {
+			if now.Sub(t) < time.Hour {
+				pruned = append(pruned, t)
+			}
+		}
+		searXNGPace.Recent[endpoint] = pruned
+		if len(pruned) >= 3 {
+			searXNGPace.Unlock()
+			return fmt.Errorf("%w: local SearXNG JSON hourly request budget exhausted", errSearXNGBackoff)
+		}
+		start := now
+		if next := searXNGPace.Next[endpoint]; next.After(start) {
+			start = next
+		}
+		if start.After(now) {
+			searXNGPace.Unlock()
+			timer := time.NewTimer(time.Until(start))
+			select {
+			case <-timer.C:
+			case <-ctx.Done():
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				return fmt.Errorf("%w: pacing canceled", errSearXNGBackoff)
+			}
+			continue
+		}
+		// Commit the rolling-hour slot only when the caller is ready to proceed.
+		// Waiting or canceled callers therefore do not consume request quota.
+		if ctx.Err() != nil {
+			searXNGPace.Unlock()
+			return fmt.Errorf("%w: pacing canceled", errSearXNGBackoff)
+		}
+		searXNGPace.Recent[endpoint] = append(pruned, now)
+		searXNGPace.Next[endpoint] = now.Add(2 * time.Second)
+		searXNGPace.Unlock()
+		return nil
 	}
-	return nil
 }
 func searXNGBackoff(endpoint string, status int, retryAfter string) {
 	var min time.Duration
@@ -137,6 +155,15 @@ func searchSearXNGDetailed(ctx context.Context, query, language string) (SearXNG
 	if e != nil {
 		return SearXNGResearchEnvelope{}, e
 	}
+	if ctx.Err() != nil {
+		return SearXNGResearchEnvelope{}, errors.New("SearXNG admission cancelled")
+	}
+	if language != "" && language != "und" && !sweepLanguage(language) {
+		return SearXNGResearchEnvelope{}, errors.New("invalid requested SearXNG language")
+	}
+	if !safeExternalSweepTerm(query) {
+		return SearXNGResearchEnvelope{}, errors.New("unsafe external query syntax")
+	}
 	select {
 	case globalSearxngSlots <- struct{}{}:
 		defer func() { <-globalSearxngSlots }()
@@ -145,12 +172,6 @@ func searchSearXNGDetailed(ctx context.Context, query, language string) (SearXNG
 	}
 	if e := paceSearXNG(ctx, endpoint); e != nil {
 		return SearXNGResearchEnvelope{}, e
-	}
-	if language != "" && language != "und" && !sweepLanguage(language) {
-		return SearXNGResearchEnvelope{}, errors.New("invalid requested SearXNG language")
-	}
-	if !safeExternalSweepTerm(query) {
-		return SearXNGResearchEnvelope{}, errors.New("unsafe external query syntax")
 	}
 
 	u, _ := url.Parse(endpoint)
