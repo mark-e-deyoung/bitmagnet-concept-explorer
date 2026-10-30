@@ -17,6 +17,8 @@ import (
 	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/deadline"
 )
 
+const maxCLIResponseBytes = 4 << 20
+
 // Keep the client open beyond the server's bounded sweep deadline and write
 // allowance so callers receive the final full/partial response when available.
 func main() {
@@ -169,7 +171,7 @@ func main() {
 		os.Exit(3)
 	}
 	defer resp.Body.Close()
-	output, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+	output, err := readServiceResponse(resp.Body)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(3)
@@ -213,4 +215,15 @@ func readOperationInput(r io.Reader, operation string) ([]byte, error) {
 		return nil, fmt.Errorf("bounded JSON input required for %s (maximum %d bytes)", operation, limit)
 	}
 	return body, nil
+}
+
+func readServiceResponse(r io.Reader) ([]byte, error) {
+	output, err := io.ReadAll(io.LimitReader(r, maxCLIResponseBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("service response read failed: %w", err)
+	}
+	if len(output) > maxCLIResponseBytes {
+		return nil, fmt.Errorf("service response exceeds %d-byte CLI output budget", maxCLIResponseBytes)
+	}
+	return output, nil
 }

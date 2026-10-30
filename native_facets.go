@@ -141,8 +141,8 @@ func fetchNativeFacets(ctx context.Context, r FacetSearchRequest) (NativeFacetSu
 		Data struct {
 			TorrentContent struct {
 				Search struct {
-					TotalCount           int                                    `json:"totalCount"`
-					TotalCountIsEstimate bool                                   `json:"totalCountIsEstimate"`
+					TotalCount           *int                                   `json:"totalCount"`
+					TotalCountIsEstimate *bool                                  `json:"totalCountIsEstimate"`
 					Aggregations         map[string][]upstreamNativeFacetBucket `json:"aggregations"`
 				} `json:"search"`
 			} `json:"torrentContent"`
@@ -155,7 +155,10 @@ func fetchNativeFacets(ctx context.Context, r FacetSearchRequest) (NativeFacetSu
 	if len(result.Errors) > 0 {
 		return NativeFacetSummary{}, errors.New("Bitmagnet aggregation returned GraphQL errors")
 	}
-	if result.Data.TorrentContent.Search.TotalCount < 0 {
+	if result.Data.TorrentContent.Search.TotalCount == nil || result.Data.TorrentContent.Search.TotalCountIsEstimate == nil {
+		return NativeFacetSummary{}, errors.New("native aggregation omitted required total count or estimate flag")
+	}
+	if *result.Data.TorrentContent.Search.TotalCount < 0 {
 		return NativeFacetSummary{}, errors.New("negative aggregate total count")
 	}
 	got := result.Data.TorrentContent.Search.Aggregations
@@ -183,7 +186,7 @@ func fetchNativeFacets(ctx context.Context, r FacetSearchRequest) (NativeFacetSu
 			})
 		}
 	}
-	return NativeFacetSummary{Source: "bitmagnet", Scope: "native_corpus_metadata_aggregate_not_cpe_concepts", TotalCount: result.Data.TorrentContent.Search.TotalCount, TotalCountIsEstimate: result.Data.TorrentContent.Search.TotalCountIsEstimate, Groups: ret, Warnings: []string{"Bitmagnet native metadata facet counts can be estimates; neither source tags nor counts establish CPE semantic presence or policy dispositions", "Counts are native and scoped to the direct query with its native filters, not globally merged across multilingual expansions"}}, nil
+	return NativeFacetSummary{Source: "bitmagnet", Scope: "native_corpus_metadata_aggregate_not_cpe_concepts", TotalCount: *result.Data.TorrentContent.Search.TotalCount, TotalCountIsEstimate: *result.Data.TorrentContent.Search.TotalCountIsEstimate, Groups: ret, Warnings: []string{"Bitmagnet native metadata facet counts can be estimates; neither source tags nor counts establish CPE semantic presence or policy dispositions", "Counts are native and scoped to the direct query with its native filters, not globally merged across multilingual expansions"}}, nil
 }
 func registerNativeFacets(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/query/facets", func(w http.ResponseWriter, r *http.Request) {

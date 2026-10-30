@@ -53,32 +53,39 @@
 <section><h2>Metadata groups and evidence</h2><pre id="details"></pre></section>
 <script>
 const $=id=>document.getElementById(id);
-let canExecute=false,canInfer=false;
+let canExecute=false,canInfer=false,queryToken=0;
 function displayItems(id,items){const node=$(id);node.replaceChildren();if(items.length===0){node.textContent='No observed results in this bounded query.';return;}
  for(const x of items){const article=document.createElement('article');article.className='item';const title=document.createElement('strong');title.textContent=x.title||'(untitled)';const detail=document.createElement('div');const hash=(x.info_hash||'').slice(0,14);detail.textContent='Type: '+(x.content_type||'unknown')+' · Language IDs: '+(x.languages||[]).join(', ')+' · Seeders: '+(x.seeders??'unknown')+' · Leechers: '+(x.leechers??'unknown')+' · Source adult flag: '+(x.adult_metadata===null||x.adult_metadata===undefined?'unknown':String(x.adult_metadata))+' · Infohash: '+hash+'… · Matches: '+(x.matched_queries||[]).join(', ');article.append(title,detail);node.append(article);}}
+function clearQueryEvidence(message){
+ observedToken++;
+ for(const id of ['direct','concept','overlap','external','details','observed-graph','observed-list','observed-items','observed-status','native-facet-data','native-facet-status','sweep-details','sweep-status']){
+  const node=$(id);node.replaceChildren();node.textContent=message;
+ }
+}
 async function capabilities(){
  try{const r=await fetch('/api/v1/capabilities');const c=await r.json();canExecute=r.ok&&c.execute===true;canInfer=r.ok&&c.sovereign_inference_configured===true;$('mode').textContent=canExecute?'Read-only Bitmagnet execution configured. Concept terms are experimental and not CPE-validated.':'Planning only: Bitmagnet execution is not configured. No CPE writes or payload downloads.';$('submit').textContent=canExecute?'Run read-only search':'Plan query';}
  catch(e){$('mode').textContent='Capability check failed; query planning may still be available.';}
 }
 $('q').addEventListener('submit',async event=>{
- event.preventDefault();const expansions=$('terms').value.split('\n').map(s=>s.trim()).filter(Boolean).map(term=>({term,provenance:'manual-unverified'}));
+ event.preventDefault();const token=++queryToken;clearQueryEvidence('Current query in progress; previous evidence cleared.');const expansions=$('terms').value.split('\n').map(s=>s.trim()).filter(Boolean).map(term=>({term,provenance:'manual-unverified'}));
  const filters={languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[],adult_metadata:$('adult').value};
  if($('minseeders').value!=='')filters.min_seeders=Number($('minseeders').value);
  if($('minleechers').value!=='')filters.min_leechers=Number($('minleechers').value);
  const body={query:$('query').value,expansions,filters,sort:$('sort').value,group_by:$('group').value,include_web:$('web').checked,concept_ids:$('use-concept').checked&&focusConcept?[focusConcept.id]:[]};$('submit').disabled=true;$('status').textContent='Processing bounded request…';
  try{const route=canExecute?'/api/v1/query/execute':'/api/v1/query/plan';
  const response=await fetch(route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
- const data=await response.json();if(!response.ok)throw Error(data.error||('HTTP '+response.status));
+ const data=await response.json();if(token!==queryToken)return;if(!response.ok)throw Error(data.error||('HTTP '+response.status));
  if(!canExecute){displayItems('direct',[]);displayItems('concept',[]);displayItems('overlap',[]);$('status').textContent='Plan generated; execution not configured.';$('details').textContent=JSON.stringify(data,null,2);return;}
  const rows=data.results||[];displayItems('direct',rows.filter(x=>x.tracks?.includes('direct')&&!x.tracks?.includes('concept')));displayItems('concept',rows.filter(x=>x.tracks?.includes('concept')&&!x.tracks?.includes('direct')));displayItems('overlap',rows.filter(x=>x.tracks?.includes('concept')&&x.tracks?.includes('direct')));
  await renderObservedGraph(rows);
+ if(token!==queryToken)return;
  $('status').textContent='State: '+data.state+' · Unique observed: '+rows.length+' · Direct matches: '+(data.track_counts?.direct??0)+' · Concept matches: '+(data.track_counts?.concept??0);
  $('details').textContent=JSON.stringify({failures:data.failures,warnings:data.warnings,track_counts:data.track_counts,scope:data.filter_scope,before_filters:data.before_filters,after_filters:data.after_filters,groups:data.groups,coverage:data.coverage},null,2);
  const external=$('external');external.replaceChildren();
  for(const x of data.external_results||[]){const article=document.createElement('article');article.className='item';const strong=document.createElement('strong');strong.textContent=x.title;const p=document.createElement('div');p.textContent=x.url+' · '+(x.engines||[]).join(', ');article.append(strong,p);external.append(article)}
  if(!(data.external_results||[]).length){external.textContent='No web observations returned. A failed or disabled adapter does not establish absence.'}
- }catch(e){$('status').textContent='Query failed: '+e.message;$('details').textContent='No absence inference can be drawn from this failure.';}
- finally{$('submit').disabled=false;}
+ }catch(e){if(token!==queryToken)return;clearQueryEvidence('Current query failed; prior evidence cleared. No absence inference can be drawn from this failure.');$('status').textContent='Query failed: '+e.message;$('details').textContent='No absence inference can be drawn from this failure.';}
+ finally{if(token===queryToken)$('submit').disabled=false;}
 });
 // The graph is read-only and uses only a local, digest-pinned provisional projection.
 let conceptCatalog=null,focusConcept=null;
