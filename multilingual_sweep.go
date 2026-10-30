@@ -27,9 +27,11 @@ import (
 // (28s). The 55s deadline leaves 3s for serialization and scheduling.
 const (
 	sweepExecutionDeadline = 55 * time.Second
-	sweepHTTPWriteTimeout  = 60 * time.Second
-	sweepClientTimeout     = deadline.ClientTimeout
-	maxConcurrentSweeps    = 1
+	// HTTP WriteTimeout starts before the request body is read. Leave room for
+	// the 15s ReadTimeout plus the 55s sweep budget and response serialization.
+	sweepHTTPWriteTimeout = 75 * time.Second
+	sweepClientTimeout    = deadline.ClientTimeout
+	maxConcurrentSweeps   = 1
 )
 
 // At most one whole sweep may occupy the local backends at once. This is

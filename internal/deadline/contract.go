@@ -6,4 +6,6 @@ import "time"
 
 // ClientTimeout gives the server time to return bounded full or partial sweep
 // results after its execution deadline and HTTP response allowance.
-const ClientTimeout = 65 * time.Second
+// ClientTimeout includes the server's body-read and execution budgets plus
+// the time needed to serialize and deliver the response.
+const ClientTimeout = 80 * time.Second

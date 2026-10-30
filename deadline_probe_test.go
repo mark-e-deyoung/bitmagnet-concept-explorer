@@ -129,6 +129,46 @@ func TestLegacyWriteTimeoutReproducesMissingSweepResponse(t *testing.T) {
 	t.Logf("legacy production-equivalent API result: elapsed=%s error=%v provider_requests=%d", elapsed, err, requests.Load())
 }
 
+func TestLegacyWriteTimeoutIncludesSlowRequestBodyAndLosesCompletedResult(t *testing.T) {
+	// WriteTimeout begins when request headers arrive, so time spent reading the
+	// body consumes the same allowance as handler execution and response writing.
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.ReadAll(r.Body); err != nil {
+			return
+		}
+		time.Sleep(55 * time.Second)
+		_, _ = io.WriteString(w, `{"state":"complete"}`)
+	}))
+	srv.Config.ReadHeaderTimeout = 5 * time.Second
+	srv.Config.ReadTimeout = 15 * time.Second
+	srv.Config.WriteTimeout = 60 * time.Second
+	srv.Start()
+	defer srv.Close()
+
+	reader, writer := io.Pipe()
+	req, err := http.NewRequest(http.MethodPost, srv.URL, reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	go func() {
+		_, _ = io.WriteString(writer, `{"x":`)
+		time.Sleep(6 * time.Second)
+		_, _ = io.WriteString(writer, `1}`)
+		_ = writer.Close()
+	}()
+	started := time.Now()
+	resp, err := (&http.Client{Timeout: 75 * time.Second}).Do(req)
+	elapsed := time.Since(started)
+	if resp != nil {
+		resp.Body.Close()
+	}
+	if err == nil || elapsed < 60*time.Second || elapsed > 70*time.Second {
+		t.Fatalf("legacy 60s write budget should lose completed 55s handler after slow body: elapsed=%v err=%v", elapsed, err)
+	}
+	t.Logf("legacy slow-body result lost: body_delay=6s handler=55s elapsed=%s error=%v", elapsed, err)
+}
+
 func TestSweepAdmissionRejectsWithoutStartingWork(t *testing.T) {
 	setupFixtureGraph(t, sweepFixture)
 	var calls int
