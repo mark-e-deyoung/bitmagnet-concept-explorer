@@ -24,15 +24,16 @@ var globalBitmagnetSlots = make(chan struct{}, 4)
 const gqlSearch = `query Search($input: TorrentContentSearchQueryInput!) { torrentContent { search(input: $input) { hasNextPage items { contentType title seeders leechers languages { id name } content { adult } torrent { infoHash name size } } } } }`
 
 type Observation struct {
-	InfoHash      string   `json:"info_hash"`
-	Title         string   `json:"title"`
-	ContentType   string   `json:"content_type,omitempty"`
-	Seeders       *int     `json:"seeders"`
-	Leechers      *int     `json:"leechers"`
-	Languages     []string `json:"languages,omitempty"`
-	AdultMetadata *bool    `json:"adult_metadata,omitempty"`
-	Tracks        []string `json:"tracks"`
-	Terms         []string `json:"matched_queries"`
+	InfoHash            string   `json:"info_hash"`
+	Title               string   `json:"title"`
+	ContentType         string   `json:"content_type,omitempty"`
+	Seeders             *int     `json:"seeders"`
+	Leechers            *int     `json:"leechers"`
+	Languages           []string `json:"languages,omitempty"`
+	AdultMetadata       *bool    `json:"adult_metadata,omitempty"`
+	Tracks              []string `json:"tracks"`
+	Terms               []string `json:"matched_queries"`
+	ConflictingMetadata []string `json:"conflicting_metadata,omitempty"`
 }
 type TermCoverage struct {
 	Track       string `json:"track"`
@@ -241,6 +242,7 @@ func execute(ctx context.Context, q Request) (Execution, error) {
 				if !contains(existing.Terms, j.term) {
 					existing.Terms = append(existing.Terms, j.term)
 				}
+				mergeObservationMetadata(existing, v)
 			}
 		}(j)
 	}
@@ -249,6 +251,7 @@ func execute(ctx context.Context, q Request) (Execution, error) {
 	for _, r := range merged {
 		sort.Strings(r.Tracks)
 		sort.Strings(r.Terms)
+		sort.Strings(r.ConflictingMetadata)
 		out.Results = append(out.Results, *r)
 	}
 	sort.Slice(out.Results, func(i, j int) bool { return out.Results[i].InfoHash < out.Results[j].InfoHash })
@@ -260,6 +263,12 @@ func execute(ctx context.Context, q Request) (Execution, error) {
 		return out.Coverage[i].Term < out.Coverage[j].Term
 	})
 	out.BeforeFilters = len(out.Results)
+	for _, result := range out.Results {
+		if len(result.ConflictingMetadata) > 0 {
+			out.Warnings = append(out.Warnings, "Duplicate infohashes had conflicting Bitmagnet metadata; conflicting fields are unknown and cannot qualify those results for metadata filters")
+			break
+		}
+	}
 	out.Results, out.Groups = viewResults(out.Results, q)
 	out.AfterFilters = len(out.Results)
 	out.FilterScope = "bounded_returned_results_only"
@@ -276,6 +285,105 @@ func execute(ctx context.Context, q Request) (Execution, error) {
 	}
 	return out, nil
 }
+
+// mergeObservationMetadata keeps only metadata supported consistently across
+// all observations for an infohash. A disagreement clears the field to its
+// unknown representation and latches that state so a later observation cannot
+// make an arbitrary arrival-order value eligible for filtering.
+func mergeObservationMetadata(dst *Observation, src Observation) {
+	markConflict := func(field string) {
+		if contains(dst.ConflictingMetadata, field) {
+			return
+		}
+		dst.ConflictingMetadata = append(dst.ConflictingMetadata, field)
+	}
+	mergeString := func(field string, target *string, incoming string) {
+		if contains(dst.ConflictingMetadata, field) {
+			return
+		}
+		if *target == "" {
+			*target = incoming
+			return
+		}
+		if incoming != "" && *target != incoming {
+			*target = ""
+			markConflict(field)
+		}
+	}
+	mergeString("title", &dst.Title, src.Title)
+	mergeString("content_type", &dst.ContentType, src.ContentType)
+
+	mergeInt := func(field string, target **int, incoming *int) {
+		if contains(dst.ConflictingMetadata, field) {
+			return
+		}
+		if *target == nil {
+			if incoming != nil {
+				value := *incoming
+				*target = &value
+			}
+			return
+		}
+		if incoming != nil && **target != *incoming {
+			*target = nil
+			markConflict(field)
+		}
+	}
+	mergeInt("seeders", &dst.Seeders, src.Seeders)
+	mergeInt("leechers", &dst.Leechers, src.Leechers)
+
+	if !contains(dst.ConflictingMetadata, "adult_metadata") {
+		if dst.AdultMetadata == nil {
+			if src.AdultMetadata != nil {
+				value := *src.AdultMetadata
+				dst.AdultMetadata = &value
+			}
+		} else if src.AdultMetadata != nil && *dst.AdultMetadata != *src.AdultMetadata {
+			dst.AdultMetadata = nil
+			markConflict("adult_metadata")
+		}
+	}
+
+	if !contains(dst.ConflictingMetadata, "languages") {
+		current, incoming := normalizedLanguages(dst.Languages), normalizedLanguages(src.Languages)
+		switch {
+		case len(current) == 0:
+			dst.Languages = incoming
+		case len(incoming) == 0:
+			dst.Languages = current
+		case !equalStrings(current, incoming):
+			dst.Languages = []string{}
+			markConflict("languages")
+		default:
+			dst.Languages = current
+		}
+	}
+}
+
+func normalizedLanguages(values []string) []string {
+	ret := append([]string(nil), values...)
+	sort.Strings(ret)
+	unique := ret[:0]
+	for _, value := range ret {
+		if value != "" && (len(unique) == 0 || unique[len(unique)-1] != value) {
+			unique = append(unique, value)
+		}
+	}
+	return unique
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func contains(items []string, v string) bool {
 	for _, x := range items {
 		if x == v {
