@@ -262,7 +262,7 @@ func collectArchive(out string, entries *[]map[string]any, events *[]string) {
 	// find a small number of item-level source-license candidates. No
 	// sweeping of unauthorised titles, payload, trackers or peers occurs.
 	searches := []struct {
-		name string
+		name  string
 		query string
 	}{
 		{"prelinger", "collection:prelinger AND mediatype:movies AND format:\"Archive BitTorrent\""},
@@ -313,9 +313,9 @@ func collectArchive(out string, entries *[]map[string]any, events *[]string) {
 			var item struct {
 				Metadata struct {
 					Identifier string
-					Mediatype string
+					Mediatype  string
 					Licenseurl any
-					Is_dark any
+					Is_dark    any
 				}
 				Files []struct{ Name, Format string }
 			}
@@ -343,7 +343,7 @@ func collectArchive(out string, entries *[]map[string]any, events *[]string) {
 					strings.Contains(file.Name, "/") {
 					continue
 				}
-				link := "https://archive.org/download/"+url.PathEscape(id)+"/"+url.PathEscape(file.Name)
+				link := "https://archive.org/download/" + url.PathEscape(id) + "/" + url.PathEscape(file.Name)
 				if e = admit(out, entries, "internet-archive:"+source.name, id, license, link, "movie"); e != nil {
 					*events = append(*events, "archive metainfo "+source.name+": "+e.Error())
 				} else {
