@@ -13,6 +13,7 @@ import (
  "io"
  "os"
  "regexp"
+ "sort"
  "strings"
 )
 const sourceSHA="7294644f1fc26490f8a0aed415afc01b8278294e4373169e1407986c56cb0961"
@@ -46,11 +47,47 @@ type Window struct {
  RoleStatus string `json:"role_status"`
  Status string `json:"status"`
 }
+// ReviewGroup only coalesces overlapping text windows. It is NOT a dance figure.
+type ReviewGroup struct {
+ ID string `json:"id"`
+ StartLine int `json:"start_line"`
+ EndLine int `json:"end_line"`
+ CandidateIDs []string `json:"candidate_ids"`
+ Status string `json:"status"`
+}
+func overlappingWindows(windows []Window)([]ReviewGroup,error){
+ ordered:=append([]Window(nil),windows...)
+ sort.Slice(ordered,func(i,j int)bool{
+  if ordered[i].StartLine!=ordered[j].StartLine{return ordered[i].StartLine<ordered[j].StartLine}
+  if ordered[i].EndLine!=ordered[j].EndLine{return ordered[i].EndLine<ordered[j].EndLine}
+  return ordered[i].CandidateID<ordered[j].CandidateID
+ })
+ groups:=[]ReviewGroup{}
+ for _,w:=range ordered{
+  if w.StartLine<1||w.EndLine<w.StartLine{return nil,errors.New("invalid context interval")}
+  if len(groups)==0||w.StartLine>groups[len(groups)-1].EndLine{
+   groups=append(groups,ReviewGroup{StartLine:w.StartLine,EndLine:w.EndLine,
+    CandidateIDs:[]string{w.CandidateID},Status:"COLOCATED_LEXICAL_WINDOWS_NOT_A_VERIFIED_FIGURE"})
+  }else{
+   g:=&groups[len(groups)-1]
+   if w.EndLine>g.EndLine{g.EndLine=w.EndLine}
+   g.CandidateIDs=append(g.CandidateIDs,w.CandidateID)
+  }
+ }
+ for i:=range groups{
+  group:=&groups[i]
+  h:=sha256.Sum256([]byte(fmt.Sprintf("%s:%d:%d:%s","pg:12926",group.StartLine,group.EndLine,strings.Join(group.CandidateIDs,";"))))
+  group.ID="pg12926-overlap-"+hex.EncodeToString(h[:8])
+ }
+ return groups,nil
+}
 type Result struct {
  Schema string `json:"schema"`
  SourceID string `json:"source_id"`
  SourceSHA256 string `json:"source_sha256"`
  CandidateCount int `json:"candidate_count"`
+ ReviewGroupCount int `json:"review_group_count"`
+ ReviewGroups []ReviewGroup `json:"review_groups"`
  SourceCandidateTruncated bool `json:"source_candidate_truncated"`
  CompleteFigureClaim bool `json:"complete_figure_claim"`
  MotionMeasurementClaim bool `json:"motion_measurement_claim"`
@@ -97,6 +134,9 @@ func Enrich(src []byte,r Report,requirePin bool)(Result,error){
   result.Windows=append(result.Windows,Window{CandidateID:c.ID,AnchorLine:c.Line,StartLine:start+1,EndLine:end+1,
    SourceLines:append([]string(nil),lines[start:end+1]...),RoleStatus:roleStatus(c),Status:"UNREVIEWED_CONTEXT_WINDOW_NOT_VALIDATED_FIGURE"})
  }
+ groups,err:=overlappingWindows(result.Windows);if err!=nil{return Result{},err}
+ result.ReviewGroups=groups
+ result.ReviewGroupCount=len(groups)
  return result,nil
 }
 func run(args []string,w io.Writer) error{
