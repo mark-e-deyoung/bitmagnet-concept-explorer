@@ -164,12 +164,20 @@ echo "PUBLIC-CPE: candidate pack=$PACK_DIR sha256=$GRAPH_SHA"
 # source-filtered; Ubuntu publisher torrents are mandatory in this first rep.
 RDTE_DIR="$OUT/rdte-real-metainfo"
 export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly
-go run ./cmd/rdte-torrent-collector -out "$RDTE_DIR" -minimum 2
+go run ./cmd/rdte-torrent-collector -out "$RDTE_DIR" -minimum 3
 REAL_TORRENT_ROWS="$(jq -r '.entries | length' "$RDTE_DIR/manifest.json")"
-if [[ "$REAL_TORRENT_ROWS" -lt 2 ]]; then
+if [[ "$REAL_TORRENT_ROWS" -lt 3 ]]; then
   echo "::error::No qualifying genuine publisher-provided .torrent metainfo"
   exit 1
 fi
+# A minimum count alone does not prove independent source-family coverage.
+DEBIAN_SOURCE_ROWS="$(jq '[.entries[] | select(.source == "debian:official-mirror")] | length' "$RDTE_DIR/manifest.json")"
+if [[ "$DEBIAN_SOURCE_ROWS" != "1" ]]; then
+  echo "::error::Debian official-mirror metainfo was not genuinely admitted"
+  jq '{entries: [.entries[] | {source,infohash,metainfo_sha256}], source_events}' "$RDTE_DIR/manifest.json" || true
+  exit 1
+fi
+
 curl --noproxy '*' -fsS --max-time 120 \
   -H 'Content-Type: application/json' -H 'Connection: close' \
   --data-binary @"$RDTE_DIR/bitmagnet-import.ndjson" \
@@ -364,6 +372,35 @@ if [[ "$authentic" != "1" ]]; then
   exit 1
 fi
 echo "CPE-RDTE-REAL: authentic bencoded publisher infohash=$UBUNTU_HASH successfully returned from real Bitmagnet index and Explorer"
+
+# Independently prove a second publisher family makes it through actual FTS and Explorer.
+DEBIAN_HASH="$(jq -r '[.entries[] | select(.source == "debian:official-mirror")][0].infohash' "$RDTE_DIR/manifest.json")"
+if [[ -z "$DEBIAN_HASH" || "$DEBIAN_HASH" == "null" ]]; then
+  echo "::error::No authentic Debian hash in provenance manifest"
+  exit 1
+fi
+debian_authentic=0
+for i in $(seq 1 60); do
+  curl --noproxy '*' -sS --max-time 20 -u "$AUTH" \
+    -H 'Content-Type: application/json' \
+    --data '{"query":"debian"}' \
+    http://127.0.0.1:3086/api/v1/query/execute -o "$OUT/debian-real-query.json" || true
+  if jq -e --arg hash "$DEBIAN_HASH" '
+    .state == "complete" and .read_only == true and
+    (any(.results[]; .info_hash == $hash and (.tracks | index("direct") != null)))
+  ' "$OUT/debian-real-query.json" >/dev/null 2>&1; then
+    debian_authentic=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$debian_authentic" != "1" ]]; then
+  echo "::error::Debian publisher infohash absent from actual Bitmagnet FTS and Explorer"
+  jq '{state,track_counts,results,failures}' "$OUT/debian-real-query.json" || true
+  exit 1
+fi
+echo "CPE-RDTE-REAL: authentic Debian publisher infohash=$DEBIAN_HASH returned from real Bitmagnet index and Explorer"
+
 
 # Separate CLI process uses actual authenticated HTTP service and real upstream.
 BCE_AUTH_USER=public-rep BCE_AUTH_PASSWORD=synthetic-only-credential-2026 \
