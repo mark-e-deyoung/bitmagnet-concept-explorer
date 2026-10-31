@@ -518,7 +518,7 @@ async function loadNativeFacets(){
 }
 $('native-facet-button').addEventListener('click',loadNativeFacets);
 function svgElem(tag,attrs){const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
-function chooseConcept(id){
+function chooseConcept(id,focusOrigin){
  if(!conceptCatalog)return;
  focusConcept=conceptCatalog.concepts.find(n=>n.id===id)||null;if(!focusConcept)return;
  const n=focusConcept;
@@ -526,6 +526,16 @@ function chooseConcept(id){
  $('query').value=n.label;
  $('terms').value=(n.lexicalizations||[]).filter(x=>x.term&&x.term!==n.label).slice(0,31).map(x=>x.term).join('\n');
  renderConceptMap();
+ // Rendering replaces SVG groups and selector buttons. Restore the exact
+ // keyboard/pointer selection target so another Tab/Enter can continue the
+ // same workflow; catalog/filter programmatic updates do not steal focus.
+ if(focusOrigin==='graph'){
+  Array.from($('concept-graph').querySelectorAll('.graph-node'))
+   .find(el=>el.getAttribute('data-id')===id)?.focus();
+ }else if(focusOrigin==='list'){
+  Array.from($('concept-list').querySelectorAll('button'))
+   .find(el=>el.dataset.conceptId===id)?.focus();
+ }
 }
 function renderConceptMap(){
  const graph=$('concept-graph'),list=$('concept-list');graph.replaceChildren();list.replaceChildren();
@@ -544,9 +554,9 @@ function renderConceptMap(){
  const circle=svgElem('circle',{cx:p.x,cy:p.y,r:n.id===focusConcept.id?51:40,class:'graph-node-shape'});
  const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',class:'graph-node-label'});
  label.textContent=n.label.length>16?n.label.slice(0,14)+'…':n.label;group.append(circle,label);
- group.addEventListener('click',()=>chooseConcept(n.id));group.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseConcept(n.id)}});
+ group.addEventListener('click',()=>chooseConcept(n.id,'graph'));group.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseConcept(n.id,'graph')}});
  graph.append(group);
- const btn=document.createElement('button');btn.type='button';btn.textContent=n.label;btn.setAttribute('aria-pressed',String(n.id===focusConcept.id));btn.addEventListener('click',()=>chooseConcept(n.id));list.append(btn);}
+ const btn=document.createElement('button');btn.type='button';btn.textContent=n.label;btn.dataset.conceptId=n.id;btn.setAttribute('aria-pressed',String(n.id===focusConcept.id));btn.addEventListener('click',()=>chooseConcept(n.id,'list'));list.append(btn);}
 }
 async function loadCatalog(){
  try{const r=await fetch('/api/v1/concepts');const data=await r.json();if(!r.ok)throw Error(data.error||'projection unavailable');
