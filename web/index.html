@@ -429,13 +429,19 @@ async function renderObservedGraph(rows){
   status.textContent='Evidence state: '+data.status+' · '+concepts.length+' lexical candidates · '+edges.length+' evidence links'+(rows.length>subset.length?' · first 200 returned rows only':'')+' · Not CPE assertions';
   if(!concepts.length)return;
   const selected=concepts.slice(0,16),center={x:350,y:170},positions=[];
-  const centerCircle=svgElem('circle',{cx:center.x,cy:center.y,r:48,fill:'#24445d',stroke:'#b2d7eb','stroke-width':2});
+  const centerCircle=svgElem('circle',{cx:center.x,cy:center.y,r:48,class:'graph-center'});
   graph.append(centerCircle);
-  const centerLabel=svgElem('text',{x:center.x,y:center.y+4,'text-anchor':'middle',fill:'#fff','font-size':13});centerLabel.textContent='Results';graph.append(centerLabel);
+  const centerLabel=svgElem('text',{x:center.x,y:center.y+4,'text-anchor':'middle',class:'graph-center-label'});centerLabel.textContent='Results';graph.append(centerLabel);
   function inspect(node){
    items.replaceChildren();
    const matching=new Set(edges.filter(e=>e.concept_id===node.id).map(e=>e.info_hash));
-   const h=document.createElement('h3');h.textContent=node.label+' — '+node.distinct_returned_torrents+' distinct returned torrents';items.append(h);
+   graph.querySelectorAll('.graph-node').forEach(el=>{
+   el.setAttribute('aria-pressed',String(el.getAttribute('data-id')===node.id));
+  });
+  list.querySelectorAll('button').forEach(el=>{
+   el.setAttribute('aria-pressed',String(el.dataset.conceptId===node.id));
+  });
+  const h=document.createElement('h3');h.textContent=node.label+' — '+node.distinct_returned_torrents+' distinct returned torrents';items.append(h);
    const evidence=edges.filter(e=>e.concept_id===node.id);
    for(const e of evidence.slice(0,30)){
     const rec=subset.find(x=>x.info_hash===e.info_hash);if(!rec)continue;
@@ -459,19 +465,19 @@ async function renderObservedGraph(rows){
   selected.forEach((node,i)=>{
    const angle=2*Math.PI*i/selected.length-Math.PI/2;
    const p={x:center.x+260*Math.cos(angle),y:center.y+120*Math.sin(angle)};positions.push(p);
-   graph.append(svgElem('line',{x1:center.x,y1:center.y,x2:p.x,y2:p.y,stroke:'#98b9ca','stroke-width':1.5}));
+   graph.append(svgElem('line',{x1:center.x,y1:center.y,x2:p.x,y2:p.y,class:'graph-link','stroke-width':1.5}));
   });
   selected.forEach((node,i)=>{
-   const p=positions[i],g=svgElem('g',{tabindex:'0',role:'button',class:'graph-node','aria-label':'Inspect returned metadata evidence for '+node.label});
-   const circle=svgElem('circle',{cx:p.x,cy:p.y,r:40,fill:'#315a4a',stroke:'#b2d7eb','stroke-width':2});
-   const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',fill:'#fff','font-size':12});
+   const p=positions[i],g=svgElem('g',{tabindex:'0',role:'button',class:'graph-node','data-evidence':'observed','data-id':node.id,'aria-pressed':'false','aria-label':'Inspect returned metadata evidence for '+node.label});
+   const circle=svgElem('circle',{cx:p.x,cy:p.y,r:40,class:'graph-node-shape'});
+   const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',class:'graph-node-label'});
    label.textContent=node.label.length>14?node.label.slice(0,12)+'…':node.label;g.append(circle,label);
    g.addEventListener('click',()=>inspect(node));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inspect(node)}});
    graph.append(g);
   });
   for(const node of concepts){
    const btn=document.createElement('button');btn.type='button';
-   btn.textContent=node.label+' ('+node.distinct_returned_torrents+')';btn.addEventListener('click',()=>inspect(node));list.append(btn);
+   btn.textContent=node.label+' ('+node.distinct_returned_torrents+')';btn.dataset.conceptId=node.id;btn.setAttribute('aria-pressed','false');btn.addEventListener('click',()=>inspect(node));list.append(btn);
   }
   inspect(concepts[0]);
   if(concepts.length>selected.length)status.textContent+=' · Diagram shows first 16; all available as buttons';
@@ -504,7 +510,7 @@ function chooseConcept(id){
  if(!conceptCatalog)return;
  focusConcept=conceptCatalog.concepts.find(n=>n.id===id)||null;if(!focusConcept)return;
  const n=focusConcept;
- $('concept-detail').textContent=n.label+' — '+(n.definition||'No description')+' · '+n.id+' · relations: '+(n.relations||[]).map(r=>r.predicate+' → '+r.target_id).join(', ');
+ $('concept-detail').textContent='Selected provisional concept: '+n.label+' — '+(n.definition||'No description')+' · '+n.id+' · relations: '+(n.relations||[]).map(r=>r.predicate+' → '+r.target_id).join(', ')+' · Search input has been prepared but no query was executed.';
  $('query').value=n.label;
  $('terms').value=(n.lexicalizations||[]).filter(x=>x.term&&x.term!==n.label).slice(0,31).map(x=>x.term).join('\n');
  renderConceptMap();
@@ -521,10 +527,10 @@ function renderConceptMap(){
  position.set(focusConcept.id,{x:350,y:175});
  others.forEach((n,i)=>{const a=2*Math.PI*i/Math.max(1,others.length)-Math.PI/2;position.set(n.id,{x:350+250*Math.cos(a),y:175+125*Math.sin(a)})});
  for(const n of nodes){for(const rel of n.relations||[]){if(!position.has(rel.target_id))continue;const a=position.get(n.id),b=position.get(rel.target_id);
- const line=svgElem('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#98b9ca','stroke-width':2});graph.append(line)}}
- for(const n of nodes){const p=position.get(n.id);const group=svgElem('g',{tabindex:'0',role:'button','aria-label':'Explore '+n.label,class:'graph-node'});
- const circle=svgElem('circle',{cx:p.x,cy:p.y,r:n.id===focusConcept.id?51:40,fill:n.id===focusConcept.id?'#fbd36c':'#24445d',stroke:'#b2d7eb','stroke-width':2});
- const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',fill:n.id===focusConcept.id?'#162535':'#ffffff','font-size':12});
+ const line=svgElem('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,class:'graph-link','stroke-width':2});graph.append(line)}}
+ for(const n of nodes){const p=position.get(n.id);const group=svgElem('g',{tabindex:'0',role:'button','aria-label':'Explore '+n.label,class:'graph-node','data-id':n.id,'aria-pressed':String(n.id===focusConcept.id)});
+ const circle=svgElem('circle',{cx:p.x,cy:p.y,r:n.id===focusConcept.id?51:40,class:'graph-node-shape'});
+ const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',class:'graph-node-label'});
  label.textContent=n.label.length>16?n.label.slice(0,14)+'…':n.label;group.append(circle,label);
  group.addEventListener('click',()=>chooseConcept(n.id));group.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseConcept(n.id)}});
  graph.append(group);
