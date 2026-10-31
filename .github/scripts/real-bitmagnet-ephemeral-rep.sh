@@ -592,26 +592,12 @@ if [[ "$GITHUB_HEAD_REF" == "preview/rdte-cloudflare-disposable-20261031" ]]; th
     echo "::error::Public tunnel did not deny native Bitmagnet import path (code=$deny_status)"
     exit 1
   fi
-  # Publish the ephemeral link while THIS job is still active; GH REST job logs
-  # are not reliably available mid-step. A narrowly scoped PR issue comment
-  # is the only GITHUB_TOKEN write, and only in this explicitly preview-only PR.
-  if [[ -z "$GH_PREVIEW_ISSUE_TOKEN" ]]; then
-    echo "::error::Missing scoped preview URL publication token"
-    exit 1
-  fi
-  jq -n --arg link "$TUNNEL_URL" --arg sha "$(git rev-parse HEAD)" \
-    '{body:("### Disposable RDTE Cloudflare viewer now LIVE\n\n**Open:** " + $link + "\n\nSource: " + $sha + ". The authentic 5-publisher public metadata-only Bitmagnet/Explorer checks passed. The temporary viewer is PUBLIC and anonymous, but a bounded read-only facade over public fixtures only. Original BCE origin remains Basic Auth-protected and loopback-only. This one-off runner expires automatically; no private data, no Bitmagnet /import/GraphQL or PostgreSQL exposure. NEVER MERGE this preview branch.")}' \
-    >"$OUT/tunnel-pr-comment.json"
-  curl -fsS --max-time 20 \
-    -H "Authorization: Bearer $GH_PREVIEW_ISSUE_TOKEN" \
-    -H "Accept: application/vnd.github+json" \
-    -H "X-GitHub-Api-Version: 2022-11-28" \
-    -H "Content-Type: application/json" \
-    -X POST --data-binary @"$OUT/tunnel-pr-comment.json" \
-    "https://api.github.com/repos/mark-e-deyoung/bitmagnet-concept-explorer/issues/31/comments" \
-    -o "$OUT/tunnel-pr-comment-receipt.json"
-  jq -e '.id > 0 and (.html_url | contains("/pull/31#issuecomment-"))' "$OUT/tunnel-pr-comment-receipt.json" >/dev/null
-  echo "RDTE-PREVIEW: live URL published to PR #31: $(jq -r '.html_url' "$OUT/tunnel-pr-comment-receipt.json")"
+  # Finalize the URL as a non-secret Actions artifact in the NEXT step.
+  # GitHub's public pull_request GITHUB_TOKEN may refuse issue comment writes
+  # even when workflows request issues:write. Artifact publication is a
+  # per-run short-lived, read-only exchange with no repo issue permissions.
+  printf '%s\n' "$TUNNEL_URL" >"$OUT/preview-url.txt"
+  chmod 600 "$OUT/preview-url.txt"
   echo "RDTE_DISPOSABLE_CLOUDFLARE_URL=$TUNNEL_URL"
   echo "RDTE-PREVIEW: external HTTPS -> anonymous public-fixture read-only proxy 200, native import POST 405 PASS"
   if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
@@ -626,17 +612,11 @@ if [[ "$GITHUB_HEAD_REF" == "preview/rdte-cloudflare-disposable-20261031" ]]; th
       echo "- **Lifetime:** at most 20 minutes after checks, bounded by runner; expires at job stop"
     } >>"$GITHUB_STEP_SUMMARY"
   fi
-  # Bounded preview and liveness checks; cleanup removes all containers/tunnel.
-  for i in $(seq 1 40); do
-    sleep 30
-    if ! kill -0 "$TUNNEL_PID" 2>/dev/null || ! kill -0 "$SERVICE_PID" 2>/dev/null || ! kill -0 "$PREVIEW_PROXY_PID" 2>/dev/null; then
-      echo "::error::A bounded preview service stopped unexpectedly"
-      exit 1
-    fi
-    if [[ $((i % 10)) == 0 ]]; then
-      echo "RDTE-PREVIEW: live elapsed=$((i * 30))s url=$TUNNEL_URL"
-    fi
-  done
-  echo "RDTE-PREVIEW: expired normally; tearing down disposable runner"
+  # Transfer ownership to the next GHA steps: upload URL artifact FIRST,
+  # then run the bounded hold/cleanup step while user views the live app.
+  printf '%s\n' "$TUNNEL_PID" "$PREVIEW_PROXY_PID" "$SERVICE_PID" >"$OUT/preview-pids.txt"
+  echo "RDTE-PREVIEW: Cloudflare and service independently healthy; transfer to URL-artifact and hold steps"
+  trap - EXIT
+  exit 0
 fi
 
