@@ -184,6 +184,20 @@ func decodeMetainfo(b []byte) (hash, name string, size int64, err error) {
 	sum := sha1.Sum(b[start:end])
 	return hex.EncodeToString(sum[:]), string(n), size, nil
 }
+// validateMetainfoRedirect fences the entire redirect chain, not only the initial HTTPS URL.
+func validateMetainfoRedirect(req *http.Request, via []*http.Request) error {
+	if req.URL.Scheme != "https" {
+		return errors.New("HTTPS mandatory for redirects")
+	}
+	if len(via) > 3 {
+		return errors.New("redirect budget")
+	}
+	host := req.URL.Hostname()
+	if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || strings.HasSuffix(host, ".archive.org") {
+		return nil
+	}
+	return errors.New("off-origin redirect")
+}
 func fetch(rawurl string, max int) ([]byte, error) {
 	u, e := url.Parse(rawurl)
 	if e != nil || u.Scheme != "https" {
@@ -192,19 +206,7 @@ func fetch(rawurl string, max int) ([]byte, error) {
 	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "mirrors.edge.kernel.org" {
 		return nil, errors.New("unapproved source")
 	}
-	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		if req.URL.Scheme != "https" {
-			return errors.New("HTTPS mandatory for redirects")
-		}
-		if len(via) > 3 {
-			return errors.New("redirect budget")
-		}
-		host := req.URL.Hostname()
-		if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || strings.HasSuffix(host, ".archive.org") {
-			return nil
-		}
-		return errors.New("off-origin redirect")
-	}}
+	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: validateMetainfoRedirect}
 	req, e := http.NewRequest("GET", rawurl, nil)
 	if e != nil {
 		return nil, e
