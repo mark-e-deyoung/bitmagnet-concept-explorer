@@ -40,6 +40,8 @@ jobs:
           go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/candidates.json -format=json > inspect-evidence/automation.json
           go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/candidates.json -format=html > inspect-evidence/human.html
           go run ./research/gutenbergmotion/inspect -capabilities > inspect-evidence/agent-capabilities.json
+          go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/candidates.json -format=json -query="right shoulder" > inspect-evidence/filtered-automation.json
+          go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/candidates.json -format=html -query="right shoulder" > inspect-evidence/filtered-human.html
           python3 - <<'PY'
           import json,html.parser
           j=json.load(open("inspect-evidence/automation.json"))
@@ -52,6 +54,13 @@ jobs:
           assert '<main>' in page and '<ol class="results"' in page and '<h1>' in page and '<blockquote' in page
           assert 'Scientific state:' in page and 'unvalidated source-text candidates' in page
           assert len(j['views'])==64
+          filt=json.load(open("inspect-evidence/filtered-automation.json"))
+          assert filt['candidate_count']==64
+          assert 0<filt['visible_count']<64
+          assert filt['visible_count']==len(filt['candidates'])==len(filt['views'])
+          assert filt['source_sha256']==j['source_sha256']
+          assert filt['query']=='right shoulder'
+          assert all('right shoulder' in v['search_text'] for v in filt['views'])
           assert j['views'][0]['context_start_line']<j['views'][0]['line']
           assert j['views'][0]['context_end_line']>=j['views'][0]['line']
           assert 'When the side is to advance and retire' in j['views'][0]['context']
@@ -97,6 +106,26 @@ jobs:
             test -s "inspect-evidence/$layout.png"
             file "inspect-evidence/$layout.png"
           done
+          timeout 40 "$browser" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=1500 \
+            --dump-dom "file://$PWD/inspect-evidence/filtered-human.html" > inspect-evidence/filtered-browser-dom.html 2> inspect-evidence/filter-browser.stderr
+          python3 - <<'PY'
+          import json,html.parser,re
+          j=json.load(open("inspect-evidence/filtered-automation.json"))
+          markup=open("inspect-evidence/filtered-browser-dom.html").read()
+          class Cards(html.parser.HTMLParser):
+              def __init__(self):super().__init__();self.n=0;self.hidden=0
+              def handle_starttag(self,tag,attrs):
+                  x=dict(attrs)
+                  if tag=='li' and 'candidate' in x.get('class',''):
+                      self.n+=1
+                      if 'hidden' in x:self.hidden+=1
+          cards=Cards();cards.feed(markup)
+          assert cards.n==64,(cards.n,len(markup))
+          assert cards.n-cards.hidden==j['visible_count'],(cards.hidden,j['visible_count'])
+          match=re.search(r'<output id="visible-count">([0-9]+)</output>',markup)
+          assert match and int(match.group(1))==j['visible_count']
+          print("PASS REAL CHROMIUM prefilled HTML search vs operator JSON vs agent tool schema",j['visible_count'])
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
