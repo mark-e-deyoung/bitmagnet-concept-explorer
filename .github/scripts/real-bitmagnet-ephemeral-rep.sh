@@ -109,6 +109,54 @@ if ! grep -q '5 items imported' "$OUT/import.txt" || ! grep -q 'import complete'
   exit 1
 fi
 
+# Load a *real public metadata source* instead of inventing hundreds of fake
+# book names. Project Gutenberg expressly publishes bulk machine-readable
+# catalogs for automation. This is ONE bulk download, NOT web page scraping.
+# The real Bitmagnet importer receives catalog-derived titles/authors, but each
+# infohash and size is deliberately fabricated as an isolated test identifier.
+CATALOG_URL="https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv.gz"
+CATALOG_MIRROR="https://dev.gutenberg.org/cache/epub/feeds/pg_catalog.csv.gz"
+if curl -fsSL --retry 1 --connect-timeout 12 --max-time 180 --max-filesize 15000000 \
+  "$CATALOG_URL" -o "$OUT/pg_catalog.csv.gz"; then
+  echo "PUBLIC-GUTENBERG-CATALOG: official bulk metadata acquired from $CATALOG_URL"
+else
+  echo "::warning::Official Gutenberg bulk catalog origin unavailable; trying one official dev mirror"
+  rm -f "$OUT/pg_catalog.csv.gz"
+  curl -fsSL --retry 1 --connect-timeout 12 --max-time 180 --max-filesize 15000000 \
+    "$CATALOG_MIRROR" -o "$OUT/pg_catalog.csv.gz"
+  echo "PUBLIC-GUTENBERG-CATALOG: official bulk metadata acquired from $CATALOG_MIRROR"
+fi
+
+python3 .github/scripts/sample-public-gutenberg-catalog.py \
+  --catalog "$OUT/pg_catalog.csv.gz" \
+  --output "$OUT/public-catalog-only.ndjson" \
+  --manifest "$OUT/public-catalog-manifest.json"
+CATALOG_ROWS="$(jq -r '.selected' "$OUT/public-catalog-manifest.json")"
+if [[ "$CATALOG_ROWS" -lt 180 ]]; then
+  echo "::error::Real public catalog sample failed minimum corpus-size admission"
+  exit 1
+fi
+echo "PUBLIC-GUTENBERG-CATALOG: import real metadata ($CATALOG_ROWS distinct source records), never actual torrents"
+curl --noproxy '*' -fsS --max-time 150 \
+  -H 'Content-Type: application/json' -H 'Connection: close' \
+  --data-binary @"$OUT/public-catalog-only.ndjson" \
+  http://127.0.0.1:3333/import >"$OUT/public-catalog-import.txt"
+if ! grep -qF "$CATALOG_ROWS items imported" "$OUT/public-catalog-import.txt" || ! grep -q 'import complete' "$OUT/public-catalog-import.txt"; then
+  echo "::error::Real Bitmagnet /import did not admit full genuine-catalog metadata sample"
+  cat "$OUT/public-catalog-import.txt"
+  exit 1
+fi
+echo "PUBLIC-GUTENBERG-CATALOG: real Bitmagnet importer acknowledged $CATALOG_ROWS actual catalog-derived titles"
+
+# This public draft pack is a digest-pinned RESEARCH vocabulary, not CPE-accepted
+# concepts or facts. The separate evidence JSON supplies attributed work data.
+PACK_DIR="testdata/public-cpe-packs/gutenberg-lore-v0"
+GRAPH="$PWD/$PACK_DIR/graph-preview.json"
+EVIDENCE="$PWD/$PACK_DIR/catalog-evidence.json"
+test -s "$GRAPH" && test -s "$EVIDENCE"
+GRAPH_SHA="$(sha256sum "$GRAPH" | cut -d' ' -f1)"
+echo "PUBLIC-CPE: candidate pack=$PACK_DIR sha256=$GRAPH_SHA"
+
 # Compile and start the ACTUAL Explorer service and standalone automation CLI.
 # No service ports are reachable from outside this ephemeral runner.
 export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly
@@ -117,7 +165,7 @@ go build -trimpath -o "$OUT/bce" .
 go build -trimpath -o "$OUT/bce-cli" ./cmd/bce
 BCE_AUTH_USER=public-rep BCE_AUTH_PASSWORD=synthetic-only-credential-2026 \
 BCE_BITMAGNET_GRAPHQL=http://127.0.0.1:3333/graphql \
-BCE_SEARXNG_URL= BCE_CPE_GRAPH_FILE= BCE_CPE_GRAPH_SHA256= \
+BCE_SEARXNG_URL= BCE_CPE_GRAPH_FILE="$GRAPH" BCE_CPE_GRAPH_SHA256="$GRAPH_SHA" \
   "$OUT/bce" -listen 127.0.0.1:3086 >"$OUT/bce.log" 2>&1 &
 SERVICE_PID="$!"
 
@@ -148,6 +196,24 @@ if ! grep -qi 'concept explorer' "$OUT/index.html"; then
   echo "::error::Actual Explorer browser document not served"
   exit 1
 fi
+
+# Human/API/agent interface reads this public, digest-pinned concept type pack.
+# It is *not* a normative CPE snapshot or a rights/creative-work verdict.
+curl --noproxy '*' -fsS --max-time 5 -u "$AUTH" \
+  http://127.0.0.1:3086/api/v1/concepts >"$OUT/public-cpe-concepts.json"
+jq -e '
+  .authority_status == "pinned-preview-not-normative" and
+  .snapshot_id == "public-gutenberg-lore-research-20261031-v0" and
+  (.concepts | length) == 10 and
+  (any(.concepts[]; .id == "public:literary-work")) and
+  (any(.concepts[]; .id == "public:fictional-character")) and
+  (any(.concepts[]; .id == "public:source-claim")) and
+  (any(.concepts[]; .id == "public:rights-claim")) and
+  (any(.concepts[]; .id == "public:literary-work" and
+      (any(.lexicalizations[]; .language == "de")) and
+      (any(.lexicalizations[]; .language == "th"))))
+' "$OUT/public-cpe-concepts.json" >/dev/null
+echo "PUBLIC-CPE: original public Git-backed pack with 10 types, EN/DE/TH/JA/ES lexicalizations loaded from actual digest-pinned file"
 
 # Import and classification are genuinely asynchronous. Poll the real
 # PostgreSQL-backed Bitmagnet FTS through Explorer, not a mocked response.
@@ -214,6 +280,37 @@ if [[ "$fts" != "1" ]]; then
 fi
 echo "REAL-BITMAGNET: pinned native FTS AND=$(jq -r '.results|length' "$OUT/and-result.json") quote-adjacent=$(jq -r '.results|length' "$OUT/phrase-result.json") PASS"
 
+# Real public-source research lookup: Barsoom is a source-catalog setting,
+# while "A Princess of Mars" is the actual title of Gutenberg eBook #62.
+# The expansion is explicitly source-candidate, not an accepted CPE mapping.
+# This deliberately uses Bitmagnet's actual indexed catalog-derived metadata.
+cat >"$OUT/gutenberg-research-query.json" <<'QUERY'
+{"query":"Barsoom","expansions":[{"term":"A Princess of Mars","provenance":"public-gutenberg-source-candidate:gutenberg:62"}]}
+QUERY
+ANCHOR_HASH="$(jq -r '.items[] | select(.gutenberg_ebook_id == 62) | .artificial_infohash_for_disposable_test_only' "$OUT/public-catalog-manifest.json")"
+test -n "$ANCHOR_HASH"
+found=0
+for i in $(seq 1 120); do
+  curl --noproxy '*' -sS --max-time 25 -u "$AUTH" \
+    -H 'Content-Type: application/json' --data-binary @"$OUT/gutenberg-research-query.json" \
+    http://127.0.0.1:3086/api/v1/query/execute -o "$OUT/public-cpe-real-retrieval.json" || true
+  if jq -e --arg hash "$ANCHOR_HASH" '
+    .state == "complete" and .read_only == true and
+    (.track_counts.concept // 0) >= 1 and
+    (any(.results[]; .info_hash == $hash and (.tracks | index("concept") != null)))
+  ' "$OUT/public-cpe-real-retrieval.json" >/dev/null 2>&1; then
+    found=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$found" != "1" ]]; then
+  echo "::error::Official catalog A Princess of Mars metadata did not materialize in real native Bitmagnet FTS"
+  jq '{state,track_counts,results,failures,coverage}' "$OUT/public-cpe-real-retrieval.json" || true
+  exit 1
+fi
+echo "PUBLIC-CPE: real Bitmagnet indexed official bulk eBook #62; Barsoom source-candidate expansion retrieved matching catalog anchor, authority remains research-only"
+
 # Separate CLI process uses actual authenticated HTTP service and real upstream.
 BCE_AUTH_USER=public-rep BCE_AUTH_PASSWORD=synthetic-only-credential-2026 \
   "$OUT/bce-cli" -server http://127.0.0.1:3086 -operation execute \
@@ -229,7 +326,10 @@ if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
     echo "- **Bitmagnet real GraphQL version:** $(jq -r '.data.version' "$OUT/version.json")"
     echo "- **Bitmagnet OCI pulled identity:** \`$BITMAGNET_IDENTITY\`"
     echo "- **Postgres OCI pulled identity:** \`$POSTGRES_IDENTITY\`"
-    echo "- **Seed:** three original synthetic metadata records via real upstream importer"
+    echo "- **Seed:** 5 invented negative/overlap cases + $CATALOG_ROWS real public Gutenberg catalog-derived metadata records (only artificial torrent hashes)"
+    echo "- **Public Gutenberg bulk SHA-256:** \`$(jq -r '.catalog_gzip_sha256' "$OUT/public-catalog-manifest.json")\`"
+    echo "- **Public CPE research graph SHA-256:** \`$GRAPH_SHA\` (10 types, not CPE-authorized)"
+    echo "- **Native source-candidate retrieval:** Gutenberg #62 anchor indexed and found using Barsoom research expansion"
     echo "- **BCE tracks:** direct $(jq -r '.track_counts.direct' "$OUT/execute.json"), concept $(jq -r '.track_counts.concept' "$OUT/execute.json")"
     echo "- **Boundaries:** no DHT, public internet ingress, TMDB, CPE accepted facts, images published, private corpus or site deployment"
     echo "- **Cleanup:** both containers and runner-local service removed on job exit"
