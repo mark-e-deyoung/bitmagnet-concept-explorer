@@ -7,8 +7,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"net/url"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -90,6 +92,29 @@ func validID(s string) bool {
 	}
 	return true
 }
+// v0 accepts a narrow GitHub HTTPS origin grammar, without credentials, ports,
+// escapes or query fragments. Other Git forges require a versioned extension.
+func validGitOrigin(source string) bool {
+	u, err := url.Parse(source)
+	if err != nil || u.Scheme != "https" || u.Hostname() != "github.com" || u.Host != "github.com" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Opaque != "" || u.RawPath != "" {
+		return false
+	}
+	parts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
+	if len(parts) != 2 {
+		return false
+	}
+	for _, p := range parts {
+		if len(p) == 0 || len(p) > 100 || p == "." || p == ".." || strings.Contains(p, "..") {
+			return false
+		}
+		for _, r := range p {
+			if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_' || r == '.') {
+				return false
+			}
+		}
+	}
+	return true
+}
 func sortedUnique(items []string) ([]string, error) {
 	out := append([]string{}, items...)
 	sort.Strings(out)
@@ -104,7 +129,7 @@ func normalizeConcepts(input []Concept) ([]Concept, error) {
 	out := append([]Concept{}, input...)
 	for i := range out {
 		c := &out[i]
-		if !validID(c.ID) || strings.TrimSpace(c.Definition) == "" {
+		if !validID(c.ID) || strings.TrimSpace(c.Definition) == "" || !utf8.ValidString(c.Definition) {
 			return nil, fail("invalid_concept")
 		}
 		c.Lexicalizations = append([]Lexicalization{}, c.Lexicalizations...)
@@ -116,7 +141,7 @@ func normalizeConcepts(input []Concept) ([]Concept, error) {
 			return a.Term < b.Term
 		})
 		for j, l := range c.Lexicalizations {
-			if strings.TrimSpace(l.Language) == "" || strings.TrimSpace(l.Term) == "" || (j > 0 && l == c.Lexicalizations[j-1]) {
+			if !utf8.ValidString(l.Language) || !utf8.ValidString(l.Term) || strings.TrimSpace(l.Language) == "" || strings.TrimSpace(l.Term) == "" || (j > 0 && l == c.Lexicalizations[j-1]) {
 				return nil, fail("invalid_lexicalization")
 			}
 		}
@@ -228,7 +253,10 @@ func Build(packages []Package, lock Lock, roots []string, public bool) (Projecti
 		if public && (p.Visibility != "public" || l.Visibility != "public") {
 			return fail("private_dependency_in_public_closure")
 		}
-		if p.Visibility != l.Visibility || p.Repository != l.Repository || p.CommitSHA != l.CommitSHA || p.ContentSHA256 != l.ContentSHA256 || !isHex(p.CommitSHA, 40) || !isHex(p.ContentSHA256, 64) || strings.TrimSpace(p.Repository) == "" {
+		if !validGitOrigin(p.Repository) {
+			return fail("invalid_git_origin")
+		}
+		if p.Visibility != l.Visibility || p.Repository != l.Repository || p.CommitSHA != l.CommitSHA || p.ContentSHA256 != l.ContentSHA256 || !isHex(p.CommitSHA, 40) || !isHex(p.ContentSHA256, 64) {
 			return fail("lock_mismatch")
 		}
 		pd, err := sortedUnique(p.Dependencies)
