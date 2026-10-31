@@ -42,8 +42,8 @@ type NativeFacetBucket struct {
 type upstreamNativeFacetBucket struct {
 	Value      json.RawMessage `json:"value"`
 	Label      string          `json:"label"`
-	Count      int             `json:"count"`
-	IsEstimate bool            `json:"isEstimate"`
+	Count      *int            `json:"count"`
+	IsEstimate *bool           `json:"isEstimate"`
 }
 type NativeFacetSummary struct {
 	Source               string                         `json:"source"`
@@ -175,14 +175,14 @@ func fetchNativeFacets(ctx context.Context, r FacetSearchRequest) (NativeFacetSu
 			return NativeFacetSummary{}, errors.New("native aggregation group exceeds output budget")
 		}
 		for _, v := range arr {
-			if v.Count < 0 || len(v.Label) > 256 {
+			if v.Count == nil || v.IsEstimate == nil || *v.Count < 0 || len(v.Label) > 256 {
 				return NativeFacetSummary{}, errors.New("invalid native aggregation bucket")
 			}
 		}
 		ret[name] = make([]NativeFacetBucket, 0, len(arr))
 		for _, v := range arr {
 			ret[name] = append(ret[name], NativeFacetBucket{
-				Value: v.Value, Label: v.Label, Count: v.Count, IsEstimate: v.IsEstimate,
+				Value: v.Value, Label: v.Label, Count: *v.Count, IsEstimate: *v.IsEstimate,
 			})
 		}
 	}

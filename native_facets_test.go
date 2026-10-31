@@ -125,3 +125,37 @@ func TestNativeFacetRequiresPresentNonnegativeTotalsButAcceptsExplicitZero(t *te
 		})
 	}
 }
+
+func TestNativeFacetBucketsRequirePresentNonnegativeCountsAndEstimateFlags(t *testing.T) {
+	cases := []struct {
+		name    string
+		bucket  string
+		wantErr bool
+	}{
+		{name: "missing-count", bucket: `{"value":"en","label":"English","isEstimate":false}`, wantErr: true},
+		{name: "null-count", bucket: `{"value":"en","label":"English","count":null,"isEstimate":false}`, wantErr: true},
+		{name: "missing-estimate", bucket: `{"value":"en","label":"English","count":0}`, wantErr: true},
+		{name: "null-estimate", bucket: `{"value":"en","label":"English","count":0,"isEstimate":null}`, wantErr: true},
+		{name: "negative-count", bucket: `{"value":"en","label":"English","count":-1,"isEstimate":false}`, wantErr: true},
+		{name: "explicit-zero", bucket: `{"value":"en","label":"English","count":0,"isEstimate":false}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = w.Write([]byte(`{"data":{"torrentContent":{"search":{"totalCount":0,"totalCountIsEstimate":false,"aggregations":{"language":[` + tc.bucket + `]}}}}}`))
+			}))
+			defer server.Close()
+			t.Setenv("BCE_BITMAGNET_GRAPHQL", server.URL+"/graphql")
+			got, err := fetchNativeFacets(context.Background(), FacetSearchRequest{Query: "synthetic", Groups: []string{"language"}})
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("incomplete bucket accepted as zero: %#v", got)
+				}
+				return
+			}
+			if err != nil || got.Groups["language"][0].Count != 0 || got.Groups["language"][0].IsEstimate {
+				t.Fatalf("explicit zero bucket result=%#v err=%v", got, err)
+			}
+		})
+	}
+}
