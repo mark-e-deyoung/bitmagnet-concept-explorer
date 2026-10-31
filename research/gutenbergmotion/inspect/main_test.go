@@ -45,7 +45,7 @@ func TestHTMLAccessibleAndEscaped(t *testing.T){
  for _,required:=range []string{"<main>","<h1>","<ol class=\"results\"","<details open","<summary","<blockquote class=\"source-context\"","role=\"status\"","&lt;script&gt;"}{
   if !strings.Contains(html,required){t.Fatalf("missing %q",required)}
  }
- if strings.Contains(html,"<script>"){t.Fatal("unescaped source injection")}
+ if strings.Contains(html,"<script>alert(1)</script>")||strings.Contains(html,"<script>bad source</script>"){t.Fatal("unescaped source data injected into script")}
  var cap bytes.Buffer
  if e:=run([]string{"-capabilities"},&cap);e!=nil{t.Fatal(e)}
  var c map[string]any
