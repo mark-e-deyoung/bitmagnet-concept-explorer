@@ -15,7 +15,7 @@ func TestTrueNASPublicCandidateLoopbackDefault(t *testing.T) {
 	}
 	source := string(raw)
 	// Exposed port must not silently bind all NAS interfaces by default.
-	if !strings.Contains(source, "host_ips\n                schema:\n                  type: list\n                  default:\n                    - 127.0.0.1") {
+	if !strings.Contains(source, "host_ips\n                label: Host IPs\n                schema:\n                  type: list\n                  default:\n                    - 127.0.0.1") {
 		t.Fatal("TrueNAS source must default web port to explicit loopback IP")
 	}
 	if !strings.Contains(source, "TLS-terminating reverse proxy") {
