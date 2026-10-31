@@ -50,7 +50,7 @@ jobs:
           assert j['status']=='UNVALIDATED_SOURCE_TEXT_CANDIDATES'
           assert 'DISCOVERABLE_READ_ONLY_CAPABILITIES'==agent['agent']
           assert '<main>' in page and '<ol class="results"' in page and '<h1>' in page and '<blockquote' in page
-          assert 'UNVALIDATED_SOURCE_TEXT_CANDIDATES' in page
+          assert 'Scientific state:' in page and 'unvalidated source-text candidates' in page
           assert len(j['views'])==64
           assert j['views'][0]['context_start_line']<j['views'][0]['line']
           assert j['views'][0]['context_end_line']>=j['views'][0]['line']
