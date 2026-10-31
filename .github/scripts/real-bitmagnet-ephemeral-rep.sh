@@ -11,8 +11,8 @@ SERVICE_PID=""
 NETWORK="bce-real-rep"
 DB="bce-real-postgres"
 BITMAGNET="bce-real-bitmagnet"
-POSTGRES_IMAGE="postgres:16-alpine"
-BITMAGNET_IMAGE="ghcr.io/bitmagnet-io/bitmagnet:v0.10.0"
+POSTGRES_IMAGE="postgres@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab"
+BITMAGNET_IMAGE="ghcr.io/bitmagnet-io/bitmagnet@sha256:cf2c16fac5b51f1c18e630b4710175d35d7e44b83012cfd05a2b43712feec05e"
 export NO_PROXY="127.0.0.1,localhost"
 export no_proxy="$NO_PROXY"
 
@@ -93,14 +93,18 @@ if [[ "$ready" != "1" ]]; then
   exit 1
 fi
 echo "REAL-BITMAGNET: GraphQL version=$(jq -r '.data.version' "$OUT/version.json")"
+if [[ "$(jq -r '.data.version' "$OUT/version.json")" != "v0.10.0" ]]; then
+  echo "::error::Immutable Bitmagnet image does not report pinned source version v0.10.0"
+  exit 1
+fi
 
-echo "REAL-BITMAGNET: importing 3 ORIGINAL PUBLIC SYNTHETIC metadata records using upstream /import"
+echo "REAL-BITMAGNET: importing 5 ORIGINAL PUBLIC SYNTHETIC metadata records using upstream /import"
 curl --noproxy '*' -fsS --max-time 90 \
   -H 'Content-Type: application/json' -H 'Connection: close' \
   --data-binary @fixtures/public-bitmagnet-rep.ndjson \
   http://127.0.0.1:3333/import >"$OUT/import.txt"
 cat "$OUT/import.txt"
-if ! grep -q '3 items imported' "$OUT/import.txt" || ! grep -q 'import complete' "$OUT/import.txt"; then
+if ! grep -q '5 items imported' "$OUT/import.txt" || ! grep -q 'import complete' "$OUT/import.txt"; then
   echo "::error::Real Bitmagnet importer did not acknowledge all public test metadata"
   exit 1
 fi
@@ -173,6 +177,42 @@ if [[ "$found" != "1" ]]; then
   exit 1
 fi
 echo "REAL-BITMAGNET: direct=$(jq -r '.track_counts.direct' "$OUT/execute.json") concept=$(jq -r '.track_counts.concept' "$OUT/execute.json") merged=$(jq -r '.results|length' "$OUT/execute.json")"
+
+
+# Qualify the ACTUAL pinned upstream native FTS parser. Unquoted
+# "science fiction" is a conjunction, not phrase adjacency. A real imported
+# record with an intervening word must match AND, but not the quoted phrase.
+# This does not accept any CPE lexical or concept policy.
+cat >"$OUT/and.json" <<'QUERY'
+{"query":"science fiction"}
+QUERY
+cat >"$OUT/phrase.json" <<'QUERY'
+{"query":"\"science fiction\""}
+QUERY
+fts=0
+for i in $(seq 1 30); do
+  curl --noproxy '*' -sS --max-time 25 -u "$AUTH" \
+    -H 'Content-Type: application/json' --data-binary @"$OUT/and.json" \
+    http://127.0.0.1:3086/api/v1/query/execute -o "$OUT/and-result.json" || true
+  curl --noproxy '*' -sS --max-time 25 -u "$AUTH" \
+    -H 'Content-Type: application/json' --data-binary @"$OUT/phrase.json" \
+    http://127.0.0.1:3086/api/v1/query/execute -o "$OUT/phrase-result.json" || true
+  if jq -e '.state == "complete" and .read_only == true and (.track_counts.direct // 0) >= 2 and (.results | length) >= 2' "$OUT/and-result.json" >/dev/null 2>&1 \
+    && jq -e '.state == "complete" and .read_only == true and (.track_counts.direct // 0) == 1 and (.results | length) == 1 and .results[0].info_hash == "4444444444444444444444444444444444444444"' "$OUT/phrase-result.json" >/dev/null 2>&1; then
+    fts=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$fts" != "1" ]]; then
+  echo "::error::Actual Bitmagnet v0.10.0 multiword AND vs phrase adjacency distinction not verified"
+  echo "Last AND search:"
+  jq '{state,track_counts,results,failures}' "$OUT/and-result.json" || true
+  echo "Last quoted phrase search:"
+  jq '{state,track_counts,results,failures}' "$OUT/phrase-result.json" || true
+  exit 1
+fi
+echo "REAL-BITMAGNET: pinned native FTS AND=$(jq -r '.results|length' "$OUT/and-result.json") quote-adjacent=$(jq -r '.results|length' "$OUT/phrase-result.json") PASS"
 
 # Separate CLI process uses actual authenticated HTTP service and real upstream.
 BCE_AUTH_USER=public-rep BCE_AUTH_PASSWORD=synthetic-only-credential-2026 \
