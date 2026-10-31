@@ -48,7 +48,9 @@ jobs:
             exit 1
           fi
       - name: Embedded browser state regression
-        run: node web/query_state.test.mjs
+        run: |
+          node web/query_state.test.mjs
+          node web/research_evidence_ui.test.mjs
 
   race:
     runs-on: ubuntu-24.04
