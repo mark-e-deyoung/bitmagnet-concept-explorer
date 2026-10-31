@@ -54,8 +54,8 @@ test('theme, reduced motion and multilingual script content retain semantic pari
  const light=await page.locator('#concept-graph .graph-node-shape').first().evaluate(el=>getComputedStyle(el).fill);
  expect(dark).not.toBe(light);
  const selected=page.locator('#concept-list button').first();
- selected.click();
- await expect(page.locator('#terms')).toContainText('');
+ await selected.click(); // WebKit must finish scroll/click before the test advances
+ await expect(selected).toHaveAttribute('aria-pressed','true');
  await expect(page.locator('#terms')).toHaveValue(/kreatives Werk/);
  await expect(page.locator('#terms')).toHaveValue(/งานสร้างสรรค์/);
  await expect(page.getByRole('textbox',{name:'Search phrase',exact:true})).toHaveValue('Creative work');
