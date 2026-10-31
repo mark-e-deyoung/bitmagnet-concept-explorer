@@ -25,7 +25,7 @@ func main() {
 	service := flag.String("server", "http://127.0.0.1:3086", "Concept Explorer origin")
 	query := flag.String("query", "", "Literal query for plan/execute")
 	expansions := flag.String("expand", "", "Comma-separated exploratory terms")
-	operation := flag.String("operation", "capabilities", "capabilities, limits, concepts, concept, plan, execute, facets, observed-graph, cpe-preflight, infer, sweep-plan, sweep or discovery-preview")
+	operation := flag.String("operation", "capabilities", "capabilities, limits, concepts, concept, plan, execute, facets, observed-graph, cpe-preflight, infer, sweep-plan, sweep, discovery-preview or research-evidence")
 	languages := flag.String("languages", "", "Comma-separated observed language IDs")
 	media := flag.String("media", "", "Native Bitmagnet media type")
 	minSeeders := flag.Int("min-seeders", -1, "Minimum observed seeders (-1 unset)")
@@ -35,6 +35,7 @@ func main() {
 	groupBy := flag.String("group", "none", "none, media_type, language, adult_metadata or track")
 	useWeb := flag.Bool("web", false, "Explicitly send literal query to configured SearXNG")
 	conceptID := flag.String("concept-id", "", "Exact concept ID for inspect operation")
+	researchSection := flag.String("research-section", "", "Optional public research evidence section: works, entities, claims, art_candidates, source_inventory")
 	selectedConcepts := flag.String("concept-ids", "", "Comma-separated exact IDs from pinned provisional graph, opt-in")
 	facetGroups := flag.String("facet-groups", "contentType,language,genre", "Comma-separated native groups for -operation facets (1-4)")
 	inputJSON := flag.String("input", "-", "JSON input file or - for stdin for observed-graph, cpe-preflight, infer, sweep-plan, sweep and discovery-preview")
@@ -92,6 +93,15 @@ func main() {
 		if err == nil {
 			req.Header.Set("Content-Type", "application/json")
 		}
+	case "research-evidence":
+		path := serviceOrigin + "/api/v1/research-evidence"
+		if *researchSection != "" || *query != "" {
+			values := url.Values{}
+			if *researchSection != "" { values.Set("section", *researchSection) }
+			if *query != "" { values.Set("q", *query) }
+			path += "?" + values.Encode()
+		}
+		req, err = http.NewRequest("GET", path, nil)
 	case "facets":
 		if strings.TrimSpace(*query) == "" {
 			fmt.Fprintln(os.Stderr, "-query required for facets")
