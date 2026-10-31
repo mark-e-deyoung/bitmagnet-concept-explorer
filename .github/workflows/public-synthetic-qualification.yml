@@ -48,6 +48,8 @@ jobs:
           fi
       - name: Embedded browser state regression
         run: node web/query_state.test.mjs
+      - name: Evidence workbench semantic and design-system contract
+        run: node web/ux_contract.test.mjs
 
   race:
     runs-on: ubuntu-24.04
@@ -87,3 +89,29 @@ jobs:
           go build -trimpath -o /tmp/bce-service .
           go build -trimpath -o /tmp/bce-client ./cmd/bce
           file /tmp/bce-service /tmp/bce-client
+
+  browser-ux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install reviewed browser test dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install Chromium for real interaction and axe tests
+        run: npx playwright install --with-deps chromium
+      - name: Run two-viewport browser journeys, theme, axe and screenshot QA
+        env:
+          CI: "1"
+        run: npm run ux:test
+      - name: Retain browser screenshot/traces and test HTML evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: evidence-workbench-browser-qa-${{ github.run_id }}
+          path: |
+            build/playwright-report
+            build/playwright-results
+          if-no-files-found: ignore
+          retention-days: 14
