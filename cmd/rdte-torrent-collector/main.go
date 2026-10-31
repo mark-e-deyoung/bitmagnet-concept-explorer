@@ -350,6 +350,14 @@ func collectFedora(out string, entries *[]map[string]any, events *[]string) {
 		*events = append(*events, "fedora publisher HTTPS source rejected: "+err.Error())
 		return
 	}
+	// Independent byte-for-byte verification of the original first-source
+	// 2026-10-31 public GHA artifact + owner-only private Drive readback.
+	const originalSHA256 = "14d96ec3a1d56cef3eb2b64a5c7505459bbb6c0e6d88442e88c8d05dfb02bc79"
+	const originalInfoHash = "439e24b06daf7255eeeedbc9cddab490fa8caefd"
+	if err := verifyPinnedMetainfo(raw, originalSHA256, originalInfoHash); err != nil {
+		*events = append(*events, "fedora exact-source immutable identity rejected: "+err.Error())
+		return
+	}
 	_, name, _, err := decodeMetainfo(raw)
 	if err != nil {
 		*events = append(*events, "fedora publisher original metainfo rejected: "+err.Error())
