@@ -384,7 +384,7 @@ if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
     echo "- **Public Gutenberg bulk SHA-256:** \`$(jq -r '.catalog_gzip_sha256' "$OUT/public-catalog-manifest.json")\`"
     echo "- **Public CPE research graph SHA-256:** \`$GRAPH_SHA\` (10 types, not CPE-authorized)"
     echo "- **Native source-candidate retrieval:** Gutenberg #62 anchor indexed and found using Barsoom research expansion"
-    echo "- **Actual publisher `.torrent` files:** $REAL_TORRENT_ROWS retained by SHA-256 in Actions evidence; original exact v1 infohash verified through Bitmagnet FTS"
+    echo "- **Actual publisher .torrent files:** $REAL_TORRENT_ROWS retained by SHA-256 in Actions evidence; original exact v1 infohash verified through Bitmagnet FTS"
     echo "- **Torrent payload / P2P:** none; meta files only, no DHT, tracker, webseed or peer connections"
     echo "- **BCE tracks:** direct $(jq -r '.track_counts.direct' "$OUT/execute.json"), concept $(jq -r '.track_counts.concept' "$OUT/execute.json")"
     echo "- **Boundaries:** no DHT, public internet ingress, TMDB, CPE accepted facts, images published, private corpus or site deployment"
