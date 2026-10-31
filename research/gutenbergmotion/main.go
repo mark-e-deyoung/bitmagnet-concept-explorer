@@ -18,6 +18,7 @@ import (
 const sourceID = "pg:12926"
 const gitCommit = "1d5ca33372491509805a64cd0425a5164d3108fa"
 const gitBlob = "08984be691ebd69f92a7a271217612f0056cea37"
+const sourceSHA256 = "7294644f1fc26490f8a0aed415afc01b8278294e4373169e1407986c56cb0961"
 const maxSourceBytes = 2 << 20
 
 type Candidate struct {
@@ -83,6 +84,7 @@ func run(args []string,out io.Writer)error{
   if *input==""{return errors.New("-input required")}
   b,err:=os.ReadFile(*input);if err!=nil{return err}
   r,err:=Mine(b,*limit);if err!=nil{return err}
+  if r.SourceSHA256!=sourceSHA256{return fmt.Errorf("source bytes do not match pinned original: got %s",r.SourceSHA256)}
   enc:=json.NewEncoder(out);enc.SetIndent("","  ");return enc.Encode(r)
 }
 func main(){if err:=run(os.Args[1:],os.Stdout);err!=nil{fmt.Fprintln(os.Stderr,err);os.Exit(1)}}
