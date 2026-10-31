@@ -1,0 +1,46 @@
+name: CPE immutable package lock source qualification (public synthetic only)
+on:
+  pull_request:
+    paths:
+      - 'internal/cpepack/**'
+      - 'cmd/cpepack/**'
+      - 'docs/reps/2026-10-31-cpe-federation-source-rep.md'
+      - '.github/workflows/cpe-lock-source-qualification.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-lock-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Verify zero external Go dependencies
+        run: |
+          test ! -f go.sum
+          GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off go list -m all
+      - name: Unit, adversarial, race and vet
+        env:
+          GOTOOLCHAIN: local
+          GOPROXY: "off"
+          GOSUMDB: "off"
+        run: |
+          set -euo pipefail
+          go test -count=2 ./internal/cpepack ./cmd/cpepack
+          go test -race ./internal/cpepack ./cmd/cpepack
+          go vet ./internal/cpepack ./cmd/cpepack
+          test -z "$(gofmt -l internal/cpepack/pack.go internal/cpepack/pack_test.go cmd/cpepack/main.go)"
+      - name: Source-only portable crossbuild
+        env:
+          GOTOOLCHAIN: local
+          GOPROXY: "off"
+          GOSUMDB: "off"
+        run: |
+          set -euo pipefail
+          GOOS=linux GOARCH=amd64 go build -o /tmp/cpepack-amd64 ./cmd/cpepack
+          GOOS=linux GOARCH=arm64 go build -o /tmp/cpepack-arm64 ./cmd/cpepack
+          test -s /tmp/cpepack-amd64
+          test -s /tmp/cpepack-arm64
