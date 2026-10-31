@@ -1,0 +1,155 @@
+name: Public Gutenberg read-only three-audience inspection C7
+on:
+  pull_request:
+    paths:
+      - 'research/gutenbergmotion/inspect/**'
+      - '.github/workflows/gutenberg-inspect-c7.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: CLI read-only views, original source holds and XSS hostiles
+        run: |
+          go test -count=2 ./research/gutenbergmotion/inspect ./research/gutenbergmotion
+          go test -race ./research/gutenbergmotion/inspect
+          go vet ./research/gutenbergmotion/inspect
+      - name: Native original source-backed multi-audience inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p inspect-evidence
+          git init -q "$RUNNER_TEMP/morris"
+          cd "$RUNNER_TEMP/morris"
+          git remote add origin https://github.com/GITenberg/The-Morris-Book-Part-1--13-A-History-of-Morris-Dancing-With-a-Description-of-Eleven-Dances-as__12926.git
+          git fetch --depth 1 origin 1d5ca33372491509805a64cd0425a5164d3108fa
+          git checkout -q --detach FETCH_HEAD
+          test "$(git hash-object 12926.txt)" = 08984be691ebd69f92a7a271217612f0056cea37
+          test "$(sha256sum 12926.txt | cut -d' ' -f1)" = 7294644f1fc26490f8a0aed415afc01b8278294e4373169e1407986c56cb0961
+          cd "$GITHUB_WORKSPACE"
+          go run ./research/gutenbergmotion -input "$RUNNER_TEMP/morris/12926.txt" > inspect-evidence/candidates.json
+          go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/candidates.json -format=json > inspect-evidence/automation.json
+          go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/candidates.json -format=html > inspect-evidence/human.html
+          go run ./research/gutenbergmotion/inspect -capabilities > inspect-evidence/agent-capabilities.json
+          go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/candidates.json -format=json -query="right shoulder" > inspect-evidence/filtered-automation.json
+          go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/candidates.json -format=html -query="right shoulder" > inspect-evidence/filtered-human.html
+          python3 - <<'PY'
+          import json,html.parser
+          j=json.load(open("inspect-evidence/automation.json"))
+          agent=json.load(open("inspect-evidence/agent-capabilities.json"))
+          page=open("inspect-evidence/human.html").read()
+          assert j['candidate_count']==len(j['candidates'])==64
+          assert not j['claims_choreography_acceptance'] and not j['claims_physical_motion']
+          assert j['status']=='UNVALIDATED_SOURCE_TEXT_CANDIDATES'
+          assert 'DISCOVERABLE_READ_ONLY_CAPABILITIES'==agent['agent']
+          assert '<main>' in page and '<ol class="results"' in page and '<h1>' in page and '<blockquote' in page
+          assert 'Scientific state:' in page and 'unvalidated source-text candidates' in page
+          assert len(j['views'])==64
+          filt=json.load(open("inspect-evidence/filtered-automation.json"))
+          assert filt['candidate_count']==64
+          assert 0<filt['visible_count']<64
+          assert filt['visible_count']==len(filt['candidates'])==len(filt['views'])
+          assert filt['source_sha256']==j['source_sha256']
+          assert filt['query']=='right shoulder'
+          assert all('right shoulder' in v['search_text'] for v in filt['views'])
+          assert [v['match_origin'] for v in filt['views']]==['ORIGINAL_SOURCE_LINE','ADJACENT_SOURCE_CONTEXT']
+          assert j['views'][0]['context_start_line']<j['views'][0]['line']
+          assert j['views'][0]['context_end_line']>=j['views'][0]['line']
+          assert 'When the side is to advance and retire' in j['views'][0]['context']
+          assert all(v['context_status']=='ADJACENT_SOURCE_LINES_NOT_VERIFIED_FIGURE' for v in j['views'])
+          class Cards(html.parser.HTMLParser):
+              def __init__(self): super().__init__();self.n=0;self.details=0
+              def handle_starttag(self,tag,attrs):
+                  if tag=='li' and ('class','candidate') in attrs:self.n+=1
+                  if tag=='details':self.details+=1
+          p=Cards();p.feed(page);assert p.n==p.details==64
+          print("PASS 64 responsive source context cards, automation records, agent discovery")
+          PY
+          cp "$RUNNER_TEMP/morris/12926.txt" "$RUNNER_TEMP/swapped.txt"
+          printf 'tamper' >> "$RUNNER_TEMP/swapped.txt"
+          if go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/swapped.txt" -report inspect-evidence/candidates.json -format=json > inspect-evidence/rejected.json; then
+            echo 'swapped source accepted' >&2; exit 1
+          fi
+          test ! -s inspect-evidence/rejected.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('inspect-evidence/candidates.json'))
+          d['candidates'][0]['id']='pg12926-motion-forged-id'
+          with open('inspect-evidence/forged.json','w') as f:json.dump(d,f)
+          PY
+          if go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/forged.json -format=json > inspect-evidence/forged-rejected.json; then
+            echo 'forged candidate ID accepted' >&2; exit 1
+          fi
+          test ! -s inspect-evidence/forged-rejected.json
+      - name: Actual headless desktop/mobile Chromium screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          browser="$(command -v google-chrome || command -v chromium || true)"
+          if test -z "$browser"; then
+            echo 'BROWSER_NOT_INSTALLED: cannot claim actual native browser QA' >&2
+            exit 1
+          fi
+          "$browser" --version | tee inspect-evidence/browser-version.txt
+          for layout in desktop mobile; do
+            if test "$layout" = desktop; then dims=1280,900; else dims=390,844; fi
+            timeout 40 "$browser" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size="$dims" \
+              --screenshot="$PWD/inspect-evidence/$layout.png" "file://$PWD/inspect-evidence/human.html" >/dev/null 2>&1
+            test -s "inspect-evidence/$layout.png"
+            file "inspect-evidence/$layout.png"
+          done
+          timeout 40 "$browser" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=1500 \
+            --dump-dom "file://$PWD/inspect-evidence/filtered-human.html" > inspect-evidence/filtered-browser-dom.html 2> inspect-evidence/filter-browser.stderr
+          python3 - <<'PY'
+          import json,html.parser,re
+          j=json.load(open("inspect-evidence/filtered-automation.json"))
+          markup=open("inspect-evidence/filtered-browser-dom.html").read()
+          class Cards(html.parser.HTMLParser):
+              def __init__(self):super().__init__();self.n=0;self.hidden=0
+              def handle_starttag(self,tag,attrs):
+                  x=dict(attrs)
+                  if tag=='li' and 'candidate' in x.get('class',''):
+                      self.n+=1
+                      if 'hidden' in x:self.hidden+=1
+          cards=Cards();cards.feed(markup)
+          assert cards.n==64,(cards.n,len(markup))
+          assert cards.n-cards.hidden==j['visible_count'],(cards.hidden,j['visible_count'])
+          match=re.search(r'<output id="visible-count">([0-9]+)</output>',markup)
+          assert match and int(match.group(1))==j['visible_count']
+          print("PASS REAL CHROMIUM prefilled HTML search vs operator JSON vs agent tool schema",j['visible_count'])
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Real desktop/mobile typed source search and pointer recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          browser="$(command -v google-chrome || command -v chromium || true)"
+          test -n "$browser"
+          node --version
+          node research/gutenbergmotion/inspect/browser_cdpsmoke.mjs \
+            inspect-evidence/human.html inspect-evidence/filtered-automation.json "$browser" \
+            | tee inspect-evidence/real-interaction.txt
+          grep -q 'PASS original source Chromium CDP 1280x900' inspect-evidence/real-interaction.txt
+          grep -q 'PASS original source Chromium CDP 390x844' inspect-evidence/real-interaction.txt
+          for shot in typed-filter-desktop typed-filter-mobile clear-restored-desktop clear-restored-mobile; do
+            test -s "inspect-evidence/$shot.png"
+            file "inspect-evidence/$shot.png"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: read-only-audience-inspection-c7
+          path: inspect-evidence/
+          if-no-files-found: warn
+          retention-days: 7
