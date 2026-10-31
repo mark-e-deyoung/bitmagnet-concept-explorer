@@ -64,12 +64,13 @@ func TestSharedSearchSurfaceAndRefusal(t *testing.T){
  original:=Inspection{Schema:"scp.choreography-inspection-readmodel.v0",Count:3,VisibleCount:3,
  Candidates:[]Candidate{{ID:"first"},{ID:"second"},{ID:"third"}},
  Views:[]EvidenceView{
-  {Index:0,CandidateID:"first",SearchText:"cross over right shoulder"},
-  {Index:1,CandidateID:"second",SearchText:"step backward toward front"},
-  {Index:2,CandidateID:"third",SearchText:"right shoulder on bar 4"},
+  {Index:0,CandidateID:"first",Evidence:"cross over right shoulder",Context:"cross over right shoulder",SearchText:"cross over right shoulder"},
+  {Index:1,CandidateID:"second",Evidence:"step backward toward front",Context:"same",SearchText:"step backward toward front"},
+  {Index:2,CandidateID:"third",Evidence:"left shoulder",Context:"right shoulder on bar 4",SearchText:"right shoulder on bar 4"},
  }}
  filtered,e:=filterInspection(original," RiGhT ShOuLdEr ")
  if e!=nil{t.Fatal(e)}
+ if filtered.Views[0].MatchOrigin!="ORIGINAL_SOURCE_LINE"||filtered.Views[1].MatchOrigin!="ADJACENT_SOURCE_CONTEXT"{t.Fatalf("match origin misleading %+v",filtered.Views)}
  if filtered.Count!=3||filtered.VisibleCount!=2||len(filtered.Views)!=2||len(filtered.Candidates)!=2||
  filtered.Candidates[0].ID!="first"||filtered.Candidates[1].ID!="third"{t.Fatalf("source filter mismatch %+v",filtered)}
  empty,e:=filterInspection(original,"not a source phrase");if e!=nil{t.Fatal(e)}
