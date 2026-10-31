@@ -49,14 +49,20 @@ jobs:
           assert not j['claims_choreography_acceptance'] and not j['claims_physical_motion']
           assert j['status']=='UNVALIDATED_SOURCE_TEXT_CANDIDATES'
           assert 'DISCOVERABLE_READ_ONLY_CAPABILITIES'==agent['agent']
-          assert '<main>' in page and '<caption>' in page and '<h1>' in page
+          assert '<main>' in page and '<ol class="results"' in page and '<h1>' in page and '<blockquote' in page
           assert 'UNVALIDATED_SOURCE_TEXT_CANDIDATES' in page
-          class Rows(html.parser.HTMLParser):
-              def __init__(self): super().__init__();self.n=0
+          assert len(j['views'])==64
+          assert j['views'][0]['context_start_line']<j['views'][0]['line']
+          assert j['views'][0]['context_end_line']>=j['views'][0]['line']
+          assert 'When the side is to advance and retire' in j['views'][0]['context']
+          assert all(v['context_status']=='ADJACENT_SOURCE_LINES_NOT_VERIFIED_FIGURE' for v in j['views'])
+          class Cards(html.parser.HTMLParser):
+              def __init__(self): super().__init__();self.n=0;self.details=0
               def handle_starttag(self,tag,attrs):
-                  if tag=='tr':self.n+=1
-          p=Rows();p.feed(page);assert p.n==65
-          print("PASS original source 64 human table rows, automation records, typed agent discovery")
+                  if tag=='li' and ('class','candidate') in attrs:self.n+=1
+                  if tag=='details':self.details+=1
+          p=Cards();p.feed(page);assert p.n==p.details==64
+          print("PASS 64 responsive source context cards, automation records, agent discovery")
           PY
           cp "$RUNNER_TEMP/morris/12926.txt" "$RUNNER_TEMP/swapped.txt"
           printf 'tamper' >> "$RUNNER_TEMP/swapped.txt"
@@ -64,6 +70,33 @@ jobs:
             echo 'swapped source accepted' >&2; exit 1
           fi
           test ! -s inspect-evidence/rejected.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('inspect-evidence/candidates.json'))
+          d['candidates'][0]['id']='pg12926-motion-forged-id'
+          with open('inspect-evidence/forged.json','w') as f:json.dump(d,f)
+          PY
+          if go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/forged.json -format=json > inspect-evidence/forged-rejected.json; then
+            echo 'forged candidate ID accepted' >&2; exit 1
+          fi
+          test ! -s inspect-evidence/forged-rejected.json
+      - name: Actual headless desktop/mobile Chromium screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          browser="$(command -v google-chrome || command -v chromium || true)"
+          if test -z "$browser"; then
+            echo 'BROWSER_NOT_INSTALLED: cannot claim actual native browser QA' >&2
+            exit 1
+          fi
+          "$browser" --version | tee inspect-evidence/browser-version.txt
+          for layout in desktop mobile; do
+            if test "$layout" = desktop; then dims=1280,900; else dims=390,844; fi
+            timeout 40 "$browser" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size="$dims" \
+              --screenshot="$PWD/inspect-evidence/$layout.png" "file://$PWD/inspect-evidence/human.html" >/dev/null 2>&1
+            test -s "inspect-evidence/$layout.png"
+            file "inspect-evidence/$layout.png"
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
