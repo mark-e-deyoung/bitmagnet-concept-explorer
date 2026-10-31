@@ -38,6 +38,7 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           go run ./research/gutenbergmotion -input "$RUNNER_TEMP/morris/12926.txt" > context-evidence/candidates.json
           go run ./research/gutenbergmotion/context -source "$RUNNER_TEMP/morris/12926.txt" -candidates context-evidence/candidates.json > context-evidence/windows.json
+          go run ./research/gutenbergmotion/context -cross-over-first-pass -source "$RUNNER_TEMP/morris/12926.txt" > context-evidence/cross-over-first-pass.json
           python3 - <<'PY'
           import json
           c=json.load(open("context-evidence/windows.json"))
@@ -48,6 +49,15 @@ jobs:
           assert all(g["status"]=="COLOCATED_LEXICAL_WINDOWS_NOT_A_VERIFIED_FIGURE" for g in c["review_groups"])
           assert not c["complete_figure_claim"] and not c["motion_measurement_claim"]
           assert all(w["status"]=="UNREVIEWED_CONTEXT_WINDOW_NOT_VALIDATED_FIGURE" for w in c["windows"])
+          gold=json.load(open("context-evidence/cross-over-first-pass.json"))
+          assert gold["name"]=="Cross-over" and gold["written_bars"]==8
+          assert gold["figure_start_line"]==1433 and gold["figure_end_line"]==1467
+          assert len(gold["phrases"])==7 and gold["independent_review"]=="PENDING_SECOND_READER"
+          assert gold["diagrams_status"]=="ILLUSTRATIONS_NOT_DIGITALLY_QUALIFIED"
+          assert gold["music_score_status"]=="NO_NOTATED_SCORE_BYTES_ADMITTED"
+          assert gold["physical_motion"]=="UNKNOWN_NOT_MEASURED"
+          assert gold["source_sha256"]==r["source_sha256"]
+          print("PASS pinned historical 8bar Cross-over first pass, second-reader hold")
           print("PASS original_source_grounded_windows",c["candidate_count"])
           PY
       - uses: actions/upload-artifact@v4
