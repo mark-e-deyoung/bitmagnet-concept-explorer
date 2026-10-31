@@ -34,11 +34,15 @@ func TestSourceHostiles(t *testing.T){
  if _,e:=anchored(b,r);e==nil{t.Fatal("wrong source link accepted")}
 }
 func TestHTMLAccessibleAndEscaped(t *testing.T){
- v:=Inspection{Schema:"scp.choreography-inspection-readmodel.v0",SourceID:"pg:12926",Status:"UNVALIDATED_SOURCE_TEXT_CANDIDATES",Candidates:[]Candidate{{Line:12,Evidence:"<script>alert(1)</script>",Measurement:"UNMEASURED_TEXT_INSTRUCTION"}}}
+ v:=Inspection{Schema:"scp.choreography-inspection-readmodel.v0",SourceID:"pg:12926",Status:"UNVALIDATED_SOURCE_TEXT_CANDIDATES",Count:1,
+ Views:[]EvidenceView{{Index:0,Line:12,Evidence:"<script>alert(1)</script>",ContextStart:11,ContextEnd:13,
+ Context:"prior dance paragraph\n<script>bad source</script>\nnext line",
+ CandidateID:"source-test",RoleInterpretation:"ACTOR_OR_DIRECTION_AMBIGUOUS_NOT_RESOLVED",
+ ContextStatus:"ADJACENT_SOURCE_LINES_NOT_VERIFIED_FIGURE"}}}
  var w bytes.Buffer
  if e:=renderHTML(&w,v);e!=nil{t.Fatal(e)}
  html:=w.String()
- for _,required:=range []string{"<main>","<h1>","<caption>","scope=\"col\"","role=\"status\"","&lt;script&gt;"}{
+ for _,required:=range []string{"<main>","<h1>","<ol class=\"results\"","<details open","<summary","<blockquote class=\"source-context\"","role=\"status\"","&lt;script&gt;"}{
   if !strings.Contains(html,required){t.Fatalf("missing %q",required)}
  }
  if strings.Contains(html,"<script>"){t.Fatal("unescaped source injection")}
@@ -47,4 +51,11 @@ func TestHTMLAccessibleAndEscaped(t *testing.T){
  var c map[string]any
  if e:=json.Unmarshal(cap.Bytes(),&c);e!=nil||c["agent"]==""{t.Fatal("agent discovery invalid")}
  if e:=run([]string{"-capabilities","-source=x"},&cap);e==nil{t.Fatal("capability input injection accepted")}
+}
+
+func TestContextWindowIncludesNearbyOriginalLines(t *testing.T){
+ lines:=[]string{"first movement","second direction","third timing","","separate figure"}
+ start,end,excerpt:=contextWindow(lines,2)
+ if start!=1||end!=3||excerpt!="first movement\nsecond direction\nthird timing" {t.Fatalf("wrong bounded original context %d..%d %q",start,end,excerpt)}
+ if roleCue([]string{"opposite"})!="ACTOR_OR_DIRECTION_AMBIGUOUS_NOT_RESOLVED"{t.Fatal("direction silently became partner")}
 }
