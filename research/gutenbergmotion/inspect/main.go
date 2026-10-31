@@ -91,7 +91,7 @@ func anchored(source []byte,r SourceReport)(Inspection,error){
  return Inspection{Schema:"scp.choreography-inspection-readmodel.v0",SourceID:r.SourceID,SourceSHA:got,
  Count:len(r.Candidates),Status:"UNVALIDATED_SOURCE_TEXT_CANDIDATES",Candidates:r.Candidates},nil
 }
-const page=[[RAW]]<!doctype html>
+const page=`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Historical choreography research evidence</title>
 <style>
@@ -108,7 +108,7 @@ code{overflow-wrap:anywhere}main{min-width:0}.scroll{overflow-x:auto}.note{borde
 <div class="scroll"><table><caption>Original-source candidate lines (not verified movements)</caption>
 <thead><tr><th scope="col">Original line</th><th scope="col">Source text</th><th scope="col">Candidate status</th></tr></thead>
 <tbody>{{range .Candidates}}<tr><td><code>{{.Line}}</code></td><td>{{.Evidence}}</td><td>{{.Measurement}}</td></tr>{{end}}</tbody></table></div>
-</main></body></html>[[RAW]]
+</main></body></html>`
 func renderHTML(w io.Writer,v Inspection)error{
  t,err:=template.New("inspect").Parse(page);if err!=nil{return err}
  return t.Execute(w,v)
