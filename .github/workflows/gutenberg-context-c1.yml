@@ -1,0 +1,56 @@
+name: Public Gutenberg contextual grounding C1
+on:
+  pull_request:
+    paths:
+      - 'research/gutenbergmotion/context/**'
+      - '.github/workflows/gutenberg-context-c1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-context:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Context and source hostile tests
+        run: |
+          go test -count=2 ./research/gutenbergmotion/context ./research/gutenbergmotion
+          go test -race ./research/gutenbergmotion/context
+          go vet ./research/gutenbergmotion/context
+      - name: Original pinned source and true candidate windows
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/context-evidence"
+          git init -q "$RUNNER_TEMP/morris"
+          cd "$RUNNER_TEMP/morris"
+          git remote add origin https://github.com/GITenberg/The-Morris-Book-Part-1--13-A-History-of-Morris-Dancing-With-a-Description-of-Eleven-Dances-as__12926.git
+          git fetch --depth 1 origin 1d5ca33372491509805a64cd0425a5164d3108fa
+          git checkout -q --detach FETCH_HEAD
+          test "$(git hash-object 12926.txt)" = 08984be691ebd69f92a7a271217612f0056cea37
+          test "$(sha256sum 12926.txt | cut -d' ' -f1)" = 7294644f1fc26490f8a0aed415afc01b8278294e4373169e1407986c56cb0961
+          cd "$GITHUB_WORKSPACE"
+          go run ./research/gutenbergmotion -input "$RUNNER_TEMP/morris/12926.txt" > context-evidence/candidates.json
+          go run ./research/gutenbergmotion/context -source "$RUNNER_TEMP/morris/12926.txt" -candidates context-evidence/candidates.json > context-evidence/windows.json
+          python3 - <<'PY'
+          import json
+          c=json.load(open("context-evidence/windows.json"))
+          r=json.load(open("context-evidence/candidates.json"))
+          assert c["candidate_count"]==len(r["candidates"])==64
+          assert not c["complete_figure_claim"] and not c["motion_measurement_claim"]
+          assert all(w["status"]=="UNREVIEWED_CONTEXT_WINDOW_NOT_VALIDATED_FIGURE" for w in c["windows"])
+          print("PASS original_source_grounded_windows",c["candidate_count"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gutenberg-context-c1-research
+          path: context-evidence/
+          if-no-files-found: warn
+          retention-days: 7
