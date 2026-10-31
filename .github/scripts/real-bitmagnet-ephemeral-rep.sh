@@ -8,6 +8,7 @@ set -Eeuo pipefail
 OUT="$RUNNER_TEMP/bce-real-bitmagnet-rep"
 mkdir -p "$OUT"
 SERVICE_PID=""
+TUNNEL_PID=""
 NETWORK="bce-real-rep"
 DB="bce-real-postgres"
 BITMAGNET="bce-real-bitmagnet"
@@ -19,6 +20,10 @@ export no_proxy="$NO_PROXY"
 cleanup() {
   local status="$1"
   trap - EXIT
+  if [[ -n "$TUNNEL_PID" ]]; then
+    kill "$TUNNEL_PID" 2>/dev/null || true
+    wait "$TUNNEL_PID" 2>/dev/null || true
+  fi
   if [[ -n "$SERVICE_PID" ]]; then
     kill "$SERVICE_PID" 2>/dev/null || true
     wait "$SERVICE_PID" 2>/dev/null || true
@@ -495,8 +500,90 @@ if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
     echo "- **Actual publisher .torrent files:** $REAL_TORRENT_ROWS retained by SHA-256 in Actions evidence; original exact v1 infohash verified through Bitmagnet FTS"
     echo "- **Torrent payload / P2P:** none; meta files only, no DHT, tracker, webseed or peer connections"
     echo "- **BCE tracks:** direct $(jq -r '.track_counts.direct' "$OUT/execute.json"), concept $(jq -r '.track_counts.concept' "$OUT/execute.json")"
-    echo "- **Boundaries:** no DHT, public internet ingress, TMDB, CPE accepted facts, images published, private corpus or site deployment"
+    echo "- **Boundaries:** no DHT, TMDB, CPE accepted facts or private corpus; opt-in preview can expose ONLY the read-only Explorer through bounded Cloudflare Quick Tunnel"
     echo "- **Cleanup:** both containers and runner-local service removed on job exit"
   } >>"$GITHUB_STEP_SUMMARY"
 fi
 echo "REAL-BITMAGNET: PASS full real ephemeral PostgreSQL/Bitmagnet/Explorer/CLI stack"
+
+# Explicitly requested public-fixture-only disposable browser preview.
+# Never merge this experimental branch to main or enable a schedule.
+if [[ "$GITHUB_HEAD_REF" == "preview/rdte-cloudflare-disposable-20261031" ]]; then
+  echo "RDTE-PREVIEW: opt-in ephemeral Cloudflare Quick Tunnel from a PUBLIC GHA PR only"
+  echo "RDTE-PREVIEW: 5 authentic original metainfo, no payload, DHT, tracker or private user data"
+  # Fixed official release and exact GitHub release asset SHA256.
+  CF_VERSION="2026.10.7"
+  CF_SHA="1f99fb518b83dec2ba8d870a7cc991d82a77e6196295a3d2754ba17ab9f91872"
+  CF_BINARY="$OUT/cloudflared"
+  curl -fsSL --retry 2 --connect-timeout 15 --max-time 150 \
+    "https://github.com/cloudflare/cloudflared/releases/download/$CF_VERSION/cloudflared-linux-amd64" \
+    -o "$CF_BINARY"
+  echo "$CF_SHA  $CF_BINARY" | sha256sum -c -
+  chmod 700 "$CF_BINARY"
+  "$CF_BINARY" --version
+  # ONLY BCE read-only port; PostgreSQL, Bitmagnet GraphQL/import remain local.
+  "$CF_BINARY" tunnel --no-autoupdate --url http://127.0.0.1:3086 \
+    >"$OUT/cloudflared.log" 2>&1 &
+  TUNNEL_PID="$!"
+  TUNNEL_URL=""
+  for i in $(seq 1 90); do
+    if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
+      echo "::error::Cloudflare tunnel exited before issuing a URL"
+      tail -n 65 "$OUT/cloudflared.log" || true
+      exit 1
+    fi
+    TUNNEL_URL="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "$OUT/cloudflared.log" | head -n 1 || true)"
+    if [[ -n "$TUNNEL_URL" ]]; then break; fi
+    sleep 2
+  done
+  if [[ -z "$TUNNEL_URL" ]]; then
+    echo "::error::Cloudflare Quick Tunnel did not issue a URL"
+    tail -n 65 "$OUT/cloudflared.log" || true
+    exit 1
+  fi
+  # Fail closed if the edge fails to reach the origin or bypasses Basic Auth.
+  verified=0
+  for i in $(seq 1 30); do
+    edge_code="$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' "$TUNNEL_URL/api/v1/capabilities" || true)"
+    if [[ "$edge_code" == "401" ]]; then verified=1; break; fi
+    sleep 2
+  done
+  if [[ "$verified" != "1" ]]; then
+    echo "::error::Cloudflare edge did not preserve 401 authentication (last code=$edge_code)"
+    tail -n 65 "$OUT/cloudflared.log" || true
+    exit 1
+  fi
+  page_status="$(curl -sS --max-time 20 -u "$AUTH" -o "$OUT/tunnel-index.html" -w '%{http_code}' "$TUNNEL_URL/" || true)"
+  if [[ "$page_status" != "200" ]] || ! grep -qi 'concept explorer' "$OUT/tunnel-index.html"; then
+    echo "::error::Cloudflare link failed authenticated UI verification (code=$page_status)"
+    tail -n 65 "$OUT/cloudflared.log" || true
+    exit 1
+  fi
+  echo "RDTE_DISPOSABLE_CLOUDFLARE_URL=$TUNNEL_URL"
+  echo "RDTE-PREVIEW: external Cloudflare HTTPS -> Explorer (401 anonymous / 200 demo login) PASS"
+  if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
+    {
+      echo ""
+      echo "### Temporary read-only RDTE Cloudflare preview"
+      echo "- **Open now:** [$TUNNEL_URL]($TUNNEL_URL)"
+      echo "- **Login:** public fixture-only Basic Auth, values in existing public rep script"
+      echo "- **Source SHA:** $(git rev-parse HEAD)"
+      echo "- **Evidence:** five real publisher metainfo identities through Bitmagnet/PostgreSQL/Explorer"
+      echo "- **Security:** no private corpus, payloads, or Bitmagnet import/GraphQL/DB publicly exposed"
+      echo "- **Lifetime:** at most 20 minutes after checks, bounded by runner; expires at job stop"
+    } >>"$GITHUB_STEP_SUMMARY"
+  fi
+  # Bounded preview and liveness checks; cleanup removes all containers/tunnel.
+  for i in $(seq 1 40); do
+    sleep 30
+    if ! kill -0 "$TUNNEL_PID" 2>/dev/null || ! kill -0 "$SERVICE_PID" 2>/dev/null; then
+      echo "::error::A bounded preview service stopped unexpectedly"
+      exit 1
+    fi
+    if [[ $((i % 10)) == 0 ]]; then
+      echo "RDTE-PREVIEW: live elapsed=$((i * 30))s url=$TUNNEL_URL"
+    fi
+  done
+  echo "RDTE-PREVIEW: expired normally; tearing down disposable runner"
+fi
+
