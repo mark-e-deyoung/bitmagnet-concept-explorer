@@ -1,10 +1,10 @@
 groups:
   - name: Authentication
-    description: Credentials required for network access to the app.
+    description: Credentials for access to the read-only app. Basic Auth requires TLS for remote access; use a trusted reverse proxy and do not expose plaintext credentials.
   - name: Bitmagnet Integration
     description: Optional read-only Bitmagnet endpoint.
   - name: Network Configuration
-    description: Web interface port.
+    description: Web interface port. Bind to loopback by default; only change host IP and exposure for a trusted TLS-terminating reverse proxy.
   - name: Resources Configuration
     description: CPU and memory limits.
 
@@ -61,7 +61,7 @@ questions:
                   default: exposed
                   enum:
                     - value: exposed
-                      description: Expose for access through an app or TLS terminating reverse proxy.
+                      description: Expose ONLY on the selected trusted host IP; for remote access require TLS termination before Basic Auth.
                     - value: ""
                       description: Do not expose the port.
               - variable: port_number
@@ -76,7 +76,8 @@ questions:
                 label: Host IPs
                 schema:
                   type: list
-                  default: []
+                  default:
+                    - 127.0.0.1
                   items:
                     - variable: host_ip
                       label: Host IP
