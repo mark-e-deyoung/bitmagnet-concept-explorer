@@ -76,6 +76,7 @@ test('both graph selections stay native, keyboard-accessible and visually theme-
  await expect(graph.locator('[fill]')).toHaveCount(0);
  await expect(graph.locator('[stroke]')).toHaveCount(0);
  await expect(nodes.filter({'hasText':'Creative work'})).toHaveAttribute('aria-pressed','true');
+ await page.getByRole('radio',{name:'Light theme'}).check();
  const firstColors=await page.locator('#concept-graph .graph-node-shape').first().evaluate(el=>({
   fill:getComputedStyle(el).fill,stroke:getComputedStyle(el).stroke
  }));
