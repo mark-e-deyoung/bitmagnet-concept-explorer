@@ -126,6 +126,21 @@ jobs:
           assert match and int(match.group(1))==j['visible_count']
           print("PASS REAL CHROMIUM prefilled HTML search vs operator JSON vs agent tool schema",j['visible_count'])
           PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Real desktop/mobile typed source search and pointer recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          browser="$(command -v google-chrome || command -v chromium || true)"
+          test -n "$browser"
+          node --version
+          node research/gutenbergmotion/inspect/browser_cdpsmoke.mjs \
+            inspect-evidence/human.html inspect-evidence/filtered-automation.json "$browser" \
+            | tee inspect-evidence/real-interaction.txt
+          grep -q 'PASS original source Chromium CDP 1280x900' inspect-evidence/real-interaction.txt
+          grep -q 'PASS original source Chromium CDP 390x844' inspect-evidence/real-interaction.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
