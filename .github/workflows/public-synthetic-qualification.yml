@@ -44,6 +44,7 @@ jobs:
           unformatted="$(gofmt -l .)"
           if [ -n "$unformatted" ]; then
             printf 'Unformatted Go files:\n%s\n' "$unformatted"
+            gofmt -d research_proposal_events.go research_proposal_events_test.go
             exit 1
           fi
       - name: Embedded browser state regression
