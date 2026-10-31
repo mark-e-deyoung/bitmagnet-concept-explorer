@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+assert.ok(html.includes('id="sweep-external-budget" type="number" min="1" max="3" value="3"'), 'multilingual sweep request budget has valid bounds and default');
 for (const id of [
   'research-evidence-title', 'research-evidence-section',
   'research-evidence-filter', 'research-evidence-load',
