@@ -30,6 +30,29 @@ Sweep execution has a 55-second handler deadline, one active sweep per process, 
 
 If the deadline expires after some source results arrive, the API returns a `partial` result with failures and the explicit deadline. If no source result arrives it returns `failed`. A disconnected or canceled caller receives no final response; cancellation propagates to in-flight source requests and is not retried. None of these outcomes establishes corpus absence.
 
+## Optional public research evidence inspector
+
+The public Gutenberg source-evidence packet is a **research candidate**, not accepted
+CPE knowledge. When an operator supplies a local, read-only permitted JSON file,
+set `BCE_RESEARCH_EVIDENCE_FILE` and its exact byte-level digest as
+`BCE_RESEARCH_EVIDENCE_SHA256` (64 lowercase hexadecimal digits). Both are
+required; the loader fails closed on missing, mismatched, oversized (over 256 KiB)
+or invalid files. The application **does not** retrieve books, artwork, or other
+assets, and cannot promote source claims or decide reuse rights.
+
+After enabling the optional file, authenticated users can inspect
+`GET /api/v1/research-evidence` for the entire pinned public research packet or
+`GET /api/v1/research-evidence?section=claims&q=Barsoom` for a literal, bounded
+metadata search. Sections are `works`, `entities`, `claims`,
+`art_candidates`, and `source_inventory`. This is a **text match over source
+metadata, not semantic concept/fact qualification**. Automation and agents can
+use the same read-only HTTP contract, or
+`bce -operation research-evidence -research-section claims -query Barsoom`.
+
+The TrueNAS source package does **not yet** expose evidence-file read-only mounts
+or digest configuration in its wizard; that work is owned by the separate Foundry
+source-materialization lane. Running without this packet remains supported.
+
 ## Build and test
 
 The project uses the Go standard library. With Go 1.27.1, run:
