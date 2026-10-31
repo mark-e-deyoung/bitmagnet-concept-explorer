@@ -59,3 +59,22 @@ func TestContextWindowIncludesNearbyOriginalLines(t *testing.T){
  if start!=1||end!=3||excerpt!="first movement\nsecond direction\nthird timing" {t.Fatalf("wrong bounded original context %d..%d %q",start,end,excerpt)}
  if roleCue([]string{"opposite"})!="ACTOR_OR_DIRECTION_AMBIGUOUS_NOT_RESOLVED"{t.Fatal("direction silently became partner")}
 }
+
+func TestSharedSearchSurfaceAndRefusal(t *testing.T){
+ original:=Inspection{Schema:"scp.choreography-inspection-readmodel.v0",Count:3,VisibleCount:3,
+ Candidates:[]Candidate{{ID:"first"},{ID:"second"},{ID:"third"}},
+ Views:[]EvidenceView{
+  {Index:0,CandidateID:"first",SearchText:"cross over right shoulder"},
+  {Index:1,CandidateID:"second",SearchText:"step backward toward front"},
+  {Index:2,CandidateID:"third",SearchText:"right shoulder on bar 4"},
+ }}
+ filtered,e:=filterInspection(original," RiGhT ShOuLdEr ")
+ if e!=nil{t.Fatal(e)}
+ if filtered.Count!=3||filtered.VisibleCount!=2||len(filtered.Views)!=2||len(filtered.Candidates)!=2||
+ filtered.Candidates[0].ID!="first"||filtered.Candidates[1].ID!="third"{t.Fatalf("source filter mismatch %+v",filtered)}
+ empty,e:=filterInspection(original,"not a source phrase");if e!=nil{t.Fatal(e)}
+ if empty.VisibleCount!=0||len(empty.Views)!=0||len(empty.Candidates)!=0{t.Fatal("unmatched filter fabricated results")}
+ every,e:=filterInspection(original,"");if e!=nil||every.VisibleCount!=3{t.Fatal("unfiltered corpus lost")}
+ if _,e:=filterInspection(original,strings.Repeat("x",81));e==nil{t.Fatal("unbounded agent query accepted")}
+ if original.Count!=3||original.VisibleCount!=3||len(original.Candidates)!=3 {t.Fatal("read operation mutated shared authority")}
+}
