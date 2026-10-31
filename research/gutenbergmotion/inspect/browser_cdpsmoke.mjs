@@ -69,6 +69,9 @@ try{
   await sleep(100);
   const filtered=await state(expect.visible_count,'CDP native browser text entry');
   if(filtered.value!=='right shoulder')throw Error('native text did not reach input');
+  const origins=await evaluate('[...document.querySelectorAll("li.candidate:not([hidden]) .match-origin")].map(x=>x.textContent)');
+  if(JSON.stringify(origins)!==JSON.stringify(['Match in original line','Match in adjacent source context']))
+   throw Error('source match origin misleading: '+JSON.stringify(origins));
   const shotFilter=await send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
   const label=mobile?'mobile':'desktop';
   fs.writeFileSync(path.join(path.dirname(htmlPath),'typed-filter-'+label+'.png'),Buffer.from(shotFilter.data,'base64'));
