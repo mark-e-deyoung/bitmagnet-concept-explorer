@@ -304,7 +304,6 @@ func collectDebian(out string, entries *[]map[string]any, events *[]string) {
 	*events = append(*events, "debian: no mirror met prior SHA256+infohash+HTTPS admission")
 }
 
-
 // collectArch admits one exact-version official Arch Linux torrent metainfo item.
 // The published original infohash on archlinux.org is a publisher-side
 // identity oracle. The whole-file SHA256 is emitted from the real bytes,
