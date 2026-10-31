@@ -62,6 +62,7 @@ h3{font-size:1.06rem}
   padding:.65rem 1rem;background:var(--surface);border:2px solid var(--focus);
   border-radius:8px;font-weight:750}.skip-link:focus{transform:translateY(0)}
 .site-header{background:var(--surface);border-bottom:1px solid var(--line)}
+@media(min-width:881px){.site-header{position:sticky;top:0;z-index:50}}
 .site-nav{display:flex;gap:1rem;justify-content:space-between;align-items:center;flex-wrap:wrap;padding-block:.7rem}
 .product-brand{display:flex;align-items:center;gap:.7rem;text-decoration:none;color:var(--ink);font-weight:760;font-size:1.08rem;min-height:44px}
 .product-mark{width:40px;height:40px;background:var(--strong);color:var(--surface);
@@ -107,6 +108,8 @@ main.shell{padding-bottom:3.2rem}
 .search-form .search-primary{max-width:820px}
 .search-form .search-primary input{font-size:1.08rem;padding:.85rem 1rem;border:2px solid var(--line)}
 .search-actions{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin:1rem 0 .4rem}
+.examples{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin-top:.65rem;font-size:.84rem;color:var(--subtle)}
+.examples button{min-height:36px;padding:.3rem .65rem;font-size:.85rem;background:var(--raised);border-color:var(--line)}
 .primary-action{background:var(--action);color:var(--action-text);border-color:var(--action);padding:.7rem 1.4rem;font-weight:800}
 .primary-action:hover:not(:disabled){background:var(--strong);color:var(--surface)}
 details.advanced{margin-top:1rem;border:1px solid var(--line);border-radius:12px;background:var(--raised);padding:0 .9rem}
@@ -196,7 +199,7 @@ code{font-family:ui-monospace,Consolas,monospace}
 <form class="search-form" id="q">
   <div class="search-primary"><label for="query">Search phrase</label>
     <input id="query" required maxlength="512" autocomplete="off" aria-describedby="search-hint" placeholder="e.g. A Princess of Mars">
-    <small id="search-hint">Searches indexed titles and metadata; no torrent payload is downloaded.</small>
+    <small id="search-hint">Searches indexed titles and metadata; no torrent payload is downloaded.</small><div class="examples" aria-label="Example search phrases"><span>Try a phrase:</span> <button type="button" class="example-query" data-query="Fedora">Fedora</button> <button type="button" class="example-query" data-query="A Princess of Mars">A Princess of Mars</button> <button type="button" class="example-query" data-query="Ubuntu">Ubuntu</button></div>
   </div>
   <details class="advanced" id="advanced-settings"><summary>Refine search · languages, concepts and filters</summary>
 <label for="terms">Exploratory concept expansions, one per line</label><textarea id="terms" rows="4" placeholder="Alternative phrases or multilingual terms"></textarea>
@@ -216,9 +219,9 @@ code{font-family:ui-monospace,Consolas,monospace}
 <section class="section-space" id="results" aria-labelledby="results-heading"><span class="section-kicker">02 / Compare evidence</span><h2 id="results-heading">Search results</h2><p class="section-intro">Compare direct matches, experimental concept-term matches, and records returned by both tracks. Empty output or a failed source is not proof of absence.</p>
 <p class="status-banner" id="status" role="status" aria-live="polite">Results are metadata observations, not concept validation or content recommendations.</p>
 <div class="cols">
-<section class="panel" aria-labelledby="direct-title"><h2 id="direct-title">Direct track</h2><div id="direct"></div></section>
-<section class="panel" aria-labelledby="concept-title"><h2 id="concept-title">Concept track</h2><div id="concept"></div></section>
-<section class="panel" aria-labelledby="overlap-title"><h2 id="overlap-title">Overlap</h2><div id="overlap"></div></section>
+<section class="panel" aria-labelledby="direct-title"><h2 id="direct-title">Direct matches</h2><p class="helper">Found using your literal search phrase.</p><div id="direct">Run a search to see direct metadata matches.</div></section>
+<section class="panel" aria-labelledby="concept-title"><h2 id="concept-title">Concept-term matches</h2><p class="helper">Found through optional experimental expansions.</p><div id="concept">Run a search to see expanded-term matches.</div></section>
+<section class="panel" aria-labelledby="overlap-title"><h2 id="overlap-title">Shared matches</h2><p class="helper">Appeared in both independent retrieval tracks.</p><div id="overlap">Run a search to compare overlapping results.</div></section>
 </div></section>
 <section id="concepts" class="panel section-space"><span class="section-kicker">03 / Inspect concepts</span><h2>Concept map (pinned CPE projection preview)</h2><p id="graph-status" class="note">Checking configured concept projection…</p>
 <p><label><input type="checkbox" id="use-concept" style="width:auto"> Include the selected concept's pinned preview lexicalizations in the next query (explicit opt-in)</label></p><label for="concept-filter">Find a concept</label><input id="concept-filter" placeholder="Search concept labels and aliases">
@@ -457,6 +460,10 @@ $('sweep-limits').addEventListener('click',async()=>{
  }catch(e){if(token===limitsToken&&displayToken===sweepDisplayToken)$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
 });
 
+// Example phrases fill the search field without silently executing a query.
+document.querySelectorAll('.example-query').forEach(button=>{
+ button.addEventListener('click',()=>{const query=$('query');query.value=button.dataset.query||'';query.focus();});
+});
 // Theme is an optional presentation preference. The API contract is unchanged.
 (function initWorkbenchTheme(){
  const values=new Set(['system','light','dark']);let saved='system';
