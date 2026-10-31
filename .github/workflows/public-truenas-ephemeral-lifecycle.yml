@@ -1,0 +1,55 @@
+name: Public TrueNAS ephemeral lifecycle ladder (F1-F3)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-truenas-ephemeral-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  foundry-lifecycle-f1-f3:
+    name: TrueNAS Foundry Ladder (F0-F3) Ephemeral Lifecycle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Confirm runner and commit
+        run: |
+          docker version
+          docker compose version
+          git rev-parse HEAD
+
+      - name: Checkout pinned upstream truenas/apps catalog validator
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: truenas/apps
+          ref: 77058ecb5b28199f35150912cacb13283a6fb244
+          path: truenas-apps
+          persist-credentials: false
+
+      - name: Execute TrueNAS Foundry lifecycle ladder F0-F3
+        shell: bash
+        run: bash scripts/foundry/disposable-truenas-lifecycle.sh
+
+      - name: Retain lifecycle evidence and rendered Compose artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: truenas-ephemeral-lifecycle-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/bce-foundry-lifecycle/rendered-docker-compose.yaml
+            ${{ runner.temp }}/bce-foundry-lifecycle/*.html
+            ${{ runner.temp }}/bce-foundry-lifecycle/*.json
+          if-no-files-found: ignore
+          retention-days: 14
