@@ -212,6 +212,7 @@ func makeSweepPlan(r SweepRequest) (SweepPlan, error) {
 	// One Bitmagnet FTS expression per distinct literal term, regardless of
 	// how many CPE lexicalization records refer to it.
 	seenLocal := map[string]bool{}
+	pinnedMultiwordFTS := false
 	for _, f := range forms {
 		v := strings.TrimSpace(f.Term)
 		if v == "" || utf8.RuneCountInString(v) > 512 {
@@ -233,6 +234,12 @@ func makeSweepPlan(r SweepRequest) (SweepPlan, error) {
 		}
 		f.Term = v
 		plan.Bitmagnet = append(plan.Bitmagnet, f)
+		if isPinnedProjectionProvenance(f.Provenance) && strings.ContainsRune(v, ' ') {
+			pinnedMultiwordFTS = true
+		}
+	}
+	if pinnedMultiwordFTS {
+		plan.Warnings = append(plan.Warnings, pinnedMultiwordFTSWarning)
 	}
 	if r.IncludeSearxng {
 		plan.ExternalAdmitted = privateSearxngSweepAllowed()
