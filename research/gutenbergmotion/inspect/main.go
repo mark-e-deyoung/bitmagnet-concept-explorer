@@ -54,6 +54,7 @@ type EvidenceView struct{
  RoleInterpretation string `json:"role_interpretation_status"`
  ContextStatus string `json:"context_status"`
  SearchText string `json:"search_text"`
+ MatchOrigin string `json:"match_origin"`
 }
 type Inspection struct{
  Schema string `json:"schema"`
@@ -146,6 +147,12 @@ func filterInspection(v Inspection,query string)(Inspection,error){
  result.Candidates=[]Candidate{}
  for _,ev:=range v.Views{
   if strings.Contains(ev.SearchText,q){
+   switch{
+   case q=="":ev.MatchOrigin="UNFILTERED"
+   case strings.Contains(strings.ToLower(ev.Evidence),q):ev.MatchOrigin="ORIGINAL_SOURCE_LINE"
+   case strings.Contains(strings.ToLower(ev.Context),q):ev.MatchOrigin="ADJACENT_SOURCE_CONTEXT"
+   default:ev.MatchOrigin="SOURCE_METADATA_ONLY"
+   }
    result.Views=append(result.Views,ev)
    result.Candidates=append(result.Candidates,v.Candidates[ev.Index])
   }
@@ -171,6 +178,9 @@ summary:hover{background:#eff5f9}summary:focus-visible{outline:3px solid #995400
 .details{padding:.1rem 1rem 1rem;border-top:1px solid #afbac4}
 .source-context{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;background:#f1f4f6;padding:.8rem;border-left:3px solid #6c8091;margin:.5rem 0}
 .small{font-size:.89rem}.small code{overflow-wrap:anywhere}
+.match-origin{display:block;color:#4d5865;font-size:.8rem;font-weight:600;margin-top:.22rem}
+.match-origin[hidden]{display:none}
+@media(prefers-color-scheme:dark){.match-origin{color:#bdc9d7}}
 .search{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:1rem 0}
 .search label{font-weight:600}.search input{flex:1 1 15rem;min-width:0;max-width:30rem;padding:.55rem;font:inherit;background:transparent;color:inherit;border:1px solid #73869a}
 .search button{padding:.55rem .85rem;border:1px solid #6c8091;background:transparent;color:inherit;cursor:pointer}
@@ -196,7 +206,7 @@ li.candidate[hidden]{display:none!important}
 <p aria-live="polite" aria-atomic="true">Showing <output id="visible-count">{{.VisibleCount}}</output> of {{.Count}} source matches</p>
 <ol class="results" aria-label="Source candidate occurrences">
 {{range .Views}}<li class="candidate" data-search="{{.SearchText}}"><details {{if eq .Index 0}}open{{end}}>
-<summary aria-describedby="guide"><span class="line">Line {{.Line}}</span><span class="preview">{{.Evidence}}</span></summary>
+<summary aria-describedby="guide"><span class="line">Line {{.Line}}</span><span class="preview">{{.Evidence}}<span class="match-origin" hidden></span></span></summary>
 <div class="details"><p class="small"><strong>Original context:</strong> lines {{.ContextStart}}–{{.ContextEnd}} (unreviewed)</p>
 <blockquote class="source-context">{{.Context}}</blockquote>
 <p class="small"><strong>Movement word matches:</strong> {{.MotionTerms}} · <strong>Actor/direction word matches:</strong> {{.ActorTerms}} · <strong>Timing word matches:</strong> {{.TimingTerms}}</p>
@@ -210,7 +220,17 @@ li.candidate[hidden]{display:none!important}
  const cards=Array.from(document.querySelectorAll("li.candidate"));
  function apply(){
   const query=input.value.trim().toLowerCase();let shown=0;
-  for(const card of cards){const keep=card.dataset.search.includes(query);card.hidden=!keep;if(keep)shown++;}
+  for(const card of cards){
+   const keep=card.dataset.search.includes(query);card.hidden=!keep;
+   const basis=card.querySelector(".match-origin");
+   if(basis){
+    const exact=card.querySelector(".preview").childNodes[0]?.textContent.toLowerCase()||"";
+    const context=card.querySelector(".source-context")?.textContent.toLowerCase()||"";
+    basis.hidden=!keep||!query;
+    basis.textContent=!query?"":exact.includes(query)?"Match in original line":context.includes(query)?"Match in adjacent source context":"Match in source metadata";
+   }
+   if(keep)shown++;
+  }
   output.textContent=String(shown);
  }
  input.addEventListener("input",apply);
