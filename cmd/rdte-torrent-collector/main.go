@@ -194,7 +194,7 @@ func validateMetainfoRedirect(req *http.Request, via []*http.Request) error {
 		return errors.New("redirect budget")
 	}
 	host := req.URL.Hostname()
-	if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || strings.HasSuffix(host, ".archive.org") {
+	if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || host == "debian.nic.cz" || strings.HasSuffix(host, ".archive.org") {
 		return nil
 	}
 	return errors.New("off-origin redirect")
@@ -204,7 +204,7 @@ func fetch(rawurl string, max int) ([]byte, error) {
 	if e != nil || u.Scheme != "https" {
 		return nil, errors.New("HTTPS mandatory")
 	}
-	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "mirrors.edge.kernel.org" {
+	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "mirrors.edge.kernel.org" && u.Hostname() != "debian.nic.cz" {
 		return nil, errors.New("unapproved source")
 	}
 	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: validateMetainfoRedirect}
@@ -232,6 +232,10 @@ func admit(out string, entries *[]map[string]any, source, record, rights, link, 
 	if e != nil {
 		return e
 	}
+	return admitBytes(out, entries, source, record, rights, link, contentType, raw)
+}
+
+func admitBytes(out string, entries *[]map[string]any, source, record, rights, link, contentType string, raw []byte) error {
 	hash, name, size, e := decodeMetainfo(raw)
 	if e != nil {
 		return e
@@ -250,6 +254,56 @@ func admit(out string, entries *[]map[string]any, source, record, rights, link, 
 	*entries = append(*entries, map[string]any{"source": source, "source_record": record, "source_url": link, "rights_source_claim": rights, "rights_status": "source_claim_not_independently_qualified", "infohash": hash, "metainfo_sha256": sha, "metainfo_bytes": len(raw), "metainfo_file": file, "name": name, "size_bytes": size, "content_type": contentType, "p2p_used": false, "payload_downloaded": false})
 	return nil
 }
+
+// verifyPinnedMetainfo rejects mirror substitution or a silently moved source revision.
+// A content hash over the ENTIRE original .torrent is independently pinned to a
+// prior genuine publisher observation, while the infohash verifies raw info bytes.
+func verifyPinnedMetainfo(raw []byte, expectedFileSHA256, expectedInfoHash string) error {
+	sum := sha256.Sum256(raw)
+	if hex.EncodeToString(sum[:]) != expectedFileSHA256 {
+		return errors.New("metainfo SHA256 differs from exact previously admitted source bytes")
+	}
+	hash, _, _, err := decodeMetainfo(raw)
+	if err != nil {
+		return err
+	}
+	if hash != expectedInfoHash {
+		return errors.New("original raw infohash differs from pinned publisher identity")
+	}
+	return nil
+}
+
+// collectDebian is deliberately small: two independently documented HTTPS mirrors,
+// each called at most once with fetch's strict 30-second deadline and redirect fence.
+// Failed sources remain separately observable; zero fake/alternate record admission.
+func collectDebian(out string, entries *[]map[string]any, events *[]string) {
+	const record = "debian-13.7.0-amd64-netinst.iso.torrent"
+	const sha = "690700ed8de8d0987fcf8c136507471b1588b996696ca34f9cf972ee09b849e0"
+	const hash = "7acf8fb590b2060dd9c3146ef770169d593433b0"
+	const base = "/debian-cd/current/amd64/bt-cd/"
+	mirrors := []string{"https://debian.nic.cz", "https://mirrors.edge.kernel.org"}
+	for _, origin := range mirrors {
+		link := origin + base + record
+		raw, err := fetch(link, 2<<20)
+		if err != nil {
+			*events = append(*events, "debian mirror fetch rejected "+origin+": "+err.Error())
+			continue
+		}
+		if err = verifyPinnedMetainfo(raw, sha, hash); err != nil {
+			*events = append(*events, "debian mirror identity rejected "+origin+": "+err.Error())
+			continue
+		}
+		err = admitBytes(out, entries, "debian:official-mirror", record,
+			"official Debian distribution; metainfo rights not independently adjudicated", link, "software", raw)
+		if err != nil {
+			*events = append(*events, "debian source admission rejected "+origin+": "+err.Error())
+			continue
+		}
+		return
+	}
+	*events = append(*events, "debian: no mirror met prior SHA256+infohash+HTTPS admission")
+}
+
 func collectArchive(out string, entries *[]map[string]any, events *[]string) {
 	q := url.Values{}
 	q.Set("q", "collection:prelinger AND mediatype:movies AND format:\"Archive BitTorrent\"")
@@ -339,12 +393,8 @@ func main() {
 			events = append(events, "ubuntu "+name+": "+e.Error())
 		}
 	}
-	// A second independent publisher family: Debian official distributed mirror, version-pinned. No ISO payload.
-	debianRecord := "debian-13.7.0-amd64-netinst.iso.torrent"
-	debianLink := "https://mirrors.edge.kernel.org/debian-cd/current/amd64/bt-cd/" + debianRecord
-	if e := admit(*out, &entries, "debian:official-mirror", debianRecord, "official Debian signed distribution; metainfo rights not independently adjudicated", debianLink, "software"); e != nil {
-		events = append(events, "debian "+debianRecord+": "+e.Error())
-	}
+	// Real publisher-family coverage: pinned original metainfo across two vetted mirrors.
+	collectDebian(*out, &entries, &events)
 	collectArchive(*out, &entries, &events)
 	sort.Slice(entries, func(i, j int) bool { return entries[i]["infohash"].(string) < entries[j]["infohash"].(string) })
 	manifest := map[string]any{"schema_version": "cpe-rdte-real-metainfo-v1", "authority_status": "research_source_observations_not_accepted_CPE", "entries": entries, "source_events": events, "no_payload_download": true, "no_swarm_or_dht": true}
