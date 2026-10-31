@@ -86,7 +86,9 @@ func Enrich(src []byte,r Report,requirePin bool)(Result,error){
  for _,c:=range r.Candidates {
   if c.ID==""||seen[c.ID]||c.Line<1||c.Line>len(lines)||c.Evidence=="" {return Result{},errors.New("duplicate ID or invalid source anchor")}
   seen[c.ID]=true
-  if !strings.HasPrefix(strings.TrimSpace(lines[c.Line-1]),c.Evidence)||c.Measurement!="UNMEASURED_TEXT_INSTRUCTION"||c.Status!="SOURCE_TEXT_RESEARCH_CANDIDATE" {
+  original:=strings.TrimSpace(lines[c.Line-1]);idHash:=sha256.Sum256([]byte(fmt.Sprintf("%s:%d:%s",r.SourceID,c.Line,original)))
+  correctID:="pg12926-motion-"+hex.EncodeToString(idHash[:8])
+  if c.ID!=correctID||!strings.HasPrefix(original,c.Evidence)||c.Measurement!="UNMEASURED_TEXT_INSTRUCTION"||c.Status!="SOURCE_TEXT_RESEARCH_CANDIDATE" {
    return Result{},fmt.Errorf("candidate %q source or claim forged",c.ID)
   }
   start,end:=c.Line-1,c.Line-1
