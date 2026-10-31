@@ -1,0 +1,14 @@
+{
+  "name": "bce-evidence-workbench-browser-qualification",
+  "version": "0.0.0-private",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ux:contract": "node web/ux_contract.test.mjs",
+    "ux:test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@axe-core/playwright": "4.13.0"
+  }
+}
