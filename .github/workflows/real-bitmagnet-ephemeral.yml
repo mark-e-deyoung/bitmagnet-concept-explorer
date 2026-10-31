@@ -39,6 +39,13 @@ jobs:
         with:
           go-version: "1.27.1"
           cache: false
+      - name: Emit canonical Go formatting of new RDTE collector for author review
+        shell: bash
+        run: |
+          gofmt -w cmd/rdte-torrent-collector/main.go
+          printf 'RDTE_FORMATTED_SOURCE_BASE64='
+          base64 -w0 cmd/rdte-torrent-collector/main.go
+          printf '\n'
       - name: Real upstream Bitmagnet and Explorer live isolated integration
         shell: bash
         run: bash .github/scripts/real-bitmagnet-ephemeral-rep.sh
