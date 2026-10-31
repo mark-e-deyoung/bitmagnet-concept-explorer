@@ -38,6 +38,7 @@ func main() {
 	packagesFile := flag.String("packages", "", "offline package array JSON")
 	roots := flag.String("root", "", "root package ID")
 	public := flag.Bool("public", true, "require public dependency closure")
+	format := flag.String("format", "readmodel", "readmodel or bce-preview (public research-only)")
 	flag.Parse()
 	if *lockFile == "" || *packagesFile == "" || *roots == "" {
 		fmt.Fprintln(os.Stderr, "required: -lock -packages -root")
@@ -57,6 +58,26 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+	if *format == "bce-preview" {
+		if !*public {
+			fmt.Fprintln(os.Stderr, "bce-preview must be public")
+			os.Exit(2)
+		}
+		raw, _, err := cpepack.BuildBCEPreview(ps, l, []string{*roots})
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		if _, err = os.Stdout.Write(append(raw, '\n')); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+	if *format != "readmodel" {
+		fmt.Fprintln(os.Stderr, "unsupported format")
+		os.Exit(2)
 	}
 	out := json.NewEncoder(os.Stdout)
 	out.SetIndent("", "  ")
