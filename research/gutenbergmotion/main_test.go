@@ -4,6 +4,8 @@ import (
  "bytes"
  "strings"
  "testing"
+ "os"
+ "path/filepath"
 )
 func TestSourceBoundMotionCandidates(t *testing.T){
  b:=[]byte("Bar 4. Nos. 1 and 6 advance and tap sticks.\nAt bar 8 all jump.\nThe king advanced his argument at bar 4.\nNo. 2 passes the book without timing.\n")
@@ -25,4 +27,13 @@ func TestDeterministicIDsAndCap(t *testing.T){
  a,e:=Mine(src,1);if e!=nil{t.Fatal(e)};b,e:=Mine(src,1);if e!=nil{t.Fatal(e)}
  if len(a.Candidates)!=1||!a.Truncated||a.Candidates[0].ID!=b.Candidates[0].ID{t.Fatalf("not deterministic %+v %+v",a,b)}
  if !strings.Contains(strings.Join(a.Candidates[0].Motions,","),"jump"){t.Fatal("motion term missing")}
+}
+
+func TestCLIRefusesWrongSourceBytes(t *testing.T) {
+ path:=filepath.Join(t.TempDir(),"swapped.txt")
+ if err:=os.WriteFile(path,[]byte("Bar 4. No. 1 jumps.\n"),0600);err!=nil{t.Fatal(err)}
+ var buf bytes.Buffer
+ err:=run([]string{"-input",path},&buf)
+ if err==nil || !strings.Contains(err.Error(),"source bytes do not match"){t.Fatalf("expected source pin rejection, got: %v",err)}
+ if buf.Len()!=0{t.Fatal("forged report emitted")}
 }
