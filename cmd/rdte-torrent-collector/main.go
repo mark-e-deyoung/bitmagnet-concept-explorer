@@ -194,7 +194,7 @@ func validateMetainfoRedirect(req *http.Request, via []*http.Request) error {
 		return errors.New("redirect budget")
 	}
 	host := req.URL.Hostname()
-	if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || host == "debian.nic.cz" || host == "archlinux.org" || strings.HasSuffix(host, ".archive.org") {
+	if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || host == "debian.nic.cz" || host == "archlinux.org" || host == "torrent.fedoraproject.org" || strings.HasSuffix(host, ".archive.org") {
 		return nil
 	}
 	return errors.New("off-origin redirect")
@@ -204,7 +204,7 @@ func fetch(rawurl string, max int) ([]byte, error) {
 	if e != nil || u.Scheme != "https" {
 		return nil, errors.New("HTTPS mandatory")
 	}
-	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "mirrors.edge.kernel.org" && u.Hostname() != "debian.nic.cz" && u.Hostname() != "archlinux.org" {
+	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "mirrors.edge.kernel.org" && u.Hostname() != "debian.nic.cz" && u.Hostname() != "archlinux.org" && u.Hostname() != "torrent.fedoraproject.org" {
 		return nil, errors.New("unapproved source")
 	}
 	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: validateMetainfoRedirect}
@@ -338,6 +338,41 @@ func collectArch(out string, entries *[]map[string]any, events *[]string) {
 	}
 }
 
+// collectFedora is a bounded first-source observation from Fedora's own HTTPS
+// torrent directory; there is NO independent existing file SHA pin yet.
+// Preserve source observation as rights-UNKNOWN research until independent
+// replay establishes immutable full-file SHA256; never fetch the ISO payload.
+func collectFedora(out string, entries *[]map[string]any, events *[]string) {
+	const record = "Fedora-Workstation-Live-x86_64-44.torrent"
+	const link = "https://torrent.fedoraproject.org/torrents/" + record
+	raw, err := fetch(link, 2<<20)
+	if err != nil {
+		*events = append(*events, "fedora publisher HTTPS source rejected: "+err.Error())
+		return
+	}
+	// Independent byte-for-byte verification of the original first-source
+	// 2026-10-31 public GHA artifact + owner-only private Drive readback.
+	const originalSHA256 = "14d96ec3a1d56cef3eb2b64a5c7505459bbb6c0e6d88442e88c8d05dfb02bc79"
+	const originalInfoHash = "439e24b06daf7255eeeedbc9cddab490fa8caefd"
+	if err := verifyPinnedMetainfo(raw, originalSHA256, originalInfoHash); err != nil {
+		*events = append(*events, "fedora exact-source immutable identity rejected: "+err.Error())
+		return
+	}
+	_, name, _, err := decodeMetainfo(raw)
+	if err != nil {
+		*events = append(*events, "fedora publisher original metainfo rejected: "+err.Error())
+		return
+	}
+	if !strings.Contains(strings.ToLower(name), "fedora-workstation-live") || !strings.Contains(name, "44") {
+		*events = append(*events, "fedora publisher info.name not consistent with versioned source")
+		return
+	}
+	if err := admitBytes(out, entries, "fedora:official", record,
+		"official Fedora publisher BitTorrent directory; metainfo rights not independently adjudicated", link, "software", raw); err != nil {
+		*events = append(*events, "fedora publisher metainfo admission rejected: "+err.Error())
+	}
+}
+
 func collectArchive(out string, entries *[]map[string]any, events *[]string) {
 	q := url.Values{}
 	q.Set("q", "collection:prelinger AND mediatype:movies AND format:\"Archive BitTorrent\"")
@@ -430,6 +465,7 @@ func main() {
 	// Real publisher-family coverage: pinned original metainfo across two vetted mirrors.
 	collectDebian(*out, &entries, &events)
 	collectArch(*out, &entries, &events)
+	collectFedora(*out, &entries, &events)
 	collectArchive(*out, &entries, &events)
 	sort.Slice(entries, func(i, j int) bool { return entries[i]["infohash"].(string) < entries[j]["infohash"].(string) })
 	manifest := map[string]any{"schema_version": "cpe-rdte-real-metainfo-v1", "authority_status": "research_source_observations_not_accepted_CPE", "entries": entries, "source_events": events, "no_payload_download": true, "no_swarm_or_dht": true}

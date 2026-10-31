@@ -20,6 +20,8 @@ func TestValidateMetainfoRedirect(t *testing.T) {
 		{"debian_secondary_http_downgrade", "http://debian.nic.cz/debian-cd/current/filename.torrent", 1, false},
 		{"arch_publisher_HTTPS", "https://archlinux.org/releng/releases/2026.10.01/torrent/", 1, true},
 		{"arch_http_downgrade", "http://archlinux.org/releng/releases/2026.10.01/torrent/", 1, false},
+		{"fedora_official_HTTPS", "https://torrent.fedoraproject.org/torrents/Fedora-Workstation-Live-x86_64-44.torrent", 1, true},
+		{"fedora_http_downgrade", "http://torrent.fedoraproject.org/torrents/Fedora-Workstation-Live-x86_64-44.torrent", 1, false},
 		{"archive_cdn_HTTPS", "https://files.archive.org/download/record.torrent", 1, true},
 		{"protocol_downgrade", "http://mirrors.edge.kernel.org/debian-cd/current/filename.torrent", 1, false},
 		{"foreign_host", "https://attacker.example.org/fake.torrent", 1, false},

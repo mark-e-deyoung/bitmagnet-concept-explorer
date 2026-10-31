@@ -1,0 +1,829 @@
+{
+  "schema_version": "bce-ui-control-inventory-v1",
+  "authority": "mark-e-deyoung/bitmagnet-concept-explorer",
+  "generated_at": "2026-10-31T20:30:00Z",
+  "audit_reference": "bitmagnet-tools#18 comment 6546349724",
+  "total_controls": 45,
+  "controls": [
+    {
+      "control_id": "skip-link",
+      "category": "navigation",
+      "type": "static",
+      "tag": "a",
+      "selector": ".skip-link",
+      "action": "keyboard_tab_and_activate",
+      "expected_semantic_result": "Reveals focus on Tab, moves viewport and focus to #main-content container without horizontal scroll",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "product-brand",
+      "category": "navigation",
+      "type": "static",
+      "tag": "a",
+      "selector": ".product-brand",
+      "action": "click_or_activate",
+      "expected_semantic_result": "Navigates to #top hero section, visible text matches accessible name",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "nav-search",
+      "category": "navigation",
+      "type": "static",
+      "tag": "a",
+      "selector": ".primary-nav a[href=\"#search\"]",
+      "action": "click_or_activate",
+      "expected_semantic_result": "Scrolls to #search section with valid target hash",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "nav-results",
+      "category": "navigation",
+      "type": "static",
+      "tag": "a",
+      "selector": ".primary-nav a[href=\"#results\"]",
+      "action": "click_or_activate",
+      "expected_semantic_result": "Scrolls to #results section with valid target hash",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "nav-concepts",
+      "category": "navigation",
+      "type": "static",
+      "tag": "a",
+      "selector": ".primary-nav a[href=\"#concepts\"]",
+      "action": "click_or_activate",
+      "expected_semantic_result": "Scrolls to #concepts section with valid target hash",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "nav-sweep",
+      "category": "navigation",
+      "type": "static",
+      "tag": "a",
+      "selector": ".primary-nav a[href=\"#sweep\"]",
+      "action": "click_or_activate",
+      "expected_semantic_result": "Scrolls to #sweep section with valid target hash",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "theme-system",
+      "category": "theme",
+      "type": "static",
+      "tag": "input",
+      "selector": ".theme-picker input[value=\"system\"]",
+      "action": "check",
+      "expected_semantic_result": "Removes explicit data-theme attribute on <html>, adheres to prefers-color-scheme media query",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "theme-and-motion-parity"
+      ]
+    },
+    {
+      "control_id": "theme-light",
+      "category": "theme",
+      "type": "static",
+      "tag": "input",
+      "selector": ".theme-picker input[value=\"light\"]",
+      "action": "check",
+      "expected_semantic_result": "Sets data-theme=\"light\" on <html>, persists in localStorage across reloads",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "theme-and-motion-parity"
+      ]
+    },
+    {
+      "control_id": "theme-dark",
+      "category": "theme",
+      "type": "static",
+      "tag": "input",
+      "selector": ".theme-picker input[value=\"dark\"]",
+      "action": "check",
+      "expected_semantic_result": "Sets data-theme=\"dark\" on <html>, persists in localStorage across reloads",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "theme-and-motion-parity"
+      ]
+    },
+    {
+      "control_id": "search-query",
+      "category": "search",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#query",
+      "action": "fill",
+      "expected_semantic_result": "Accepts text up to 512 chars, required for query planning/execution",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "real-synthetic-journey",
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "example-query-fedora",
+      "category": "search",
+      "type": "static",
+      "tag": "button",
+      "selector": ".examples button[data-query=\"Fedora\"]",
+      "action": "click",
+      "expected_semantic_result": "Populates #query with 'Fedora' without auto-submitting",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "example-query-mars",
+      "category": "search",
+      "type": "static",
+      "tag": "button",
+      "selector": ".examples button[data-query=\"A Princess of Mars\"]",
+      "action": "click",
+      "expected_semantic_result": "Populates #query with 'A Princess of Mars' without auto-submitting",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "example-query-ubuntu",
+      "category": "search",
+      "type": "static",
+      "tag": "button",
+      "selector": ".examples button[data-query=\"Ubuntu\"]",
+      "action": "click",
+      "expected_semantic_result": "Populates #query with 'Ubuntu' without auto-submitting",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "advanced-settings",
+      "category": "search",
+      "type": "static",
+      "tag": "details",
+      "selector": "details#advanced-settings",
+      "action": "toggle",
+      "expected_semantic_result": "Discloses refinement fields (terms, languages, media, minseeders, minleechers, adult, sort, group, web)",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "search-terms",
+      "category": "search",
+      "type": "static",
+      "tag": "textarea",
+      "selector": "textarea#terms",
+      "action": "fill",
+      "expected_semantic_result": "Multiline strings converted into array of {term, provenance: 'manual-unverified'} in POST payload",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "search-languages",
+      "category": "search",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#languages",
+      "action": "fill",
+      "expected_semantic_result": "Comma-separated language strings parsed into filters.languages string array in POST payload",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "search-media",
+      "category": "search",
+      "type": "static",
+      "tag": "select",
+      "selector": "select#media",
+      "action": "select_option",
+      "expected_semantic_result": "Selected media type mapped to filters.content_types single-element array in POST payload",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "search-minseeders",
+      "category": "search",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#minseeders",
+      "action": "fill",
+      "expected_semantic_result": "Numeric value sent as filters.min_seeders number in POST payload",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "search-minleechers",
+      "category": "search",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#minleechers",
+      "action": "fill",
+      "expected_semantic_result": "Numeric value sent as filters.min_leechers number in POST payload",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "search-adult",
+      "category": "search",
+      "type": "static",
+      "tag": "select",
+      "selector": "select#adult",
+      "action": "select_option",
+      "expected_semantic_result": "Option string ('any', 'yes', 'no', 'unknown') serialized as filters.adult_metadata in POST payload",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "search-sort",
+      "category": "search",
+      "type": "static",
+      "tag": "select",
+      "selector": "select#sort",
+      "action": "select_option",
+      "expected_semantic_result": "Selected sort key ('info_hash', 'seeders_desc', etc.) serialized as sort field in POST payload",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "search-group",
+      "category": "search",
+      "type": "static",
+      "tag": "select",
+      "selector": "select#group",
+      "action": "select_option",
+      "expected_semantic_result": "Selected grouping ('none', 'media_type', etc.) serialized as group_by field in POST payload",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "search-web",
+      "category": "search",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#web",
+      "action": "check",
+      "expected_semantic_result": "Opt-in boolean serialized as include_web in POST payload",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "search-submit",
+      "category": "search",
+      "type": "static",
+      "tag": "button",
+      "selector": "button#submit",
+      "action": "click",
+      "expected_semantic_result": "Disables button during transit, transitions status banner to busy, then displays returned tracks",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "real-synthetic-journey",
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "use-concept",
+      "category": "concept",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#use-concept",
+      "action": "check",
+      "expected_semantic_result": "When checked and focusConcept is set, includes focusConcept.id in concept_ids array of query payload",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "concept-filter-and-selection-optin"
+      ]
+    },
+    {
+      "control_id": "concept-filter",
+      "category": "concept",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#concept-filter",
+      "action": "fill",
+      "expected_semantic_result": "Filters concept catalog by label or lexical term and selects first matching concept node",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "concept-filter-and-selection-optin"
+      ]
+    },
+    {
+      "control_id": "native-facet-button",
+      "category": "facets",
+      "type": "static",
+      "tag": "button",
+      "selector": "button#native-facet-button",
+      "action": "click",
+      "expected_semantic_result": "Validates peer/adult filter boundaries; requests /api/v1/query/facets and renders disclosure groups",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "real-synthetic-journey",
+        "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "sweep-languages",
+      "category": "sweep",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#sweep-languages",
+      "action": "fill",
+      "expected_semantic_result": "Comma-separated language list serialized into sweep request languages array",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "multilingual-sweep-plan-and-execution"
+      ]
+    },
+    {
+      "control_id": "sweep-local-budget",
+      "category": "sweep",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#sweep-local-budget",
+      "action": "fill",
+      "expected_semantic_result": "Numeric budget (1-12) serialized into sweep request max_bitmagnet_queries",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "multilingual-sweep-plan-and-execution"
+      ]
+    },
+    {
+      "control_id": "sweep-external-budget",
+      "category": "sweep",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#sweep-external-budget",
+      "action": "fill",
+      "expected_semantic_result": "Numeric budget (1-3) serialized into sweep request max_searxng_queries",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "multilingual-sweep-plan-and-execution"
+      ]
+    },
+    {
+      "control_id": "sweep-web",
+      "category": "sweep",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#sweep-web",
+      "action": "check",
+      "expected_semantic_result": "Opt-in boolean serialized as include_searxng in sweep request",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "multilingual-sweep-plan-and-execution",
+        "source-unavailable-and-consent"
+      ]
+    },
+    {
+      "control_id": "sweep-consent",
+      "category": "sweep",
+      "type": "static",
+      "tag": "input",
+      "selector": "input#sweep-consent",
+      "action": "check",
+      "expected_semantic_result": "Required explicit authorization checkbox when external sweep is enabled; fails with error if missing",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "multilingual-sweep-plan-and-execution",
+        "source-unavailable-and-consent"
+      ]
+    },
+    {
+      "control_id": "sweep-plan",
+      "category": "sweep",
+      "type": "static",
+      "tag": "button",
+      "selector": "button#sweep-plan",
+      "action": "click",
+      "expected_semantic_result": "POSTs to /api/v1/sweeps/plan and populates #sweep-status and #sweep-details",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "multilingual-sweep-plan-and-execution"
+      ]
+    },
+    {
+      "control_id": "sweep-run",
+      "category": "sweep",
+      "type": "static",
+      "tag": "button",
+      "selector": "button#sweep-run",
+      "action": "click",
+      "expected_semantic_result": "POSTs to /api/v1/sweeps/execute and renders returned sweep queries and state",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "multilingual-sweep-plan-and-execution"
+      ]
+    },
+    {
+      "control_id": "sweep-limits",
+      "category": "sweep",
+      "type": "static",
+      "tag": "button",
+      "selector": "button#sweep-limits",
+      "action": "click",
+      "expected_semantic_result": "GETs /api/v1/sweeps/limits and displays SearXNG JSON budget, cooldown, and admission",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "multilingual-sweep-plan-and-execution"
+      ]
+    },
+    {
+      "control_id": "technical-evidence-disclosure",
+      "category": "diagnostics",
+      "type": "static",
+      "tag": "details",
+      "selector": "#technical-evidence details.advanced",
+      "action": "toggle",
+      "expected_semantic_result": "Discloses raw JSON diagnostics in #details pre block",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "diagnostics-disclosure-and-wcag-axe"
+      ]
+    },
+    {
+      "control_id": "api-capabilities",
+      "category": "api-links",
+      "type": "static",
+      "tag": "a",
+      "selector": "a[href=\"/api/v1/capabilities\"]",
+      "action": "validate_link",
+      "expected_semantic_result": "Points to valid JSON endpoint returning capability flags",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "api-concepts",
+      "category": "api-links",
+      "type": "static",
+      "tag": "a",
+      "selector": "a[href=\"/api/v1/concepts\"]",
+      "action": "validate_link",
+      "expected_semantic_result": "Points to valid JSON endpoint returning concept graph catalog",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "navigation-skip-link-and-api-links"
+      ]
+    },
+    {
+      "control_id": "hash-copy",
+      "category": "results",
+      "type": "dynamic",
+      "tag": "button",
+      "selector": ".hash-copy",
+      "action": "click",
+      "expected_semantic_result": "Copies infohash string to clipboard and shows 'Copied'; falls back to 'Select text' on error",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "hash-clipboard-copy-and-sovereign-hypotheses"
+      ]
+    },
+    {
+      "control_id": "sovereign-hypothesis-button",
+      "category": "results",
+      "type": "dynamic",
+      "tag": "button",
+      "selector": "#observed-items button",
+      "action": "click",
+      "expected_semantic_result": "POSTs metadata to /api/v1/inference/propose and renders unverified model hypotheses",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "hash-clipboard-copy-and-sovereign-hypotheses"
+      ]
+    },
+    {
+      "control_id": "concept-graph-node",
+      "category": "concept",
+      "type": "dynamic",
+      "tag": "g",
+      "selector": "#concept-graph .graph-node",
+      "action": "click_or_keyboard",
+      "expected_semantic_result": "Selects concept, sets aria-pressed=true, populates #query and #terms",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "real-synthetic-journey",
+        "concept-filter-and-selection-optin"
+      ]
+    },
+    {
+      "control_id": "concept-list-button",
+      "category": "concept",
+      "type": "dynamic",
+      "tag": "button",
+      "selector": "#concept-list button",
+      "action": "click",
+      "expected_semantic_result": "Accessible button alternative to SVG node, sets aria-pressed=true and populates #query",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "theme-and-motion-parity",
+        "concept-filter-and-selection-optin"
+      ]
+    },
+    {
+      "control_id": "observed-graph-node",
+      "category": "evidence",
+      "type": "dynamic",
+      "tag": "g",
+      "selector": "#observed-graph .graph-node",
+      "action": "click_or_keyboard",
+      "expected_semantic_result": "Selects observed lexical candidate node, renders source details and edge inspection",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "real-synthetic-journey",
+        "diagnostics-disclosure-and-wcag-axe"
+      ]
+    },
+    {
+      "control_id": "observed-list-button",
+      "category": "evidence",
+      "type": "dynamic",
+      "tag": "button",
+      "selector": "#observed-list button",
+      "action": "click",
+      "expected_semantic_result": "Accessible button alternative to SVG observed node, activates candidate evidence details",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "real-synthetic-journey",
+        "diagnostics-disclosure-and-wcag-axe"
+      ]
+    },
+    {
+      "control_id": "facet-group-disclosure",
+      "category": "facets",
+      "type": "dynamic",
+      "tag": "details",
+      "selector": "#native-facet-data details.facet-group",
+      "action": "toggle",
+      "expected_semantic_result": "Expands native corpus facet bucket list with explicit estimate indicators",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "real-synthetic-journey",
+        "advanced-search-payload-verification"
+      ]
+    }
+  ]
+}
