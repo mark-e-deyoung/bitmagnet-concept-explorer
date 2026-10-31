@@ -173,11 +173,79 @@ code{font-family:ui-monospace,Consolas,monospace}
  .theme-picker label:has(input:checked){outline:3px solid Highlight}
 }
 
+/* R2: Project-native data-bearing interaction tokens. Product identity is
+   independent of SupraCraft; evidence states are labels, never colors alone. */
+:root {
+ --viz-bg:#eef5f4; --viz-grid:#d6e5e3; --viz-edge:#597d89;
+ --viz-node:#205865; --viz-observed:#27694f; --viz-selected:#dfad77;
+ --viz-label:#ffffff; --viz-selected-text:#192e31; --viz-stroke:#285260;
+ --state-success:#206b4d; --state-error:#ac3b37; --state-warn:#a56026;
+}
+@media(prefers-color-scheme:dark){
+ :root:not([data-theme="light"]){
+  --viz-bg:#102a34; --viz-grid:#203f47; --viz-edge:#9ab9c2;
+  --viz-node:#285769; --viz-observed:#286e5a; --viz-selected:#f3c18c;
+  --viz-label:#ffffff; --viz-selected-text:#13272b; --viz-stroke:#bddfe2;
+  --state-success:#79d6ad; --state-error:#ffadad; --state-warn:#ffd091;
+ }
+}
+:root[data-theme="dark"]{
+ --viz-bg:#102a34; --viz-grid:#203f47; --viz-edge:#9ab9c2;
+ --viz-node:#285769; --viz-observed:#286e5a; --viz-selected:#f3c18c;
+ --viz-label:#ffffff; --viz-selected-text:#13272b; --viz-stroke:#bddfe2;
+ --state-success:#79d6ad; --state-error:#ffadad; --state-warn:#ffd091;
+}
+.viz-scroller{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border:1px solid var(--line);
+ background:var(--viz-bg);border-radius:12px}
+.viz-scroller:has(.graph:empty){display:none}
+.viz-scroller:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.viz-scroller .graph{display:block;min-width:560px;width:100%;max-width:none;min-height:0;height:auto;
+ overflow:visible;background:var(--viz-bg);border:0;border-radius:0}
+.viz-scroller .graph:empty{display:none}
+.graph-link{stroke:var(--viz-edge);stroke-linecap:round}
+.graph-node-shape{fill:var(--viz-node);stroke:var(--viz-stroke);stroke-width:2;transition:fill .15s ease}
+.graph-node[data-evidence="observed"] .graph-node-shape{fill:var(--viz-observed)}
+.graph-node-label{fill:var(--viz-label);pointer-events:none;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px}
+.graph-node[aria-pressed="true"] .graph-node-shape{fill:var(--viz-selected);stroke:var(--focus);stroke-width:3}
+.graph-node[aria-pressed="true"] .graph-node-label{fill:var(--viz-selected-text);font-weight:750}
+.graph-node:hover .graph-node-shape{stroke:var(--focus);stroke-width:3}
+.graph-node:focus-visible .graph-node-shape{stroke:var(--focus);stroke-width:5}
+.graph-center{fill:var(--viz-node);stroke:var(--viz-stroke);stroke-width:2}
+.graph-center-label{fill:var(--viz-label);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}
+.viz-key{display:flex;flex-wrap:wrap;gap:.45rem 1rem;align-items:center;font-size:.82rem;color:var(--subtle);
+ list-style:none;padding:0;margin:.5rem 0 .7rem}
+.viz-key li{display:inline-flex;gap:.35rem;align-items:center}
+.viz-dot{width:13px;height:13px;border-radius:50%;display:inline-block;flex:none;border:2px solid var(--viz-stroke);background:var(--viz-node)}
+.viz-dot.observed{background:var(--viz-observed)}
+.viz-dot.selected{background:var(--viz-selected);border-color:var(--focus)}
+.viz-help{color:var(--subtle);font-size:.84rem}
+.facet-group{border:1px solid var(--line);border-radius:10px;padding:.2rem .75rem;margin:.7rem 0;background:var(--raised)}
+.facet-group summary{min-height:44px;padding:.6rem 0;cursor:pointer;font-weight:750;text-transform:none}
+.facet-buckets{list-style:none;padding:0;margin:0 0 .6rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:.45rem}
+.facet-buckets li{display:flex;align-items:start;justify-content:space-between;gap:.6rem;background:var(--surface);
+ border:1px solid var(--line);border-radius:9px;padding:.48rem .7rem}
+.facet-label{min-width:0;overflow-wrap:anywhere}
+.facet-amount{flex:0 0 auto;font-weight:760;font-variant-numeric:tabular-nums;color:var(--strong)}
+.facet-estimate{display:block;color:var(--subtle);font-weight:500;font-size:.75rem}
+[data-ui-state="busy"]{border-left:4px solid var(--strong)}
+[data-ui-state="error"]{border-left:4px solid var(--state-error)}
+[data-ui-state="blocked"]{border-left:4px solid var(--state-warn)}
+[data-ui-state="ready"]{border-left:4px solid var(--state-success)}
+@media(prefers-reduced-motion:reduce){.graph-node-shape{transition:none}}
+@media(forced-colors:active){
+ .viz-scroller{border:1px solid CanvasText}
+ .graph-node-shape,.graph-center{fill:Canvas;stroke:CanvasText}
+ .graph-node-label,.graph-center-label{fill:CanvasText}
+ .graph-node[aria-pressed="true"] .graph-node-shape,.graph-node:focus-visible .graph-node-shape{stroke:Highlight;stroke-width:5}
+ .graph-node[aria-pressed="true"] .graph-node-label{fill:CanvasText}
+ .graph-link{stroke:CanvasText}
+ .viz-dot{forced-color-adjust:auto}
+}
 </style></head><body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <header class="site-header">
   <div class="shell site-nav">
-    <a class="product-brand" href="#top" aria-label="Bitmagnet Concept Explorer — return to top">
+    <a class="product-brand" href="#top">
       <span class="product-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 7h8l12 9-12 9H4"/><path d="M4 16h20M4 25h8"/></svg></span>
       <span>Concept Explorer<small>Bitmagnet · research workbench</small></span>
     </a>
@@ -233,12 +301,16 @@ code{font-family:ui-monospace,Consolas,monospace}
 </div></section>
 <section id="concepts" class="panel section-space"><span class="section-kicker">03 / Inspect concepts</span><h2>Concept map (pinned CPE projection preview)</h2><p id="graph-status" class="note">Checking configured concept projection…</p>
 <p><label><input type="checkbox" id="use-concept" style="width:auto"> Include the selected concept's pinned preview lexicalizations in the next query (explicit opt-in)</label></p><label for="concept-filter">Find a concept</label><input id="concept-filter" placeholder="Search concept labels and aliases">
-<svg id="concept-graph" class="graph" viewBox="0 0 700 350" role="img" aria-label="Clickable map of selected concept and its relationships"></svg>
+<ul class="viz-key" aria-label="Concept map legend"><li><span class="viz-dot selected" aria-hidden="true"></span>Selected preview concept</li><li><span class="viz-dot" aria-hidden="true"></span>Other preview concept</li></ul>
+<p class="viz-help">When available, navigate the diagram with Tab and Enter. At narrow widths, scroll sideways or use the accessible concept buttons below. Preview relationships are not accepted CPE facts.</p>
+<div class="viz-scroller" tabindex="0" role="region" aria-label="Scrollable provisional concept diagram"><svg id="concept-graph" class="graph" viewBox="0 0 700 350" role="group" aria-label="Interactive provisional concept relationships"></svg></div>
 <p id="concept-detail" aria-live="polite"></p><div id="concept-list" class="concept-buttons" role="group" aria-label="Accessible concept selector"></div></section>
 <section id="observations" class="panel section-space" aria-labelledby="observed-title"><span class="section-kicker">04 / Investigate evidence</span><h2 id="observed-title">Concepts observed in the returned Bitmagnet metadata</h2>
 <p class="note">These are title-lexical evidence candidates from this query's bounded results, not the CPE ontology's related concepts or validated semantic classifications.</p>
 <p id="observed-status" aria-live="polite">Run a search to derive a separate observed graph.</p>
-<svg id="observed-graph" class="graph" viewBox="0 0 700 340" role="img" aria-label="Evidence-linked concepts occurring in returned metadata"></svg>
+<ul class="viz-key" aria-label="Observed evidence diagram legend"><li><span class="viz-dot observed" aria-hidden="true"></span>Title-lexical candidate</li><li><span class="viz-dot selected" aria-hidden="true"></span>Selected evidence</li></ul>
+<p class="viz-help">Observed nodes are title-lexical candidates, not semantic classifications. Inspect using the graph or native evidence-selection buttons.</p>
+<div class="viz-scroller" tabindex="0" role="region" aria-label="Scrollable observed evidence diagram"><svg id="observed-graph" class="graph" viewBox="0 0 700 340" role="group" aria-label="Interactive observed title-lexical evidence"></svg></div>
 <div id="observed-list" class="concept-buttons" role="group" aria-label="Concept evidence selectors"></div>
 <div id="observed-items" aria-live="polite"></div></section>
 <section id="facets" class="panel" aria-labelledby="native-facet-title"><h2 id="native-facet-title">Native Bitmagnet corpus metadata facets</h2>
@@ -305,7 +377,7 @@ function displayItems(id,items){
 function clearQueryEvidence(message){
  observedToken++;facetToken++;sweepToken++;limitsToken++;sweepDisplayToken++;
  for(const id of ['direct','concept','overlap','external','details','observed-graph','observed-list','observed-items','observed-status','native-facet-data','native-facet-status','sweep-details','sweep-status']){
-  const node=$(id);node.replaceChildren();node.textContent=message;
+  const node=$(id);node.replaceChildren();node.textContent=message;node.setAttribute?.('data-ui-state','idle');
  }
 }
 async function capabilities(){
@@ -317,7 +389,7 @@ $('q').addEventListener('submit',async event=>{
  const filters={languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[],adult_metadata:$('adult').value};
  if($('minseeders').value!=='')filters.min_seeders=Number($('minseeders').value);
  if($('minleechers').value!=='')filters.min_leechers=Number($('minleechers').value);
- const body={query:$('query').value,expansions,filters,sort:$('sort').value,group_by:$('group').value,include_web:$('web').checked,concept_ids:$('use-concept').checked&&focusConcept?[focusConcept.id]:[]};$('submit').disabled=true;$('status').textContent='Processing bounded request…';
+ const body={query:$('query').value,expansions,filters,sort:$('sort').value,group_by:$('group').value,include_web:$('web').checked,concept_ids:$('use-concept').checked&&focusConcept?[focusConcept.id]:[]};$('submit').disabled=true;$('status').textContent='Processing bounded request…';$('status').setAttribute?.('data-ui-state','busy');
  try{const route=canExecute?'/api/v1/query/execute':'/api/v1/query/plan';
  const response=await fetch(route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
  const data=await response.json();if(token!==queryToken)return;if(!response.ok)throw Error(data.error||('HTTP '+response.status));
@@ -325,16 +397,16 @@ $('q').addEventListener('submit',async event=>{
  const rows=data.results||[];displayItems('direct',rows.filter(x=>x.tracks?.includes('direct')&&!x.tracks?.includes('concept')));displayItems('concept',rows.filter(x=>x.tracks?.includes('concept')&&!x.tracks?.includes('direct')));displayItems('overlap',rows.filter(x=>x.tracks?.includes('concept')&&x.tracks?.includes('direct')));
  await renderObservedGraph(rows);
  if(token!==queryToken)return;
- $('status').textContent='State: '+data.state+' · Unique observed: '+rows.length+' · Direct matches: '+(data.track_counts?.direct??0)+' · Concept matches: '+(data.track_counts?.concept??0);
+ $('status').textContent='State: '+data.state+' · Unique observed: '+rows.length+' · Direct matches: '+(data.track_counts?.direct??0)+' · Concept matches: '+(data.track_counts?.concept??0);$('status').setAttribute?.('data-ui-state','ready');
  $('details').textContent=JSON.stringify({failures:data.failures,warnings:data.warnings,track_counts:data.track_counts,scope:data.filter_scope,before_filters:data.before_filters,after_filters:data.after_filters,groups:data.groups,coverage:data.coverage},null,2);
- $('native-facet-status').textContent='Counts not requested for this search.';
+ $('native-facet-status').textContent='Counts not requested for this search.';$('native-facet-status').setAttribute?.('data-ui-state','idle');
  $('native-facet-data').textContent='';
- $('sweep-status').textContent='No sweep run for this search. External web search is off by default.';
+ $('sweep-status').textContent='No sweep run for this search. External web search is off by default.';$('sweep-status').setAttribute?.('data-ui-state','idle');
  $('sweep-details').textContent='';
  const external=$('external');external.replaceChildren();
  for(const x of data.external_results||[]){const article=document.createElement('article');article.className='item';const strong=document.createElement('strong');strong.textContent=x.title;const p=document.createElement('div');p.textContent=x.url+' · '+(x.engines||[]).join(', ');article.append(strong,p);external.append(article)}
  if(!(data.external_results||[]).length){external.textContent='No web observations returned. A failed or disabled adapter does not establish absence.'}
- }catch(e){if(token!==queryToken)return;clearQueryEvidence('Current query failed; prior evidence cleared. No absence inference can be drawn from this failure.');$('status').textContent='Query failed: '+e.message;$('details').textContent='No absence inference can be drawn from this failure.';}
+ }catch(e){if(token!==queryToken)return;clearQueryEvidence('Current query failed; prior evidence cleared. No absence inference can be drawn from this failure.');$('status').textContent='Query failed: '+e.message;$('status').setAttribute?.('data-ui-state','error');$('details').textContent='No absence inference can be drawn from this failure.';}
  finally{if(token===queryToken)$('submit').disabled=false;}
 });
 // The graph is read-only and uses only a local, digest-pinned provisional projection.
@@ -357,13 +429,19 @@ async function renderObservedGraph(rows){
   status.textContent='Evidence state: '+data.status+' · '+concepts.length+' lexical candidates · '+edges.length+' evidence links'+(rows.length>subset.length?' · first 200 returned rows only':'')+' · Not CPE assertions';
   if(!concepts.length)return;
   const selected=concepts.slice(0,16),center={x:350,y:170},positions=[];
-  const centerCircle=svgElem('circle',{cx:center.x,cy:center.y,r:48,fill:'#24445d',stroke:'#b2d7eb','stroke-width':2});
+  const centerCircle=svgElem('circle',{cx:center.x,cy:center.y,r:48,class:'graph-center'});
   graph.append(centerCircle);
-  const centerLabel=svgElem('text',{x:center.x,y:center.y+4,'text-anchor':'middle',fill:'#fff','font-size':13});centerLabel.textContent='Results';graph.append(centerLabel);
+  const centerLabel=svgElem('text',{x:center.x,y:center.y+4,'text-anchor':'middle',class:'graph-center-label'});centerLabel.textContent='Results';graph.append(centerLabel);
   function inspect(node){
    items.replaceChildren();
    const matching=new Set(edges.filter(e=>e.concept_id===node.id).map(e=>e.info_hash));
-   const h=document.createElement('h3');h.textContent=node.label+' — '+node.distinct_returned_torrents+' distinct returned torrents';items.append(h);
+   graph.querySelectorAll('.graph-node').forEach(el=>{
+   el.setAttribute('aria-pressed',String(el.getAttribute('data-id')===node.id));
+  });
+  list.querySelectorAll('button').forEach(el=>{
+   el.setAttribute('aria-pressed',String(el.dataset.conceptId===node.id));
+  });
+  const h=document.createElement('h3');h.textContent=node.label+' — '+node.distinct_returned_torrents+' distinct returned torrents';items.append(h);
    const evidence=edges.filter(e=>e.concept_id===node.id);
    for(const e of evidence.slice(0,30)){
     const rec=subset.find(x=>x.info_hash===e.info_hash);if(!rec)continue;
@@ -387,19 +465,19 @@ async function renderObservedGraph(rows){
   selected.forEach((node,i)=>{
    const angle=2*Math.PI*i/selected.length-Math.PI/2;
    const p={x:center.x+260*Math.cos(angle),y:center.y+120*Math.sin(angle)};positions.push(p);
-   graph.append(svgElem('line',{x1:center.x,y1:center.y,x2:p.x,y2:p.y,stroke:'#98b9ca','stroke-width':1.5}));
+   graph.append(svgElem('line',{x1:center.x,y1:center.y,x2:p.x,y2:p.y,class:'graph-link','stroke-width':1.5}));
   });
   selected.forEach((node,i)=>{
-   const p=positions[i],g=svgElem('g',{tabindex:'0',role:'button',class:'graph-node','aria-label':'Inspect returned metadata evidence for '+node.label});
-   const circle=svgElem('circle',{cx:p.x,cy:p.y,r:40,fill:'#315a4a',stroke:'#b2d7eb','stroke-width':2});
-   const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',fill:'#fff','font-size':12});
+   const p=positions[i],g=svgElem('g',{tabindex:'0',role:'button',class:'graph-node','data-evidence':'observed','data-id':node.id,'aria-pressed':'false','aria-label':'Inspect returned metadata evidence for '+node.label});
+   const circle=svgElem('circle',{cx:p.x,cy:p.y,r:40,class:'graph-node-shape'});
+   const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',class:'graph-node-label'});
    label.textContent=node.label.length>14?node.label.slice(0,12)+'…':node.label;g.append(circle,label);
    g.addEventListener('click',()=>inspect(node));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inspect(node)}});
    graph.append(g);
   });
   for(const node of concepts){
    const btn=document.createElement('button');btn.type='button';
-   btn.textContent=node.label+' ('+node.distinct_returned_torrents+')';btn.addEventListener('click',()=>inspect(node));list.append(btn);
+   btn.textContent=node.label+' ('+node.distinct_returned_torrents+')';btn.dataset.conceptId=node.id;btn.setAttribute('aria-pressed','false');btn.addEventListener('click',()=>inspect(node));list.append(btn);
   }
   inspect(concepts[0]);
   if(concepts.length>selected.length)status.textContent+=' · Diagram shows first 16; all available as buttons';
@@ -408,34 +486,56 @@ async function renderObservedGraph(rows){
 async function loadNativeFacets(){
  const token=++facetToken;
  const status=$('native-facet-status'),node=$('native-facet-data');node.replaceChildren();
- if(!canExecute){status.textContent='Bitmagnet target is not configured.';return;}
+ if(!canExecute){status.textContent='Bitmagnet target is not configured.';status.setAttribute?.('data-ui-state','blocked');return;}
  if($('minseeders').value!==''||$('minleechers').value!==''||$('adult').value!=='any'){
-  status.textContent='Clear min-peer and source-adult filters first; those cannot be pushed into this native corpus-wide aggregation without changing semantics.';return;
+  status.textContent='Clear min-peer and source-adult filters first; those cannot be pushed into this native corpus-wide aggregation without changing semantics.';status.setAttribute?.('data-ui-state','blocked');return;
  }
- status.textContent='Requesting bounded Bitmagnet-native metadata aggregations…';
+ status.textContent='Requesting bounded Bitmagnet-native metadata aggregations…';status.setAttribute?.('data-ui-state','busy');
  const filters={languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[]};
  try{
   const r=await fetch('/api/v1/query/facets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:$('query').value,filters,groups:['contentType','language','genre']})});
   const x=await r.json();if(token!==facetToken)return;if(!r.ok)throw Error(x.error||'native aggregation failed');
-  status.textContent='Native query total: '+x.total_count+(x.total_count_is_estimate?' (estimate)':' (reported exact)')+'. These are source metadata aggregates, not CPE semantic counts.';
+  status.textContent='Native query total: '+x.total_count+(x.total_count_is_estimate?' (estimate)':' (reported exact)')+'. These are source metadata aggregates, not CPE semantic counts.';status.setAttribute?.('data-ui-state','ready');
+  // Buckets are provider metadata, not CPE policy categories.
+  // Expose original values/estimate qualifiers through native disclosures.
+  const groupNames={contentType:'Content type',language:'Language',genre:'Genre'};
   for(const [group,buckets] of Object.entries(x.groups||{})){
-   const h=document.createElement('h3');h.textContent=group;node.append(h);
-   const ol=document.createElement('ol');for(const b of (buckets||[]).slice(0,60)){
-    const li=document.createElement('li');li.textContent=b.label+': '+b.count+(b.is_estimate?' (estimate)':'');ol.append(li);
-   }node.append(ol);
+   const details=document.createElement('details');details.className='facet-group';
+   const summary=document.createElement('summary');
+   summary.textContent=(groupNames[group]||group)+' · '+(buckets||[]).length+' source categories';
+   details.append(summary);
+   const ul=document.createElement('ul');ul.className='facet-buckets';
+   for(const b of (buckets||[]).slice(0,60)){
+    const li=document.createElement('li');
+    const label=document.createElement('span');label.className='facet-label';label.textContent=b.label||'(unlabelled)';
+    const amount=document.createElement('span');amount.className='facet-amount';amount.textContent=String(b.count);
+    if(b.is_estimate){const estimate=document.createElement('span');estimate.className='facet-estimate';estimate.textContent='Estimate';amount.append(estimate);}
+    li.append(label,amount);ul.append(li);
+   }
+   details.append(ul);node.append(details);
   }
- }catch(e){if(token===facetToken)status.textContent='Native aggregate unavailable: '+e.message+'; no absence inference.';}
+ }catch(e){if(token===facetToken){status.textContent='Native aggregate unavailable: '+e.message+'; no absence inference.';status.setAttribute?.('data-ui-state','error');}}
 }
 $('native-facet-button').addEventListener('click',loadNativeFacets);
 function svgElem(tag,attrs){const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
-function chooseConcept(id){
+function chooseConcept(id,focusOrigin){
  if(!conceptCatalog)return;
  focusConcept=conceptCatalog.concepts.find(n=>n.id===id)||null;if(!focusConcept)return;
  const n=focusConcept;
- $('concept-detail').textContent=n.label+' — '+(n.definition||'No description')+' · '+n.id+' · relations: '+(n.relations||[]).map(r=>r.predicate+' → '+r.target_id).join(', ');
+ $('concept-detail').textContent='Selected provisional concept: '+n.label+' — '+(n.definition||'No description')+' · '+n.id+' · relations: '+(n.relations||[]).map(r=>r.predicate+' → '+r.target_id).join(', ')+' · Search input has been prepared but no query was executed.';
  $('query').value=n.label;
  $('terms').value=(n.lexicalizations||[]).filter(x=>x.term&&x.term!==n.label).slice(0,31).map(x=>x.term).join('\n');
  renderConceptMap();
+ // Rendering replaces SVG groups and selector buttons. Restore the exact
+ // keyboard/pointer selection target so another Tab/Enter can continue the
+ // same workflow; catalog/filter programmatic updates do not steal focus.
+ if(focusOrigin==='graph'){
+  Array.from($('concept-graph').querySelectorAll('.graph-node'))
+   .find(el=>el.getAttribute('data-id')===id)?.focus();
+ }else if(focusOrigin==='list'){
+  Array.from($('concept-list').querySelectorAll('button'))
+   .find(el=>el.dataset.conceptId===id)?.focus();
+ }
 }
 function renderConceptMap(){
  const graph=$('concept-graph'),list=$('concept-list');graph.replaceChildren();list.replaceChildren();
@@ -449,14 +549,14 @@ function renderConceptMap(){
  position.set(focusConcept.id,{x:350,y:175});
  others.forEach((n,i)=>{const a=2*Math.PI*i/Math.max(1,others.length)-Math.PI/2;position.set(n.id,{x:350+250*Math.cos(a),y:175+125*Math.sin(a)})});
  for(const n of nodes){for(const rel of n.relations||[]){if(!position.has(rel.target_id))continue;const a=position.get(n.id),b=position.get(rel.target_id);
- const line=svgElem('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#98b9ca','stroke-width':2});graph.append(line)}}
- for(const n of nodes){const p=position.get(n.id);const group=svgElem('g',{tabindex:'0',role:'button','aria-label':'Explore '+n.label,class:'graph-node'});
- const circle=svgElem('circle',{cx:p.x,cy:p.y,r:n.id===focusConcept.id?51:40,fill:n.id===focusConcept.id?'#fbd36c':'#24445d',stroke:'#b2d7eb','stroke-width':2});
- const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',fill:n.id===focusConcept.id?'#162535':'#ffffff','font-size':12});
+ const line=svgElem('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,class:'graph-link','stroke-width':2});graph.append(line)}}
+ for(const n of nodes){const p=position.get(n.id);const group=svgElem('g',{tabindex:'0',role:'button','aria-label':'Explore '+n.label,class:'graph-node','data-id':n.id,'aria-pressed':String(n.id===focusConcept.id)});
+ const circle=svgElem('circle',{cx:p.x,cy:p.y,r:n.id===focusConcept.id?51:40,class:'graph-node-shape'});
+ const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',class:'graph-node-label'});
  label.textContent=n.label.length>16?n.label.slice(0,14)+'…':n.label;group.append(circle,label);
- group.addEventListener('click',()=>chooseConcept(n.id));group.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseConcept(n.id)}});
+ group.addEventListener('click',()=>chooseConcept(n.id,'graph'));group.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseConcept(n.id,'graph')}});
  graph.append(group);
- const btn=document.createElement('button');btn.type='button';btn.textContent=n.label;btn.setAttribute('aria-pressed',String(n.id===focusConcept.id));btn.addEventListener('click',()=>chooseConcept(n.id));list.append(btn);}
+ const btn=document.createElement('button');btn.type='button';btn.textContent=n.label;btn.dataset.conceptId=n.id;btn.setAttribute('aria-pressed',String(n.id===focusConcept.id));btn.addEventListener('click',()=>chooseConcept(n.id,'list'));list.append(btn);}
 }
 async function loadCatalog(){
  try{const r=await fetch('/api/v1/concepts');const data=await r.json();if(!r.ok)throw Error(data.error||'projection unavailable');
@@ -486,28 +586,29 @@ async function sweepAction(execute){
  try{
   const req=buildSweepRequest();
   if(req.include_searxng&&!req.external_consent)throw Error('External multilingual sweep requires a separate consent checkbox.');
-  status.textContent=execute?'Executing permitted bounded sweep…':'Preparing bounded sweep plan…';
+  status.textContent=execute?'Executing permitted bounded sweep…':'Preparing bounded sweep plan…';status.setAttribute?.('data-ui-state','busy');
   const path=execute?'/api/v1/sweeps/execute':'/api/v1/sweeps/plan';
   const controller=new AbortController();
   clientDeadline=setTimeout(()=>controller.abort(),80000);
   const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req),signal:controller.signal});
   const data=await res.json();if(token!==sweepToken||displayToken!==sweepDisplayToken)return;if(!res.ok)throw Error(data.error||'sweep request refused');
-  status.textContent=execute?'Sweep state: '+data.state+' · local read-only and candidate evidence only':'Plan ready; '+data.bitmagnet_queries.length+' Bitmagnet / '+data.searxng_queries.length+' SearXNG queries';
+  status.textContent=execute?'Sweep state: '+data.state+' · local read-only and candidate evidence only':'Plan ready; '+data.bitmagnet_queries.length+' Bitmagnet / '+data.searxng_queries.length+' SearXNG queries';status.setAttribute?.('data-ui-state','ready');
   details.textContent=JSON.stringify(data,null,2);
- }catch(e){if(token===sweepToken&&displayToken===sweepDisplayToken)status.textContent='Sweep blocked, canceled, or failed: '+e.message+'; no absence conclusion or automatic retry.'}
+ }catch(e){if(token===sweepToken&&displayToken===sweepDisplayToken){status.textContent='Sweep blocked, canceled, or failed: '+e.message+'; no absence conclusion or automatic retry.';status.setAttribute?.('data-ui-state','error');}}
  finally{clearTimeout(clientDeadline);if(token===sweepToken){btn.disabled=false;preview.disabled=false}}
 }
 $('sweep-plan').addEventListener('click',()=>sweepAction(false));
 $('sweep-run').addEventListener('click',()=>sweepAction(true));
 $('sweep-limits').addEventListener('click',async()=>{
  const token=++limitsToken,displayToken=++sweepDisplayToken;
- $('sweep-status').textContent='Reading local sweep limits…';
+ $('sweep-status').textContent='Reading local sweep limits…';$('sweep-status').setAttribute?.('data-ui-state','busy');
  try{
   const res=await fetch('/api/v1/sweeps/limits');const data=await res.json();if(token!==limitsToken||displayToken!==sweepDisplayToken)return;
   if(!res.ok)throw Error(data.error||'limits unavailable');
   $('sweep-status').textContent='SearXNG JSON budget: '+data.remaining_searxng_json_requests+'/'+data.max_searxng_json_requests_per_hour+' remaining in current local window · cooldown: '+data.searxng_cooldown_seconds+'s · sweep deadline: '+data.sweep_deadline_seconds+'s · caller wait: '+data.client_timeout_seconds+'s · active sweep cap: '+data.max_concurrent_sweeps+' · external sweep admitted: '+String(data.searxng_sweep_admitted);
+  $('sweep-status').setAttribute?.('data-ui-state','ready');
   $('sweep-details').textContent=JSON.stringify(data,null,2);
- }catch(e){if(token===limitsToken&&displayToken===sweepDisplayToken)$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
+ }catch(e){if(token===limitsToken&&displayToken===sweepDisplayToken){$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;$('sweep-status').setAttribute?.('data-ui-state','error');}}
 });
 
 // Example phrases fill the search field without silently executing a query.

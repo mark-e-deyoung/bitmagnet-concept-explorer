@@ -5,10 +5,15 @@
   "type": "module",
   "scripts": {
     "ux:contract": "node web/ux_contract.test.mjs",
-    "ux:test": "playwright test"
+    "ux:manifest-check": "node tests/ui/verify-coverage-manifest.mjs",
+    "ux:test": "playwright test",
+    "ux:lighthouse": "node scripts/ux/lighthouse-flow.mjs",
+    "ux:crossbrowser": "playwright test --config playwright.crossbrowser.config.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
-    "@axe-core/playwright": "4.13.0"
+    "@axe-core/playwright": "4.13.0",
+    "lighthouse": "13.6.0",
+    "puppeteer-core": "25.16.0"
   }
 }
