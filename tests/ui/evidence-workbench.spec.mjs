@@ -52,6 +52,8 @@ for(const size of [{name:'desktop',width:1440,height:900},{name:'narrow',width:3
     await expect(page.locator('#direct article .hash-row code')).toHaveText('1111111111111111111111111111111111111111');
     await expect(page.locator('#native-facet-status')).toHaveText('Counts not requested for this search.');
     await expect(page.locator('#sweep-status')).toContainText('No sweep run for this search');
+    await expect(page.locator('#native-facet-data')).toBeEmpty();
+    await expect(page.locator('#sweep-details')).toBeEmpty();
     await expect(page.locator('#concept-graph')).toBeHidden();
     await expect(page.locator('#observed-graph')).toBeHidden();
     await noHorizontalOverflow(page,size.name);
