@@ -173,6 +173,74 @@ code{font-family:ui-monospace,Consolas,monospace}
  .theme-picker label:has(input:checked){outline:3px solid Highlight}
 }
 
+/* R2: Project-native data-bearing interaction tokens. Product identity is
+   independent of SupraCraft; evidence states are labels, never colors alone. */
+:root {
+ --viz-bg:#eef5f4; --viz-grid:#d6e5e3; --viz-edge:#597d89;
+ --viz-node:#205865; --viz-observed:#27694f; --viz-selected:#dfad77;
+ --viz-label:#ffffff; --viz-selected-text:#192e31; --viz-stroke:#285260;
+ --state-success:#206b4d; --state-error:#ac3b37; --state-warn:#a56026;
+}
+@media(prefers-color-scheme:dark){
+ :root:not([data-theme="light"]){
+  --viz-bg:#102a34; --viz-grid:#203f47; --viz-edge:#9ab9c2;
+  --viz-node:#285769; --viz-observed:#286e5a; --viz-selected:#f3c18c;
+  --viz-label:#ffffff; --viz-selected-text:#13272b; --viz-stroke:#bddfe2;
+  --state-success:#79d6ad; --state-error:#ffadad; --state-warn:#ffd091;
+ }
+}
+:root[data-theme="dark"]{
+ --viz-bg:#102a34; --viz-grid:#203f47; --viz-edge:#9ab9c2;
+ --viz-node:#285769; --viz-observed:#286e5a; --viz-selected:#f3c18c;
+ --viz-label:#ffffff; --viz-selected-text:#13272b; --viz-stroke:#bddfe2;
+ --state-success:#79d6ad; --state-error:#ffadad; --state-warn:#ffd091;
+}
+.viz-scroller{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border:1px solid var(--line);
+ background:var(--viz-bg);border-radius:12px}
+.viz-scroller:has(.graph:empty){display:none}
+.viz-scroller:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.viz-scroller .graph{display:block;min-width:560px;width:100%;max-width:none;min-height:0;height:auto;
+ overflow:visible;background:var(--viz-bg);border:0;border-radius:0}
+.viz-scroller .graph:empty{display:none}
+.graph-link{stroke:var(--viz-edge);stroke-linecap:round}
+.graph-node-shape{fill:var(--viz-node);stroke:var(--viz-stroke);stroke-width:2;transition:fill .15s ease}
+.graph-node[data-evidence="observed"] .graph-node-shape{fill:var(--viz-observed)}
+.graph-node-label{fill:var(--viz-label);pointer-events:none;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px}
+.graph-node[aria-pressed="true"] .graph-node-shape{fill:var(--viz-selected);stroke:var(--focus);stroke-width:3}
+.graph-node[aria-pressed="true"] .graph-node-label{fill:var(--viz-selected-text);font-weight:750}
+.graph-node:hover .graph-node-shape{stroke:var(--focus);stroke-width:3}
+.graph-node:focus-visible .graph-node-shape{stroke:var(--focus);stroke-width:5}
+.graph-center{fill:var(--viz-node);stroke:var(--viz-stroke);stroke-width:2}
+.graph-center-label{fill:var(--viz-label);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}
+.viz-key{display:flex;flex-wrap:wrap;gap:.45rem 1rem;align-items:center;font-size:.82rem;color:var(--subtle);
+ list-style:none;padding:0;margin:.5rem 0 .7rem}
+.viz-key li{display:inline-flex;gap:.35rem;align-items:center}
+.viz-dot{width:13px;height:13px;border-radius:50%;display:inline-block;flex:none;border:2px solid var(--viz-stroke);background:var(--viz-node)}
+.viz-dot.observed{background:var(--viz-observed)}
+.viz-dot.selected{background:var(--viz-selected);border-color:var(--focus)}
+.viz-help{color:var(--subtle);font-size:.84rem}
+.facet-group{border:1px solid var(--line);border-radius:10px;padding:.2rem .75rem;margin:.7rem 0;background:var(--raised)}
+.facet-group summary{min-height:44px;padding:.6rem 0;cursor:pointer;font-weight:750;text-transform:none}
+.facet-buckets{list-style:none;padding:0;margin:0 0 .6rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:.45rem}
+.facet-buckets li{display:flex;align-items:start;justify-content:space-between;gap:.6rem;background:var(--surface);
+ border:1px solid var(--line);border-radius:9px;padding:.48rem .7rem}
+.facet-label{min-width:0;overflow-wrap:anywhere}
+.facet-amount{flex:0 0 auto;font-weight:760;font-variant-numeric:tabular-nums;color:var(--strong)}
+.facet-estimate{display:block;color:var(--subtle);font-weight:500;font-size:.75rem}
+[data-ui-state="busy"]{border-left:4px solid var(--strong)}
+[data-ui-state="error"]{border-left:4px solid var(--state-error)}
+[data-ui-state="blocked"]{border-left:4px solid var(--state-warn)}
+[data-ui-state="ready"]{border-left:4px solid var(--state-success)}
+@media(prefers-reduced-motion:reduce){.graph-node-shape{transition:none}}
+@media(forced-colors:active){
+ .viz-scroller{border:1px solid CanvasText}
+ .graph-node-shape,.graph-center{fill:Canvas;stroke:CanvasText}
+ .graph-node-label,.graph-center-label{fill:CanvasText}
+ .graph-node[aria-pressed="true"] .graph-node-shape,.graph-node:focus-visible .graph-node-shape{stroke:Highlight;stroke-width:5}
+ .graph-node[aria-pressed="true"] .graph-node-label{fill:CanvasText}
+ .graph-link{stroke:CanvasText}
+ .viz-dot{forced-color-adjust:auto}
+}
 </style></head><body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <header class="site-header">
@@ -233,12 +301,16 @@ code{font-family:ui-monospace,Consolas,monospace}
 </div></section>
 <section id="concepts" class="panel section-space"><span class="section-kicker">03 / Inspect concepts</span><h2>Concept map (pinned CPE projection preview)</h2><p id="graph-status" class="note">Checking configured concept projection…</p>
 <p><label><input type="checkbox" id="use-concept" style="width:auto"> Include the selected concept's pinned preview lexicalizations in the next query (explicit opt-in)</label></p><label for="concept-filter">Find a concept</label><input id="concept-filter" placeholder="Search concept labels and aliases">
-<svg id="concept-graph" class="graph" viewBox="0 0 700 350" role="img" aria-label="Clickable map of selected concept and its relationships"></svg>
+<ul class="viz-key" aria-label="Concept map legend"><li><span class="viz-dot selected" aria-hidden="true"></span>Selected preview concept</li><li><span class="viz-dot" aria-hidden="true"></span>Other preview concept</li></ul>
+<p class="viz-help">When available, navigate the diagram with Tab and Enter. At narrow widths, scroll sideways or use the accessible concept buttons below. Preview relationships are not accepted CPE facts.</p>
+<div class="viz-scroller" tabindex="0" role="region" aria-label="Scrollable provisional concept diagram"><svg id="concept-graph" class="graph" viewBox="0 0 700 350" role="group" aria-label="Interactive provisional concept relationships"></svg></div>
 <p id="concept-detail" aria-live="polite"></p><div id="concept-list" class="concept-buttons" role="group" aria-label="Accessible concept selector"></div></section>
 <section id="observations" class="panel section-space" aria-labelledby="observed-title"><span class="section-kicker">04 / Investigate evidence</span><h2 id="observed-title">Concepts observed in the returned Bitmagnet metadata</h2>
 <p class="note">These are title-lexical evidence candidates from this query's bounded results, not the CPE ontology's related concepts or validated semantic classifications.</p>
 <p id="observed-status" aria-live="polite">Run a search to derive a separate observed graph.</p>
-<svg id="observed-graph" class="graph" viewBox="0 0 700 340" role="img" aria-label="Evidence-linked concepts occurring in returned metadata"></svg>
+<ul class="viz-key" aria-label="Observed evidence diagram legend"><li><span class="viz-dot observed" aria-hidden="true"></span>Title-lexical candidate</li><li><span class="viz-dot selected" aria-hidden="true"></span>Selected evidence</li></ul>
+<p class="viz-help">Observed nodes are title-lexical candidates, not semantic classifications. Inspect using the graph or native evidence-selection buttons.</p>
+<div class="viz-scroller" tabindex="0" role="region" aria-label="Scrollable observed evidence diagram"><svg id="observed-graph" class="graph" viewBox="0 0 700 340" role="group" aria-label="Interactive observed title-lexical evidence"></svg></div>
 <div id="observed-list" class="concept-buttons" role="group" aria-label="Concept evidence selectors"></div>
 <div id="observed-items" aria-live="polite"></div></section>
 <section id="facets" class="panel" aria-labelledby="native-facet-title"><h2 id="native-facet-title">Native Bitmagnet corpus metadata facets</h2>
