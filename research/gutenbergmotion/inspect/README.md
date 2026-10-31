@@ -28,3 +28,28 @@ choreography, HTTP parity, cancellation/recovery, native phone playback and
 complete actor interpretation are NOT_RUN/UNKNOWN. A green static HTML
 structural test cannot certify those functions. No accepted CPE fact or
 validated full human motion is claimed. No merge/release/deploy.
+
+## Original source read-only search flow — three-audience increment
+
+The new `-query` option is source-bound, case-insensitive, limited to
+80 Unicode characters, and read-only. It is offered by the **same validated
+source read model** to (1) human responsive HTML with an accessible labelled
+live-search and Clear control, (2) automation CLI JSON with total and filtered
+counts and selected source IDs, and (3) agent capability discovery and the
+same typed read-only command contract.
+
+```sh
+go run ./research/gutenbergmotion/inspect -capabilities
+go run ./research/gutenbergmotion/inspect -source 12926.txt -report candidates.json -format=json -query="right shoulder" > selected.json
+go run ./research/gutenbergmotion/inspect -source 12926.txt -report candidates.json -format=html -query="right shoulder" > selected.html
+```
+
+The full source corpus retains all 64 original candidates. The browser
+performs an initial source-bound prefilled search without any network or
+mutation; the native GHA checks its actual headless Chromium DOM card count
+and hidden states against independent Go CLI JSON counts. Existing
+desktop/mobile Chromium screenshots and source/tamper/XSS tests remain.
+A green filter demonstration does **not** qualify native phone VoiceOver,
+full keyboard typing/form journey, human edit/undo, HTTP action parity,
+long-running task cancellation or private MVP product acceptance. Those
+remain independent NOT_RUN/UNKNOWN.
