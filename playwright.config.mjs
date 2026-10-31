@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/ui',
+  testIgnore: '**/crossbrowser-matrix.spec.mjs', // separate real multi-engine fixture workflow
   timeout: 30000,
   expect: { timeout: 8000 },
   fullyParallel: true,

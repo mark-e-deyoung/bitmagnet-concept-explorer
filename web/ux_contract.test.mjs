@@ -11,6 +11,7 @@ assert.equal(matchCount(beforeScript,/<h1\b/gi),1,'one page title');
 assert.equal(matchCount(beforeScript,/<nav\b/gi),1,'one primary navigation');
 assert.equal(matchCount(beforeScript,/<footer\b/gi),1,'research-only footer');
 assert.match(beforeScript,/<a class="skip-link" href="#main-content">/);
+assert.doesNotMatch(beforeScript,/<a class="product-brand"[^>]*aria-label=/,'brand link must use its visible content as accessible name (WCAG 2.5.3)');
 assert.match(beforeScript,/<html lang="en">/);
 assert.match(beforeScript,/<form class="search-form" id="q">/);
 assert.match(beforeScript,/<input id="query" required maxlength="512"/);
