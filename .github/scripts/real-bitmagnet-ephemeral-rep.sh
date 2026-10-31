@@ -157,6 +157,30 @@ test -s "$GRAPH" && test -s "$EVIDENCE"
 GRAPH_SHA="$(sha256sum "$GRAPH" | cut -d' ' -f1)"
 echo "PUBLIC-CPE: candidate pack=$PACK_DIR sha256=$GRAPH_SHA"
 
+# REAL TORRENT RDTE: fetch official publisher .torrent metainfo, hash the
+# original bencoded info bytes to derive genuine torrent infohashes, retain
+# source URLs and SHA-256 of intact metainfo for replay. No swarm, DHT,
+# trackers or payload download. Internet Archive selection is independently
+# source-filtered; Ubuntu publisher torrents are mandatory in this first rep.
+RDTE_DIR="$OUT/rdte-real-metainfo"
+export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly
+go run ./cmd/rdte-torrent-collector -out "$RDTE_DIR" -minimum 2
+REAL_TORRENT_ROWS="$(jq -r '.entries | length' "$RDTE_DIR/manifest.json")"
+if [[ "$REAL_TORRENT_ROWS" -lt 2 ]]; then
+  echo "::error::No qualifying genuine publisher-provided .torrent metainfo"
+  exit 1
+fi
+curl --noproxy '*' -fsS --max-time 120 \
+  -H 'Content-Type: application/json' -H 'Connection: close' \
+  --data-binary @"$RDTE_DIR/bitmagnet-import.ndjson" \
+  http://127.0.0.1:3333/import >"$OUT/real-torrent-import.txt"
+if ! grep -qF "$REAL_TORRENT_ROWS items imported" "$OUT/real-torrent-import.txt" || ! grep -q 'import complete' "$OUT/real-torrent-import.txt"; then
+  echo "::error::Real Bitmagnet upstream importer rejected verified real publisher metainfo"
+  cat "$OUT/real-torrent-import.txt"
+  exit 1
+fi
+echo "CPE-RDTE-REAL: genuine publisher torrent infohashes imported=$REAL_TORRENT_ROWS"
+
 # Compile and start the ACTUAL Explorer service and standalone automation CLI.
 # No service ports are reachable from outside this ephemeral runner.
 export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly
@@ -311,6 +335,36 @@ if [[ "$found" != "1" ]]; then
 fi
 echo "PUBLIC-CPE: real Bitmagnet indexed official bulk eBook #62; Barsoom source-candidate expansion retrieved matching catalog anchor, authority remains research-only"
 
+# Native, real indexed torrent identity: prove that the actual Bitmagnet
+# GraphQL→Explorer FTS returns a true publisher torrent infohash. Do not use
+# the Gutenberg catalog's deliberately synthetic identifiers for this check.
+UBUNTU_HASH="$(jq -r '[.entries[] | select(.source == "ubuntu:official")][0].infohash' "$RDTE_DIR/manifest.json")"
+if [[ -z "$UBUNTU_HASH" || "$UBUNTU_HASH" == "null" ]]; then
+  echo "::error::No real Ubuntu infohash in provenance manifest"
+  exit 1
+fi
+authentic=0
+for i in $(seq 1 90); do
+  curl --noproxy '*' -sS --max-time 20 -u "$AUTH" \
+    -H 'Content-Type: application/json' \
+    --data '{"query":"ubuntu"}' \
+    http://127.0.0.1:3086/api/v1/query/execute -o "$OUT/ubuntu-real-query.json" || true
+  if jq -e --arg hash "$UBUNTU_HASH" '
+    .state == "complete" and .read_only == true and
+    (any(.results[]; .info_hash == $hash and (.tracks | index("direct") != null)))
+  ' "$OUT/ubuntu-real-query.json" >/dev/null 2>&1; then
+    authentic=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$authentic" != "1" ]]; then
+  echo "::error::Real publisher torrent infohash not returned through actual Bitmagnet FTS"
+  jq '{state,track_counts,results,failures}' "$OUT/ubuntu-real-query.json" || true
+  exit 1
+fi
+echo "CPE-RDTE-REAL: authentic bencoded publisher infohash=$UBUNTU_HASH successfully returned from real Bitmagnet index and Explorer"
+
 # Separate CLI process uses actual authenticated HTTP service and real upstream.
 BCE_AUTH_USER=public-rep BCE_AUTH_PASSWORD=synthetic-only-credential-2026 \
   "$OUT/bce-cli" -server http://127.0.0.1:3086 -operation execute \
@@ -330,6 +384,8 @@ if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
     echo "- **Public Gutenberg bulk SHA-256:** \`$(jq -r '.catalog_gzip_sha256' "$OUT/public-catalog-manifest.json")\`"
     echo "- **Public CPE research graph SHA-256:** \`$GRAPH_SHA\` (10 types, not CPE-authorized)"
     echo "- **Native source-candidate retrieval:** Gutenberg #62 anchor indexed and found using Barsoom research expansion"
+    echo "- **Actual publisher `.torrent` files:** $REAL_TORRENT_ROWS retained by SHA-256 in Actions evidence; original exact v1 infohash verified through Bitmagnet FTS"
+    echo "- **Torrent payload / P2P:** none; meta files only, no DHT, tracker, webseed or peer connections"
     echo "- **BCE tracks:** direct $(jq -r '.track_counts.direct' "$OUT/execute.json"), concept $(jq -r '.track_counts.concept' "$OUT/execute.json")"
     echo "- **Boundaries:** no DHT, public internet ingress, TMDB, CPE accepted facts, images published, private corpus or site deployment"
     echo "- **Cleanup:** both containers and runner-local service removed on job exit"
