@@ -244,75 +244,118 @@ func admit(out string, entries *[]map[string]any, source, record, rights, link, 
 	*entries = append(*entries, map[string]any{"source": source, "source_record": record, "source_url": link, "rights_source_claim": rights, "rights_status": "source_claim_not_independently_qualified", "infohash": hash, "metainfo_sha256": sha, "metainfo_bytes": len(raw), "metainfo_file": file, "name": name, "size_bytes": size, "content_type": contentType, "p2p_used": false, "payload_downloaded": false})
 	return nil
 }
+func archiveRedistributableClaim(raw string) bool {
+	u, e := url.Parse(strings.TrimSpace(raw))
+	if e != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() != "creativecommons.org" {
+		return false
+	}
+	p := strings.ToLower(u.EscapedPath())
+	return strings.HasPrefix(p, "/publicdomain/zero/") ||
+		strings.HasPrefix(p, "/publicdomain/mark/") ||
+		strings.HasPrefix(p, "/licenses/by/") ||
+		strings.HasPrefix(p, "/licenses/by-sa/")
+}
+
 func collectArchive(out string, entries *[]map[string]any, events *[]string) {
-	q := url.Values{}
-	q.Set("q", "collection:prelinger AND mediatype:movies AND format:\"Archive BitTorrent\"")
-	q.Set("output", "json")
-	q.Set("rows", "20")
-	q.Add("fl[]", "identifier")
-	q.Add("sort[]", "downloads desc")
-	data, e := fetch("https://archive.org/advancedsearch.php?"+q.Encode(), 2<<20)
-	if e != nil {
-		*events = append(*events, "archive discover: "+e.Error())
-		return
-	}
-	var res struct {
-		Response struct{ Docs []struct{ Identifier string } }
-	}
-	if e = json.Unmarshal(data, &res); e != nil {
-		*events = append(*events, "archive JSON: "+e.Error())
-		return
+	// The first Prelinger stratum is retained for continuity. The second
+	// and third use the Internet Archive's *documented* licenseurl index to
+	// find a small number of item-level source-license candidates. No
+	// sweeping of unauthorised titles, payload, trackers or peers occurs.
+	searches := []struct {
+		name  string
+		query string
+	}{
+		{"prelinger", "collection:prelinger AND mediatype:movies AND format:\"Archive BitTorrent\""},
+		{"publicdomain", "mediatype:movies AND licenseurl:http*publicdomain*"},
+		{"ccby", "mediatype:movies AND licenseurl:http*licenses/by*"},
 	}
 	count := 0
-	for _, doc := range res.Response.Docs {
+	candidates := 0
+	seen := map[string]bool{}
+	for _, source := range searches {
 		if count >= 2 {
 			break
 		}
-		id := doc.Identifier
-		if len(id) < 3 || len(id) > 120 || strings.ContainsAny(id, "/%?#\\ ") {
-			continue
-		}
-		data, e = fetch("https://archive.org/metadata/"+id, 2<<20)
+		q := url.Values{}
+		q.Set("q", source.query)
+		q.Set("output", "json")
+		q.Set("rows", "12")
+		q.Add("fl[]", "identifier")
+		q.Add("sort[]", "downloads desc")
+		raw, e := fetch("https://archive.org/advancedsearch.php?"+q.Encode(), 2<<20)
 		if e != nil {
+			*events = append(*events, "archive discovery "+source.name+": "+e.Error())
 			continue
 		}
-		var item struct {
-			Metadata struct {
-				Identifier string
-				Mediatype  string
-				Licenseurl any
-				Is_dark    any
+		var response struct {
+			Response struct{ Docs []struct{ Identifier string } }
+		}
+		if e = json.Unmarshal(raw, &response); e != nil {
+			*events = append(*events, "archive JSON "+source.name+": "+e.Error())
+			continue
+		}
+		*events = append(*events, fmt.Sprintf("archive source=%s search_candidates=%d", source.name, len(response.Response.Docs)))
+		for _, doc := range response.Response.Docs {
+			if count >= 2 || candidates >= 30 {
+				break
 			}
-			Files []struct{ Name, Format string }
-		}
-		if json.Unmarshal(data, &item) != nil || item.Metadata.Identifier != id || item.Metadata.Mediatype != "movies" || item.Metadata.Is_dark == true {
-			continue
-		}
-		license := ""
-		switch v := item.Metadata.Licenseurl.(type) {
-		case string:
-			license = v
-		case []any:
-			if len(v) > 0 {
-				license, _ = v[0].(string)
-			}
-		}
-		if !strings.Contains(strings.ToLower(license), "creativecommons.org/publicdomain/") {
-			continue
-		}
-		for _, f := range item.Files {
-			if f.Format != "Archive BitTorrent" || !strings.HasSuffix(f.Name, "_archive.torrent") || strings.Contains(f.Name, "/") {
+			id := doc.Identifier
+			if len(id) < 3 || len(id) > 120 || strings.ContainsAny(id, "/%?#\\ ") || seen[id] {
 				continue
 			}
-			link := "https://archive.org/download/" + url.PathEscape(id) + "/" + url.PathEscape(f.Name)
-			if e = admit(out, entries, "internet-archive:prelinger", id, license, link, "movie"); e == nil {
-				count++
+			seen[id] = true
+			candidates++
+			raw, e = fetch("https://archive.org/metadata/"+id, 2<<20)
+			if e != nil {
+				*events = append(*events, "archive metadata "+source.name+": "+e.Error())
+				continue
 			}
-			break
+			var item struct {
+				Metadata struct {
+					Identifier string
+					Mediatype  string
+					Licenseurl any
+					Is_dark    any
+				}
+				Files []struct{ Name, Format string }
+			}
+			if json.Unmarshal(raw, &item) != nil || item.Metadata.Identifier != id ||
+				item.Metadata.Mediatype != "movies" || fmt.Sprint(item.Metadata.Is_dark) == "true" {
+				continue
+			}
+			license := ""
+			switch v := item.Metadata.Licenseurl.(type) {
+			case string:
+				license = v
+			case []any:
+				for _, field := range v {
+					if candidate, ok := field.(string); ok && archiveRedistributableClaim(candidate) {
+						license = candidate
+						break
+					}
+				}
+			}
+			if !archiveRedistributableClaim(license) {
+				continue
+			}
+			for _, file := range item.Files {
+				if file.Format != "Archive BitTorrent" || !strings.HasSuffix(file.Name, "_archive.torrent") ||
+					strings.Contains(file.Name, "/") {
+					continue
+				}
+				link := "https://archive.org/download/" + url.PathEscape(id) + "/" + url.PathEscape(file.Name)
+				if e = admit(out, entries, "internet-archive:"+source.name, id, license, link, "movie"); e != nil {
+					*events = append(*events, "archive metainfo "+source.name+": "+e.Error())
+				} else {
+					count++
+				}
+				break
+			}
 		}
 	}
+	*events = append(*events, fmt.Sprintf("archive total_individually_claimed_metainfo=%d examined_items=%d", count, candidates))
 	if count == 0 {
-		*events = append(*events, "archive: no individually public-domain-labeled real torrent admitted this bounded run")
+		*events = append(*events, "archive: no individually source-license-admitted real torrent; no source-specific CPE proposal accepted")
 	}
 }
 func main() {
