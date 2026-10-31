@@ -43,6 +43,9 @@ jobs:
           c=json.load(open("context-evidence/windows.json"))
           r=json.load(open("context-evidence/candidates.json"))
           assert c["candidate_count"]==len(r["candidates"])==64
+          assert c["review_group_count"]==len(c["review_groups"])==44
+          assert sum(len(g["candidate_ids"]) for g in c["review_groups"])==64
+          assert all(g["status"]=="COLOCATED_LEXICAL_WINDOWS_NOT_A_VERIFIED_FIGURE" for g in c["review_groups"])
           assert not c["complete_figure_claim"] and not c["motion_measurement_claim"]
           assert all(w["status"]=="UNREVIEWED_CONTEXT_WINDOW_NOT_VALIDATED_FIGURE" for w in c["windows"])
           print("PASS original_source_grounded_windows",c["candidate_count"])
