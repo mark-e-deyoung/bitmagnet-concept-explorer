@@ -1,0 +1,42 @@
+package main
+import (
+ "bytes"
+ "crypto/sha256"
+ "encoding/hex"
+ "encoding/json"
+ "os"
+ "path/filepath"
+ "strings"
+ "testing"
+)
+func fixture()([]byte,Report){
+ s:=[]byte("Bar 4. No. 1 advances and turns.\nthen comes back.\n\nBar 8. The dancers cross to the opposite side.\nand continue onward.\n")
+ h:=sha256.Sum256(s)
+ return s,Report{Schema:"cpe.motion-text-candidates.v0",SourceID:"pg:12926",GitCommit:sourceCommit,GitBlob:sourceBlob,SourceSHA256:hex.EncodeToString(h[:]),InputBytes:len(s),Candidates:[]Candidate{
+ {ID:"first",Line:1,Evidence:"Bar 4. No. 1 advances and turns.",Actors:[]string{"no. 1"},Status:"SOURCE_TEXT_RESEARCH_CANDIDATE",Measurement:"UNMEASURED_TEXT_INSTRUCTION"},
+ {ID:"second",Line:4,Evidence:"Bar 8. The dancers cross to the opposite side.",Actors:[]string{"opposite"},Status:"SOURCE_TEXT_RESEARCH_CANDIDATE",Measurement:"UNMEASURED_TEXT_INSTRUCTION"}}}
+}
+func TestContextAndUnknown(t *testing.T){
+ s,r:=fixture();o,e:=Enrich(s,r,false);if e!=nil{t.Fatal(e)}
+ if o.CandidateCount!=2||o.CompleteFigureClaim||o.MotionMeasurementClaim{t.Fatalf("overclaimed %+v",o)}
+ if o.Windows[0].StartLine!=1||o.Windows[0].EndLine!=2||o.Windows[0].RoleStatus!="NUMBERED_ROLE_UNREVIEWED"{t.Fatalf("first %+v",o.Windows[0])}
+ if o.Windows[1].StartLine!=4||o.Windows[1].EndLine!=5||o.Windows[1].RoleStatus!="AMBIGUOUS_SOURCE_ROLE"{t.Fatalf("second %+v",o.Windows[1])}
+ b,_:=json.Marshal(o);o2,e:=Enrich(s,r,false);if e!=nil{t.Fatal(e)};c,_:=json.Marshal(o2);if !bytes.Equal(b,c){t.Fatal("replay changed")}
+}
+func TestHostiles(t *testing.T){
+ s,r:=fixture()
+ if _,e:=Enrich(s,r,true);e==nil{t.Fatal("wrong pinned bytes accepted")}
+ bad:=append([]byte(nil),s...);bad[0]='X';if _,e:=Enrich(bad,r,false);e==nil{t.Fatal("swapped input accepted")}
+ mutations:=[]func(*Report){func(q *Report){q.GitCommit="fake"},func(q *Report){q.GitBlob="fake"},func(q *Report){q.SourceID="fake"},func(q *Report){q.Candidates[0].Evidence="forged"},func(q *Report){q.Candidates[0].Line=3},func(q *Report){q.Candidates[1].ID="first"},func(q *Report){q.Candidates[0].Measurement="MEASURED_MOCAP"}}
+ for i,m:=range mutations{q:=r;q.Candidates=append([]Candidate(nil),r.Candidates...);m(&q);if _,e:=Enrich(s,q,false);e==nil{t.Fatalf("hostile %d accepted",i)}}
+}
+func TestCLIRejectsUnpinnedWithoutOutput(t *testing.T){
+ s,r:=fixture();dir:=t.TempDir();src:=filepath.Join(dir,"src.txt");js:=filepath.Join(dir,"candidates.json")
+ if e:=os.WriteFile(src,s,0600);e!=nil{t.Fatal(e)}
+ raw,_:=json.Marshal(r);if e:=os.WriteFile(js,raw,0600);e!=nil{t.Fatal(e)}
+ var out bytes.Buffer
+ if e:=run([]string{"-source",src,"-candidates",js},&out);e==nil{t.Fatal("wrong book accepted")}
+ if out.Len()!=0{t.Fatal("partial result emitted")}
+ if e:=os.WriteFile(js,append(raw,[]byte("\n{}")...),0600);e!=nil{t.Fatal(e)}
+ if e:=run([]string{"-source",src,"-candidates",js},&out);e==nil||!strings.Contains(e.Error(),"trailing"){t.Fatalf("trailing JSON accepted %v",e)}
+}
