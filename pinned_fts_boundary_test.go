@@ -53,9 +53,9 @@ func TestPinnedFTSMultiwordQueryPlanWarnsWithoutRewriting(t *testing.T) {
 func TestPinnedFTSMultiwordSweepWarnsOnceAndPreservesUnknown(t *testing.T) {
 	setupFixtureGraph(t, sweepFixture)
 	plan, err := makeSweepPlan(SweepRequest{
-		Query: "fiction | !alternate",
+		Query:      "fiction | !alternate",
 		ConceptIDs: []string{"media.animation"},
-		Languages: []string{"en"},
+		Languages:  []string{"en"},
 	})
 	if err != nil {
 		t.Fatal(err)
