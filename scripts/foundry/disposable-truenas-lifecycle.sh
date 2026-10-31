@@ -374,7 +374,11 @@ AUTH_PLAN_RESP="$(curl -sS -u "${FIXTURE_USER}:${FIXTURE_PASS}" \
   -d '{"query":"multilingual concept exploration"}' \
   "${SERVICE_URL}/api/v1/query/plan")"
 echo "  Query Plan Response: ${AUTH_PLAN_RESP}"
-echo "${AUTH_PLAN_RESP}" | jq -e '.query == "multilingual concept exploration" and (.plan | length > 0)' >/dev/null
+echo "${AUTH_PLAN_RESP}" | jq -e '
+  .version == "v0-provisional" and
+  .read_only == true and
+  any(.tracks[]; .name == "direct" and (.terms | index("multilingual concept exploration") != null))
+' >/dev/null
 echo "  Query plan endpoint verification: PASS"
 
 # 5. Authenticated request to Web UI / must succeed with 200 and return HTML
