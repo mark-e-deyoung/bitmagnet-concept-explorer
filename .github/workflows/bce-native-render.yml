@@ -61,6 +61,10 @@ jobs:
           print("source-only rendered service:", name)
           print("resource contract:", svc.get("deploy", {}).get("resources"))
           print("ports contract:", svc.get("ports"), "expose:", svc.get("expose"))
+          if svc.get("ports"):
+              raise SystemExit("default exposed mode unexpectedly published a host port")
+          if "3086/tcp" not in (svc.get("expose") or []):
+              raise SystemExit("default exposed mode must produce container-only expose")
           if not svc.get("read_only") or svc.get("privileged"):
               raise SystemExit("candidate lost nonroot/read-only protection")
           resources = svc.get("deploy", {}).get("resources", {}).get("limits", {})
@@ -74,4 +78,36 @@ jobs:
           if env.get("BCE_AUTH_USER") != "fixture-user":
               raise SystemExit("lost authentication configuration")
           print("RENDER_SOURCE_ONLY, no product pull, TrueNAS installation, or F0-F5 qualification")
+          PY
+
+      - name: Render operator-selected published loopback port, never deploy
+        working-directory: truenas-apps
+        run: |
+          /tmp/bce-render-venv/bin/python .github/scripts/ci.py \
+            --app bitmagnet-concept-explorer \
+            --train community \
+            --test-file loopback-published-values.yaml \
+            --render-only=True --skip-metadata
+          /tmp/bce-render-venv/bin/python - <<'PY'
+          import pathlib, yaml
+          path = pathlib.Path("ix-dev/community/bitmagnet-concept-explorer/templates/rendered/docker-compose.yaml")
+          obj = yaml.safe_load(path.read_text())
+          name, svc = next(iter(obj["services"].items()))
+          ports = svc.get("ports") or []
+          print("published loopback source-only:", name, ports)
+          if not ports:
+              raise SystemExit("explicit published mode failed to create a host binding")
+          for item in ports:
+              if isinstance(item, dict):
+                  host_ip = item.get("host_ip")
+                  published = str(item.get("published"))
+                  target = str(item.get("target"))
+                  if (host_ip, published, target) != ("127.0.0.1", "3086", "3086"):
+                      raise SystemExit("published mode did not fail closed to loopback")
+              else:
+                  if not str(item).startswith("127.0.0.1:3086:3086"):
+                      raise SystemExit("unexpected published port contract")
+          if (svc.get("deploy") or {}).get("resources", {}).get("limits", {}).get("memory") != "1024M":
+              raise SystemExit("published mode lost memory limits")
+          print("PUBLISHED_SOURCE_ONLY; no TrueNAS deployment, network/TLS or F0-F5 qualification")
           PY
