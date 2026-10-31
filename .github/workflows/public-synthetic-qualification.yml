@@ -44,6 +44,7 @@ jobs:
           unformatted="$(gofmt -l .)"
           if [ -n "$unformatted" ]; then
             printf 'Unformatted Go files:\n%s\n' "$unformatted"
+            gofmt -d public_gutenberg_lexical_evidence_test.go
             exit 1
           fi
       - name: Embedded browser state regression
