@@ -193,6 +193,9 @@ func fetch(rawurl string, max int) ([]byte, error) {
 		return nil, errors.New("unapproved source")
 	}
 	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if req.URL.Scheme != "https" {
+			return errors.New("HTTPS mandatory for redirects")
+		}
 		if len(via) > 3 {
 			return errors.New("redirect budget")
 		}
