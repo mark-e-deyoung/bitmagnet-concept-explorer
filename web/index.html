@@ -134,6 +134,15 @@ legend{padding:0 .3rem;font-weight:700}
 .item div{font-size:.83rem;color:var(--subtle)}
 .graph{width:100%;height:auto;min-height:180px;background:#102d38;border:1px solid var(--line);
  border-radius:12px;max-width:100%;overflow:visible}
+.graph:empty{display:none}
+.metadata-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:.42rem .8rem;margin:.75rem 0 .25rem}
+.metadata-list>div{background:var(--raised);padding:.55rem .68rem;border-radius:8px;min-width:0}
+.metadata-list dt{font-size:.7rem;font-weight:750;letter-spacing:.04em;color:var(--subtle);text-transform:uppercase}
+.metadata-list dd{margin:.18rem 0 0;font-size:.86rem;font-weight:620;overflow-wrap:anywhere}
+.hash-row{font-size:.75rem;line-height:1.6;color:var(--subtle);margin-top:.55rem}
+.hash-row code{user-select:all;overflow-wrap:anywhere}
+.hash-copy{min-height:36px;padding:.3rem .55rem;font-size:.76rem;margin-left:.5rem}
+.match-reason{color:var(--subtle);font-size:.82rem;margin:.55rem 0 0}
 .graph-node{cursor:pointer}.graph-node:focus{outline:3px solid var(--focus)}
 .concept-buttons{display:flex;flex-wrap:wrap;gap:.45rem}
 .concept-buttons button{min-height:44px;padding:.45rem .75rem;font-size:.88rem}
@@ -253,8 +262,46 @@ code{font-family:ui-monospace,Consolas,monospace}
 <script>
 const $=id=>document.getElementById(id);
 let canExecute=false,canInfer=false,queryToken=0,facetToken=0,sweepToken=0,limitsToken=0,sweepDisplayToken=0;
-function displayItems(id,items){const node=$(id);node.replaceChildren();if(items.length===0){node.textContent='No observed results in this bounded query.';return;}
- for(const x of items){const article=document.createElement('article');article.className='item';const title=document.createElement('strong');title.textContent=x.title||'(untitled)';const detail=document.createElement('div');const hash=(x.info_hash||'').slice(0,14);detail.textContent='Type: '+(x.content_type||'unknown')+' · Language IDs: '+(x.languages||[]).join(', ')+' · Seeders: '+(x.seeders??'unknown')+' · Leechers: '+(x.leechers??'unknown')+' · Source adult flag: '+(x.adult_metadata===null||x.adult_metadata===undefined?'unknown':String(x.adult_metadata))+' · Infohash: '+hash+'… · Matches: '+(x.matched_queries||[]).join(', ');article.append(title,detail);node.append(article);}}
+function displayItems(id,items){
+ const node=$(id);node.replaceChildren();
+ if(items.length===0){node.textContent='No observed results in this bounded query.';return;}
+ for(const x of items){
+  const article=document.createElement('article');article.className='item';
+  const title=document.createElement('strong');title.textContent=x.title||'(untitled)';article.append(title);
+  const details=document.createElement('dl');details.className='metadata-list';
+  function datum(name,value){
+   const pair=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');
+   dt.textContent=name;dd.textContent=String(value);pair.append(dt,dd);details.append(pair);
+  }
+  datum('Type',x.content_type||'Unknown');
+  datum('Languages',(x.languages||[]).join(', ')||'Unknown');
+  datum('Seeders',x.seeders??'Unknown');
+  datum('Leechers',x.leechers??'Unknown');
+  datum('Adult source flag',x.adult_metadata==null?'Unknown':String(x.adult_metadata)+' (not a suitability verdict)');
+  article.append(details);
+  const reason=document.createElement('p');reason.className='match-reason';
+  reason.textContent='Matched query terms: '+((x.matched_queries||[]).join(', ')||'not supplied');
+  article.append(reason);
+  const hash=typeof x.info_hash==='string'?x.info_hash:'';
+  if(/^[a-f0-9]{40}$/i.test(hash)){
+   const row=document.createElement('div');row.className='hash-row';
+   const label=document.createElement('span');label.textContent='Original infohash: ';
+   const code=document.createElement('code');code.textContent=hash;row.append(label,code);
+   const button=document.createElement('button');button.type='button';button.className='hash-copy';
+   button.textContent='Copy';button.setAttribute('aria-label','Copy '+(x.title||'result')+' infohash');
+   const notice=document.createElement('span');notice.className='sr-only';notice.setAttribute('role','status');
+   button.addEventListener('click',async()=>{
+    try{
+     if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function')throw Error('Clipboard unavailable');
+     await navigator.clipboard.writeText(hash);
+     notice.textContent='Infohash copied';button.textContent='Copied';
+    }catch(_){notice.textContent='Copy unavailable. Select the displayed infohash to copy manually.';button.textContent='Select text';}
+   });
+   row.append(button,notice);article.append(row);
+  }
+  node.append(article);
+ }
+}
 function clearQueryEvidence(message){
  observedToken++;facetToken++;sweepToken++;limitsToken++;sweepDisplayToken++;
  for(const id of ['direct','concept','overlap','external','details','observed-graph','observed-list','observed-items','observed-status','native-facet-data','native-facet-status','sweep-details','sweep-status']){
@@ -280,6 +327,8 @@ $('q').addEventListener('submit',async event=>{
  if(token!==queryToken)return;
  $('status').textContent='State: '+data.state+' · Unique observed: '+rows.length+' · Direct matches: '+(data.track_counts?.direct??0)+' · Concept matches: '+(data.track_counts?.concept??0);
  $('details').textContent=JSON.stringify({failures:data.failures,warnings:data.warnings,track_counts:data.track_counts,scope:data.filter_scope,before_filters:data.before_filters,after_filters:data.after_filters,groups:data.groups,coverage:data.coverage},null,2);
+ $('native-facet-status').textContent='Counts not requested for this search.';
+ $('sweep-status').textContent='No sweep run for this search. External web search is off by default.';
  const external=$('external');external.replaceChildren();
  for(const x of data.external_results||[]){const article=document.createElement('article');article.className='item';const strong=document.createElement('strong');strong.textContent=x.title;const p=document.createElement('div');p.textContent=x.url+' · '+(x.engines||[]).join(', ');article.append(strong,p);external.append(article)}
  if(!(data.external_results||[]).length){external.textContent='No web observations returned. A failed or disabled adapter does not establish absence.'}
