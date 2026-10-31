@@ -6,6 +6,7 @@ import {startFlow,desktopConfig} from 'lighthouse';
 import {writeFile,mkdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
+import {execFileSync} from 'node:child_process';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const out=path.join(root,'build/lighthouse');
@@ -76,6 +77,19 @@ async function test(mode){
    invalid.push('Populated snapshot accessibility: '+snapScores.accessibility+' below 90');
   if(snapScores['best-practices']!=null&&snapScores['best-practices']<85)
    invalid.push('Populated snapshot best-practices: '+snapScores['best-practices']+' below 85');
+  // Aggregate Lighthouse score 100 can hide audit-specific failures. Never
+  // accept failures in Label-in-Name and core WCAG interaction semantics.
+  const critical=['label-content-name-mismatch','aria-allowed-attr','aria-required-attr',
+   'aria-required-children','color-contrast','button-name','link-name',
+   'aria-hidden-focus','focus-traps','duplicate-id-aria'];
+  for(const [name,lhr] of [['navigation',nav.lhr],['populated snapshot',snap.lhr]]){
+   for(const id of critical){
+    const audit=lhr.audits?.[id];
+    if(audit?.score===0){
+     invalid.push(name+' critical accessibility audit '+id+' FAIL: '+(audit.title||''));
+    }
+   }
+  }
   // Lighthouse is laboratory/fixture evidence, not a CrUX field result.
   // SEO intentionally informational only: this is a noindex RDTE preview.
   const problems=Object.values(snap.lhr.audits||{}).filter(x=>
@@ -89,7 +103,8 @@ async function test(mode){
 for(const mode of ['desktop','mobile']){
  try{await test(mode);}catch(err){findings.push({mode,invalid:[String(err?.stack||err)]});console.error('LIGHTHOUSE_FIRST_FAILURE '+mode,err?.stack||err);}
 }
-await writeFile(path.join(out,'summary.json'),JSON.stringify({sha:process.env.GITHUB_SHA||'local',
+const checkedOutSha=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
+await writeFile(path.join(out,'summary.json'),JSON.stringify({sha:checkedOutSha,github_event_sha:process.env.GITHUB_SHA||null,
   fixture:'public-ux-fixture-only',noindex:true,results:findings,thresholds:min,
   note:'Synthetic local laboratory Chrome. SEO noindex intentionally not gated; no real user, assistive hardware or production SLA.'},null,2));
 const bad=findings.flatMap(x=>x.invalid||[]);
