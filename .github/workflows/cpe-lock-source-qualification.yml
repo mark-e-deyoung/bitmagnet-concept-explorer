@@ -35,7 +35,7 @@ jobs:
           go test -count=2 ./internal/cpepack ./cmd/cpepack
           go test -race ./internal/cpepack ./cmd/cpepack
           go vet ./internal/cpepack ./cmd/cpepack
-          test -z "$(gofmt -l internal/cpepack/pack.go internal/cpepack/pack_test.go cmd/cpepack/main.go)"
+          test -z "$(gofmt -l internal/cpepack/pack.go internal/cpepack/pack_test.go internal/cpepack/source_hardening_test.go cmd/cpepack/main.go)"
       - name: Source-only portable crossbuild
         env:
           GOTOOLCHAIN: local
