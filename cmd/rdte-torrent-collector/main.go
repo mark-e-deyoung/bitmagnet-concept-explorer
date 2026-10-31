@@ -194,7 +194,7 @@ func validateMetainfoRedirect(req *http.Request, via []*http.Request) error {
 		return errors.New("redirect budget")
 	}
 	host := req.URL.Hostname()
-	if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || host == "debian.nic.cz" || strings.HasSuffix(host, ".archive.org") {
+	if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || host == "debian.nic.cz" || host == "archlinux.org" || strings.HasSuffix(host, ".archive.org") {
 		return nil
 	}
 	return errors.New("off-origin redirect")
@@ -204,7 +204,7 @@ func fetch(rawurl string, max int) ([]byte, error) {
 	if e != nil || u.Scheme != "https" {
 		return nil, errors.New("HTTPS mandatory")
 	}
-	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "mirrors.edge.kernel.org" && u.Hostname() != "debian.nic.cz" {
+	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "mirrors.edge.kernel.org" && u.Hostname() != "debian.nic.cz" && u.Hostname() != "archlinux.org" {
 		return nil, errors.New("unapproved source")
 	}
 	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: validateMetainfoRedirect}
@@ -304,6 +304,36 @@ func collectDebian(out string, entries *[]map[string]any, events *[]string) {
 	*events = append(*events, "debian: no mirror met prior SHA256+infohash+HTTPS admission")
 }
 
+
+// collectArch admits one exact-version official Arch Linux torrent metainfo item.
+// The published original infohash on archlinux.org is a publisher-side
+// identity oracle. The whole-file SHA256 is emitted from the real bytes,
+// not assumed from the ISO checksum on the release page.
+func collectArch(out string, entries *[]map[string]any, events *[]string) {
+	const link = "https://archlinux.org/releng/releases/2026.10.01/torrent/"
+	const expectedInfoHash = "9b521219bc48550140a666f74a29048ed78e933b"
+	const expectedName = "archlinux-2026.10.01-x86_64.iso"
+	raw, err := fetch(link, 2<<20)
+	if err != nil {
+		*events = append(*events, "arch official HTTPS source rejected: "+err.Error())
+		return
+	}
+	hash, name, _, err := decodeMetainfo(raw)
+	if err != nil {
+		*events = append(*events, "arch original metainfo malformed: "+err.Error())
+		return
+	}
+	if hash != expectedInfoHash || name != expectedName {
+		*events = append(*events, "arch publisher original infohash/name mismatch; no admission")
+		return
+	}
+	err = admitBytes(out, entries, "arch:official", "2026.10.01",
+		"official Linux distribution; metainfo rights not independently adjudicated", link, "software", raw)
+	if err != nil {
+		*events = append(*events, "arch official metainfo admission rejected: "+err.Error())
+	}
+}
+
 func collectArchive(out string, entries *[]map[string]any, events *[]string) {
 	q := url.Values{}
 	q.Set("q", "collection:prelinger AND mediatype:movies AND format:\"Archive BitTorrent\"")
@@ -395,6 +425,7 @@ func main() {
 	}
 	// Real publisher-family coverage: pinned original metainfo across two vetted mirrors.
 	collectDebian(*out, &entries, &events)
+	collectArch(*out, &entries, &events)
 	collectArchive(*out, &entries, &events)
 	sort.Slice(entries, func(i, j int) bool { return entries[i]["infohash"].(string) < entries[j]["infohash"].(string) })
 	manifest := map[string]any{"schema_version": "cpe-rdte-real-metainfo-v1", "authority_status": "research_source_observations_not_accepted_CPE", "entries": entries, "source_events": events, "no_payload_download": true, "no_swarm_or_dht": true}
