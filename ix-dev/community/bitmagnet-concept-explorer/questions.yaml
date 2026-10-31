@@ -63,7 +63,7 @@ questions:
                     - value: exposed
                       description: Container-only TCP exposure; no host port is published. Use a trusted same-network reverse proxy.
                     - value: published
-                      description: Explicit host port binding to selected IPs (defaults to loopback); external Basic Auth must be behind TLS.
+                      description: Explicit host port binding to selected IPs (defaults to loopback); remote Basic Auth requires a TLS-terminating reverse proxy.
                     - value: ""
                       description: Do not expose the port.
               - variable: port_number
