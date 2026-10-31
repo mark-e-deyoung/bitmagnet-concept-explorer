@@ -143,9 +143,16 @@ func run(args []string,w io.Writer) error{
  fs:=flag.NewFlagSet("context",flag.ContinueOnError);fs.SetOutput(io.Discard)
  srcName:=fs.String("source","","original text")
  jsonName:=fs.String("candidates","","original candidate JSON")
+ crossOver:=fs.Bool("cross-over-first-pass",false,"source-checked held first pass of original eight-bar figure")
  if err:=fs.Parse(args);err!=nil{return err}
- if *srcName==""||*jsonName==""||fs.NArg()!=0{return errors.New("source and candidates required")}
+ if *srcName==""||fs.NArg()!=0{return errors.New("source required")}
+ if *crossOver&&*jsonName!=""{return errors.New("cross-over mode accepts source only")}
+ if !*crossOver&&*jsonName==""{return errors.New("candidates required")}
  src,err:=os.ReadFile(*srcName);if err!=nil{return err}
+ if *crossOver{
+  v,err:=CrossOverFirstPass(src,true);if err!=nil{return err}
+  enc:=json.NewEncoder(w);enc.SetIndent("","  ");return enc.Encode(v)
+ }
  f,err:=os.Open(*jsonName);if err!=nil{return err};defer f.Close()
  var report struct{
   Schema string `json:"schema"`
