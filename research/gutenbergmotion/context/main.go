@@ -32,7 +32,7 @@ type Report struct {
  SourceID string `json:"source_id"`
  GitCommit string `json:"git_commit"`
  GitBlob string `json:"git_blob"`
- SourceSHA256 string [[source_sha256]]
+ SourceSHA256 string `json:"source_sha256"`
  InputBytes int `json:"input_bytes"`
  Truncated bool `json:"truncated"`
  Candidates []Candidate `json:"candidates"`
@@ -49,7 +49,7 @@ type Window struct {
 type Result struct {
  Schema string `json:"schema"`
  SourceID string `json:"source_id"`
- SourceSHA256 string [[source_sha256]]
+ SourceSHA256 string `json:"source_sha256"`
  CandidateCount int `json:"candidate_count"`
  SourceCandidateTruncated bool `json:"source_candidate_truncated"`
  CompleteFigureClaim bool `json:"complete_figure_claim"`
@@ -112,7 +112,7 @@ func run(args []string,w io.Writer) error{
   SourceURL string `json:"source_url"`
   GitCommit string `json:"git_commit"`
   GitBlob string `json:"git_blob"`
-  SourceSHA256 string [[source_sha256]]
+  SourceSHA256 string `json:"source_sha256"`
   InputBytes int `json:"input_bytes"`
   Truncated bool `json:"truncated"`
   Candidates []struct{
