@@ -48,9 +48,9 @@ const facets={total_count:172,total_count_is_estimate:true,
   genre:[{label:'Unclassified',count:14,is_estimate:true}]
  }};
 const fixtures={
- '/api/v1/capabilities':{execute:true,mutation:false,cpe_write:false,inference:false,external_web:false},
+ '/api/v1/capabilities':{execute:true,mutation:false,cpe_write:false,inference:false,sovereign_inference_configured:true,external_web:false},
  '/api/v1/concepts':catalog,
- '/api/v1/sweeps/limits':{remaining_searxng_json_requests:0,max_searxng_json_requests_per_hour:3,
+ '/api/v1/sweeps/limits':{remaining_searxng_json_requests:1,max_searxng_json_requests_per_hour:3,
   searxng_cooldown_seconds:60,sweep_deadline_seconds:55,client_timeout_seconds:80,
   max_concurrent_sweeps:1,searxng_sweep_admitted:false},
  '/api/v1/query/execute':{state:'complete',read_only:true,results:records,
@@ -59,11 +59,13 @@ const fixtures={
   track_counts:{direct:0,concept:0},failures:[],warnings:[]},
  '/api/v1/query/observed-graph':observed,
  '/api/v1/query/facets':facets,
- '/api/v1/sweeps/plan':{state:'planned',bitmagnet_queries:[],searxng_queries:[]},
- '/api/v1/sweeps/execute':{state:'complete',bitmagnet_queries:[],searxng_queries:[]}
+ '/api/v1/inference/propose':{status:'provisional_hypotheses',
+  hypotheses:[{concept_id:'public:creative',confidence:'low',rationale:'Synthetic local model hypothesis only'}]},
+ '/api/v1/sweeps/plan':{state:'planned',bitmagnet_queries:['creative work'],searxng_queries:[]},
+ '/api/v1/sweeps/execute':{state:'complete',bitmagnet_queries:['creative work'],searxng_queries:[]}
 };
 const posts=new Set(['/api/v1/query/execute','/api/v1/query/plan',
- '/api/v1/query/observed-graph','/api/v1/query/facets',
+ '/api/v1/query/observed-graph','/api/v1/query/facets','/api/v1/inference/propose',
  '/api/v1/sweeps/plan','/api/v1/sweeps/execute']);
 function send(res,code,body,type='application/json; charset=utf-8'){
  const bytes=typeof body==='string'||Buffer.isBuffer(body)?body:JSON.stringify(body);

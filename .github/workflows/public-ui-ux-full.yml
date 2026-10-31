@@ -40,6 +40,8 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
       - name: Install independent three-engine browser binaries
         run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify UI control inventory manifest and drift gate
+        run: npm run ux:manifest-check
       - name: Qualify synthetic live UI/UX with three browser engines and axe
         env:
           CI: "1"

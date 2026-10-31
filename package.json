@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "ux:contract": "node web/ux_contract.test.mjs",
+    "ux:manifest-check": "node tests/ui/verify-coverage-manifest.mjs",
     "ux:test": "playwright test",
     "ux:lighthouse": "node scripts/ux/lighthouse-flow.mjs",
     "ux:crossbrowser": "playwright test --config playwright.crossbrowser.config.mjs"
