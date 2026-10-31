@@ -1,0 +1,239 @@
+{
+  "schema_version": "public-lore-evidence-v0",
+  "pack_id": "gutenberg-lore-public-research-20261031",
+  "authority_status": "research-only-no-accepted-cpe-facts",
+  "observed_on": "2026-10-31",
+  "scope": "Public source-catalog facts, work/character/setting examples and related art candidates, not source text or image files.",
+  "rights_semantics": "Source rights statements are stored as attributed, jurisdiction-scoped claims; no universal reuse determination or legal policy decision.",
+  "works": [
+    {
+      "id": "work:princess-of-mars",
+      "title": "A Princess of Mars",
+      "creator_name": "Edgar Rice Burroughs",
+      "source_record_id": "gutenberg:62",
+      "source_url": "https://www.gutenberg.org/ebooks/62",
+      "language": "en",
+      "first_publication_year_reported": 1912,
+      "first_publication_year_evidence": "source bibliography / work identity (not Gutenberg eBook release date)",
+      "status": "public_research_candidate"
+    },
+    {
+      "id": "work:wizard-of-oz",
+      "title": "The Wonderful Wizard of Oz",
+      "creator_name": "L. Frank Baum",
+      "source_record_id": "gutenberg:55",
+      "source_url": "https://www.gutenberg.org/ebooks/55",
+      "language": "en",
+      "first_publication_year_reported": 1900,
+      "first_publication_year_evidence": "source bibliography / work identity (not Gutenberg eBook release date)",
+      "status": "public_research_candidate"
+    },
+    {
+      "id": "work:alice-in-wonderland",
+      "title": "Alice's Adventures in Wonderland",
+      "creator_name": "Lewis Carroll",
+      "source_record_id": "gutenberg:11",
+      "source_url": "https://www.gutenberg.org/ebooks/11",
+      "language": "en",
+      "first_publication_year_reported": 1865,
+      "first_publication_year_evidence": "source bibliography / work identity (not Gutenberg eBook release date)",
+      "status": "public_research_candidate"
+    },
+    {
+      "id": "work:time-machine",
+      "title": "The Time Machine",
+      "creator_name": "H. G. Wells",
+      "source_record_id": "gutenberg:35",
+      "source_url": "https://www.gutenberg.org/ebooks/35",
+      "language": "en",
+      "first_publication_year_reported": 1895,
+      "first_publication_year_evidence": "source bibliography / work identity (not Gutenberg eBook release date)",
+      "status": "public_research_candidate"
+    }
+  ],
+  "entities": [
+    {
+      "id": "fictional:barsoom",
+      "kind": "fictional_world",
+      "name": "Barsoom"
+    },
+    {
+      "id": "fictional:john-carter",
+      "kind": "fictional_character",
+      "name": "John Carter"
+    },
+    {
+      "id": "fictional:dejah-thoris",
+      "kind": "fictional_character",
+      "name": "Dejah Thoris"
+    },
+    {
+      "id": "fictional:oz",
+      "kind": "fictional_world",
+      "name": "Oz"
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim:apm-series",
+      "subject": "work:princess-of-mars",
+      "predicate": "catalog_series",
+      "object": "Barsoom series, 1",
+      "source_url": "https://www.gutenberg.org/ebooks/62",
+      "source_family": "project-gutenberg",
+      "evidence_role": "catalog_field",
+      "status": "source_report_not_independently_qualified"
+    },
+    {
+      "id": "claim:apm-carter",
+      "subject": "work:princess-of-mars",
+      "predicate": "catalog_subject_mentions",
+      "object": "fictional:john-carter",
+      "source_url": "https://www.gutenberg.org/ebooks/62",
+      "source_family": "project-gutenberg",
+      "evidence_role": "catalog_subject",
+      "status": "source_report_not_independently_qualified"
+    },
+    {
+      "id": "claim:apm-dejah",
+      "subject": "work:princess-of-mars",
+      "predicate": "catalog_subject_mentions",
+      "object": "fictional:dejah-thoris",
+      "source_url": "https://www.gutenberg.org/ebooks/62",
+      "source_family": "project-gutenberg",
+      "evidence_role": "catalog_subject",
+      "status": "source_report_not_independently_qualified"
+    },
+    {
+      "id": "claim:apm-barsoom",
+      "subject": "work:princess-of-mars",
+      "predicate": "series_relates_to_setting",
+      "object": "fictional:barsoom",
+      "source_url": "https://www.gutenberg.org/ebooks/62",
+      "source_family": "project-gutenberg",
+      "evidence_role": "catalog_series",
+      "status": "research_relationship_candidate"
+    },
+    {
+      "id": "claim:oz-setting",
+      "subject": "work:wizard-of-oz",
+      "predicate": "catalog_subject_mentions",
+      "object": "fictional:oz",
+      "source_url": "https://www.gutenberg.org/ebooks/55",
+      "source_family": "project-gutenberg",
+      "evidence_role": "catalog_subject",
+      "status": "source_report_not_independently_qualified"
+    }
+  ],
+  "art_candidates": [
+    {
+      "id": "art:princess-of-mars-plate2-1917",
+      "related_work": "work:princess-of-mars",
+      "title": "Princess of Mars Plate 2",
+      "creator": "Frank Earle Schoonover",
+      "source_url": "https://commons.wikimedia.org/wiki/File:Princess_of_Mars_Plate_2.jpg",
+      "source_family": "wikimedia-commons",
+      "source_description": "Wikimedia Commons attributes image to Frank Schoonover, 1917 edition, with a US public-domain tag",
+      "rights_observation": {
+        "claimant": "Wikimedia Commons file record",
+        "scope": "this illustration / US",
+        "statement": "public domain in the United States, according to file page",
+        "status": "recorded_not_redistribution_approved"
+      },
+      "file_retained": false,
+      "downloaded": false
+    },
+    {
+      "id": "art:wizard-of-oz-denslow-1900",
+      "related_work": "work:wizard-of-oz",
+      "title": "You ought to be ashamed of yourself",
+      "creator": "W. W. Denslow",
+      "source_url": "https://www.loc.gov/item/98508888/",
+      "source_family": "library-of-congress",
+      "source_description": "Library of Congress catalogs a 1900 Denslow illustration featuring Dorothy, Scarecrow, Tin Woodman and Lion",
+      "rights_observation": {
+        "claimant": "Library of Congress item page",
+        "scope": "this illustration / item rights advisory",
+        "statement": "rights advisory directs researchers to rights and restrictions information",
+        "status": "item_level_status_unverified"
+      },
+      "file_retained": false,
+      "downloaded": false
+    },
+    {
+      "id": "art:wizard-of-oz-first-edition-book",
+      "related_work": "work:wizard-of-oz",
+      "title": "The Wonderful Wizard of Oz, 1900 printed edition",
+      "creator": "L. Frank Baum and W. W. Denslow",
+      "source_url": "https://www.loc.gov/item/03032405/",
+      "source_family": "library-of-congress",
+      "source_description": "Library of Congress book record includes Denslow illustrations and a collection-level public-domain/reuse statement",
+      "rights_observation": {
+        "claimant": "Library of Congress item and collection page",
+        "scope": "digitized book / US",
+        "statement": "Library of Congress Children's Book Selections described as public domain and free to reuse",
+        "status": "recorded_source_claim_not_specific_derivative_clearance"
+      },
+      "file_retained": false,
+      "downloaded": false
+    }
+  ],
+  "source_inventory": [
+    {
+      "id": "project-gutenberg",
+      "purpose": "Bulk work/edition/subject metadata",
+      "url": "https://www.gutenberg.org/ebooks/offline_catalogs.html",
+      "preferred_method": "daily XML/RDF catalog snapshot",
+      "constraints": "Use published bulk catalog/feed or mirrors; do not robot per-ebook website",
+      "role": "catalog_source"
+    },
+    {
+      "id": "standard-ebooks",
+      "purpose": "Curated ebook edition metadata, links to transcriptions and scans",
+      "url": "https://standardebooks.org/ebooks/edgar-rice-burroughs/a-princess-of-mars",
+      "preferred_method": "source page or permitted metadata",
+      "constraints": "Source claims may derive from Gutenberg; preserve ancestry and edition distinctions",
+      "role": "edition_candidate"
+    },
+    {
+      "id": "wikimedia-commons",
+      "purpose": "Item-level illustrations and structured metadata",
+      "url": "https://commons.wikimedia.org/wiki/File:Princess_of_Mars_Plate_2.jpg",
+      "preferred_method": "public file metadata and MediaWiki API",
+      "constraints": "Check each file creator, date and item-level rights; no implicit reuse of modern derivative art",
+      "role": "asset_catalog"
+    },
+    {
+      "id": "library-of-congress",
+      "purpose": "Historical scans, original illustrations and image metadata",
+      "url": "https://www.loc.gov/item/03032405/",
+      "preferred_method": "loc.gov API and item pages",
+      "constraints": "Read item-specific rights and collection rights separately",
+      "role": "asset_catalog"
+    },
+    {
+      "id": "openverse",
+      "purpose": "Discovery across openly licensed and public-domain image sources",
+      "url": "https://api.openverse.org/v1/",
+      "preferred_method": "documented search API",
+      "constraints": "Rate limits; index entries are discovery candidates, not direct rights certificates",
+      "role": "federated_asset_discovery"
+    },
+    {
+      "id": "smithsonian-open-access",
+      "purpose": "CC0-labeled image/3D and collection metadata",
+      "url": "https://www.si.edu/openaccess/devtools",
+      "preferred_method": "public JSON/API",
+      "constraints": "Only CC0-designated items include unrestricted media; other metadata may exist without media",
+      "role": "asset_catalog"
+    },
+    {
+      "id": "met-open-access",
+      "purpose": "Museum collection images and metadata",
+      "url": "https://www.metmuseum.org/about-the-met/policies-and-documents/open-access",
+      "preferred_method": "open access collection API",
+      "constraints": "Item-level public-domain/CC0 status distinct from generic catalog metadata",
+      "role": "asset_catalog"
+    }
+  ]
+}
