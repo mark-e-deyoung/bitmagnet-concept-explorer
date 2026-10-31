@@ -13,25 +13,25 @@ import (
 // A correct chain does not prove independent identity, accepted CPE authority,
 // or permission to publish the source evidence.
 type ResearchProposalEvent struct {
-	SchemaVersion string `json:"schema_version"`
-	ProposalID string `json:"proposal_id"`
-	Sequence int `json:"sequence"`
-	FromState string `json:"from_state"`
-	ToState string `json:"to_state"`
-	ActorKind string `json:"actor_kind"`
-	ActorRef string `json:"actor_ref"`
+	SchemaVersion  string `json:"schema_version"`
+	ProposalID     string `json:"proposal_id"`
+	Sequence       int    `json:"sequence"`
+	FromState      string `json:"from_state"`
+	ToState        string `json:"to_state"`
+	ActorKind      string `json:"actor_kind"`
+	ActorRef       string `json:"actor_ref"`
 	EvidenceDigest string `json:"evidence_digest"`
-	PreviousHash string `json:"previous_hash"`
-	EventHash string `json:"event_hash"`
+	PreviousHash   string `json:"previous_hash"`
+	EventHash      string `json:"event_hash"`
 }
 
 var researchTransitions = map[string]map[string]bool{
-	"local-export-only": {"submitted-research": true},
+	"local-export-only":  {"submitted-research": true},
 	"submitted-research": {"classified": true, "deferred": true},
-	"classified": {"grounded": true, "deferred": true},
-	"grounded": {"challenged": true, "deferred": true},
-	"challenged": {"review-ready": true, "deferred": true},
-	"review-ready": {"recommend-mapping": true, "reject-candidate": true, "deferred": true},
+	"classified":         {"grounded": true, "deferred": true},
+	"grounded":           {"challenged": true, "deferred": true},
+	"challenged":         {"review-ready": true, "deferred": true},
+	"review-ready":       {"recommend-mapping": true, "reject-candidate": true, "deferred": true},
 }
 
 func validResearchDigest(s string) bool {
@@ -99,15 +99,15 @@ func appendResearchEvent(p DiscoveryProposal, chain []ResearchProposalEvent, to,
 		prev = chain[len(chain)-1].EventHash
 	}
 	e := ResearchProposalEvent{
-		SchemaVersion: "research-proposal-event-v0",
-		ProposalID: p.ProposalID,
-		Sequence: len(chain) + 1,
-		FromState: current,
-		ToState: to,
-		ActorKind: actorKind,
-		ActorRef: actorRef,
+		SchemaVersion:  "research-proposal-event-v0",
+		ProposalID:     p.ProposalID,
+		Sequence:       len(chain) + 1,
+		FromState:      current,
+		ToState:        to,
+		ActorKind:      actorKind,
+		ActorRef:       actorRef,
 		EvidenceDigest: evidenceDigest,
-		PreviousHash: prev,
+		PreviousHash:   prev,
 	}
 	e.EventHash, err = researchEventHash(e)
 	if err != nil {
