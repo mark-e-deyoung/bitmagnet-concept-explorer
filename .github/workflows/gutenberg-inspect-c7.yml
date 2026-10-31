@@ -1,0 +1,73 @@
+name: Public Gutenberg read-only three-audience inspection C7
+on:
+  pull_request:
+    paths:
+      - 'research/gutenbergmotion/inspect/**'
+      - '.github/workflows/gutenberg-inspect-c7.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: CLI read-only views, original source holds and XSS hostiles
+        run: |
+          go test -count=2 ./research/gutenbergmotion/inspect ./research/gutenbergmotion
+          go test -race ./research/gutenbergmotion/inspect
+          go vet ./research/gutenbergmotion/inspect
+      - name: Native original source-backed multi-audience inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p inspect-evidence
+          git init -q "$RUNNER_TEMP/morris"
+          cd "$RUNNER_TEMP/morris"
+          git remote add origin https://github.com/GITenberg/The-Morris-Book-Part-1--13-A-History-of-Morris-Dancing-With-a-Description-of-Eleven-Dances-as__12926.git
+          git fetch --depth 1 origin 1d5ca33372491509805a64cd0425a5164d3108fa
+          git checkout -q --detach FETCH_HEAD
+          test "$(git hash-object 12926.txt)" = 08984be691ebd69f92a7a271217612f0056cea37
+          test "$(sha256sum 12926.txt | cut -d' ' -f1)" = 7294644f1fc26490f8a0aed415afc01b8278294e4373169e1407986c56cb0961
+          cd "$GITHUB_WORKSPACE"
+          go run ./research/gutenbergmotion -input "$RUNNER_TEMP/morris/12926.txt" > inspect-evidence/candidates.json
+          go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/candidates.json -format=json > inspect-evidence/automation.json
+          go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/morris/12926.txt" -report inspect-evidence/candidates.json -format=html > inspect-evidence/human.html
+          go run ./research/gutenbergmotion/inspect -capabilities > inspect-evidence/agent-capabilities.json
+          python3 - <<'PY'
+          import json,html.parser
+          j=json.load(open("inspect-evidence/automation.json"))
+          agent=json.load(open("inspect-evidence/agent-capabilities.json"))
+          html=open("inspect-evidence/human.html").read()
+          assert j['candidate_count']==len(j['candidates'])==64
+          assert not j['claims_choreography_acceptance'] and not j['claims_physical_motion']
+          assert j['status']=='UNVALIDATED_SOURCE_TEXT_CANDIDATES'
+          assert 'DISCOVERABLE_READ_ONLY_CAPABILITIES'==agent['agent']
+          assert '<main>' in html and '<caption>' in html and '<h1>' in html
+          assert 'UNVALIDATED_SOURCE_TEXT_CANDIDATES' in html
+          class Rows(html.parser.HTMLParser):
+              def __init__(self): super().__init__();self.n=0
+              def handle_starttag(self,tag,attrs):
+                  if tag=='tr':self.n+=1
+          p=Rows();p.feed(html);assert p.n==65
+          print("PASS original source 64 human table rows, automation records, typed agent discovery")
+          PY
+          cp "$RUNNER_TEMP/morris/12926.txt" "$RUNNER_TEMP/swapped.txt"
+          printf 'tamper' >> "$RUNNER_TEMP/swapped.txt"
+          if go run ./research/gutenbergmotion/inspect -source "$RUNNER_TEMP/swapped.txt" -report inspect-evidence/candidates.json -format=json > inspect-evidence/rejected.json; then
+            echo 'swapped source accepted' >&2; exit 1
+          fi
+          test ! -s inspect-evidence/rejected.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: read-only-audience-inspection-c7
+          path: inspect-evidence/
+          if-no-files-found: warn
+          retention-days: 7
