@@ -7,9 +7,9 @@ import (
 
 func TestValidateMetainfoRedirect(t *testing.T) {
 	cases := []struct {
-		name string
-		url string
-		via int
+		name  string
+		url   string
+		via   int
 		allow bool
 	}{
 		{"ubuntu_HTTPS", "https://releases.ubuntu.com/26.04/filename.torrent", 1, true},
@@ -23,7 +23,9 @@ func TestValidateMetainfoRedirect(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			req, err := http.NewRequest(http.MethodGet, tt.url, nil)
-			if err != nil { t.Fatal(err) }
+			if err != nil {
+				t.Fatal(err)
+			}
 			via := make([]*http.Request, tt.via)
 			err = validateMetainfoRedirect(req, via)
 			if got := err == nil; got != tt.allow {
