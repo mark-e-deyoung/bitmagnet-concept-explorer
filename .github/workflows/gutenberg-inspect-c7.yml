@@ -44,18 +44,18 @@ jobs:
           import json,html.parser
           j=json.load(open("inspect-evidence/automation.json"))
           agent=json.load(open("inspect-evidence/agent-capabilities.json"))
-          html=open("inspect-evidence/human.html").read()
+          page=open("inspect-evidence/human.html").read()
           assert j['candidate_count']==len(j['candidates'])==64
           assert not j['claims_choreography_acceptance'] and not j['claims_physical_motion']
           assert j['status']=='UNVALIDATED_SOURCE_TEXT_CANDIDATES'
           assert 'DISCOVERABLE_READ_ONLY_CAPABILITIES'==agent['agent']
-          assert '<main>' in html and '<caption>' in html and '<h1>' in html
-          assert 'UNVALIDATED_SOURCE_TEXT_CANDIDATES' in html
+          assert '<main>' in page and '<caption>' in page and '<h1>' in page
+          assert 'UNVALIDATED_SOURCE_TEXT_CANDIDATES' in page
           class Rows(html.parser.HTMLParser):
               def __init__(self): super().__init__();self.n=0
               def handle_starttag(self,tag,attrs):
                   if tag=='tr':self.n+=1
-          p=Rows();p.feed(html);assert p.n==65
+          p=Rows();p.feed(page);assert p.n==65
           print("PASS original source 64 human table rows, automation records, typed agent discovery")
           PY
           cp "$RUNNER_TEMP/morris/12926.txt" "$RUNNER_TEMP/swapped.txt"
