@@ -98,7 +98,12 @@ test('both graph selections stay native, keyboard-accessible and visually theme-
  await secondary.focus();
  await page.keyboard.press('Enter');
  await expect(secondary).toHaveAttribute('aria-pressed','true');
- await expect(page.locator('#concept-list button').filter({hasText:'Edition'})).toHaveAttribute('aria-pressed','true');
+ await expect(secondary,'re-created SVG control must retain keyboard focus').toBeFocused();
+ const nativeEdition=page.locator('#concept-list button').filter({hasText:'Edition'});
+ await expect(nativeEdition).toHaveAttribute('aria-pressed','true');
+ await nativeEdition.focus();
+ await page.keyboard.press('Enter');
+ await expect(nativeEdition,'re-created native selector must retain keyboard focus').toBeFocused();
  await expect(page.locator('#concept-detail')).toContainText('no query was executed');
  expect(endpointCalls.filter(p=>p==='/api/v1/query/execute')).toHaveLength(0);
  await page.screenshot({path:'build/playwright-results/r2-interactive-dark.png',fullPage:true});
