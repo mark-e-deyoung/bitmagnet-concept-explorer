@@ -4,6 +4,7 @@ import (
  "crypto/sha256"
  "encoding/hex"
  "encoding/json"
+ "fmt"
  "os"
  "path/filepath"
  "strings"
@@ -12,9 +13,16 @@ import (
 func fixture()([]byte,Report){
  s:=[]byte("Bar 4. No. 1 advances and turns.\nthen comes back.\n\nBar 8. The dancers cross to the opposite side.\nand continue onward.\n")
  h:=sha256.Sum256(s)
- return s,Report{Schema:"cpe.motion-text-candidates.v0",SourceID:"pg:12926",GitCommit:sourceCommit,GitBlob:sourceBlob,SourceSHA256:hex.EncodeToString(h[:]),InputBytes:len(s),Candidates:[]Candidate{
+ r:=Report{Schema:"cpe.motion-text-candidates.v0",SourceID:"pg:12926",GitCommit:sourceCommit,GitBlob:sourceBlob,SourceSHA256:hex.EncodeToString(h[:]),InputBytes:len(s),Candidates:[]Candidate{
  {ID:"first",Line:1,Evidence:"Bar 4. No. 1 advances and turns.",Actors:[]string{"no. 1"},Status:"SOURCE_TEXT_RESEARCH_CANDIDATE",Measurement:"UNMEASURED_TEXT_INSTRUCTION"},
  {ID:"second",Line:4,Evidence:"Bar 8. The dancers cross to the opposite side.",Actors:[]string{"opposite"},Status:"SOURCE_TEXT_RESEARCH_CANDIDATE",Measurement:"UNMEASURED_TEXT_INSTRUCTION"}}}
+ r.Candidates[0].ID=sourceCandidateID(1,"Bar 4. No. 1 advances and turns.")
+ r.Candidates[1].ID=sourceCandidateID(4,"Bar 8. The dancers cross to the opposite side.")
+ return s,r
+}
+func sourceCandidateID(line int,source string)string{
+ h:=sha256.Sum256([]byte(fmt.Sprintf("%s:%d:%s","pg:12926",line,source)))
+ return "pg12926-motion-"+hex.EncodeToString(h[:8])
 }
 func TestContextAndUnknown(t *testing.T){
  s,r:=fixture();o,e:=Enrich(s,r,false);if e!=nil{t.Fatal(e)}
@@ -27,7 +35,8 @@ func TestHostiles(t *testing.T){
  s,r:=fixture()
  if _,e:=Enrich(s,r,true);e==nil{t.Fatal("wrong pinned bytes accepted")}
  bad:=append([]byte(nil),s...);bad[0]='X';if _,e:=Enrich(bad,r,false);e==nil{t.Fatal("swapped input accepted")}
- mutations:=[]func(*Report){func(q *Report){q.GitCommit="fake"},func(q *Report){q.GitBlob="fake"},func(q *Report){q.SourceID="fake"},func(q *Report){q.Candidates[0].Evidence="forged"},func(q *Report){q.Candidates[0].Line=3},func(q *Report){q.Candidates[1].ID="first"},func(q *Report){q.Candidates[0].Measurement="MEASURED_MOCAP"}}
+ mutations:=[]func(*Report){func(q *Report){q.GitCommit="fake"},func(q *Report){q.GitBlob="fake"},func(q *Report){q.SourceID="fake"},func(q *Report){q.Candidates[0].Evidence="forged"},func(q *Report){q.Candidates[0].Line=3},func(q *Report){q.Candidates[1].ID=q.Candidates[0].ID},
+  func(q *Report){q.Candidates[0].ID="pg12926-motion-deadbeefdeadbeef"},func(q *Report){q.Candidates[0].Measurement="MEASURED_MOCAP"}}
  for i,m:=range mutations{q:=r;q.Candidates=append([]Candidate(nil),r.Candidates...);m(&q);if _,e:=Enrich(s,q,false);e==nil{t.Fatalf("hostile %d accepted",i)}}
 }
 func TestCLIRejectsUnpinnedWithoutOutput(t *testing.T){
