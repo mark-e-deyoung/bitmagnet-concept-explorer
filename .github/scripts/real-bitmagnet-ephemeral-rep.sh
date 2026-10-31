@@ -9,6 +9,7 @@ OUT="$RUNNER_TEMP/bce-real-bitmagnet-rep"
 mkdir -p "$OUT"
 SERVICE_PID=""
 TUNNEL_PID=""
+PREVIEW_PROXY_PID=""
 NETWORK="bce-real-rep"
 DB="bce-real-postgres"
 BITMAGNET="bce-real-bitmagnet"
@@ -23,6 +24,10 @@ cleanup() {
   if [[ -n "$TUNNEL_PID" ]]; then
     kill "$TUNNEL_PID" 2>/dev/null || true
     wait "$TUNNEL_PID" 2>/dev/null || true
+  fi
+  if [[ -n "$PREVIEW_PROXY_PID" ]]; then
+    kill "$PREVIEW_PROXY_PID" 2>/dev/null || true
+    wait "$PREVIEW_PROXY_PID" 2>/dev/null || true
   fi
   if [[ -n "$SERVICE_PID" ]]; then
     kill "$SERVICE_PID" 2>/dev/null || true
@@ -521,8 +526,28 @@ if [[ "$GITHUB_HEAD_REF" == "preview/rdte-cloudflare-disposable-20261031" ]]; th
   echo "$CF_SHA  $CF_BINARY" | sha256sum -c -
   chmod 700 "$CF_BINARY"
   "$CF_BINARY" --version
-  # ONLY BCE read-only port; PostgreSQL, Bitmagnet GraphQL/import remain local.
-  "$CF_BINARY" tunnel --no-autoupdate --url http://127.0.0.1:3086 \
+  # Public fixture preview has its OWN narrow read-only HTTP gateway.
+  # The existing authenticated BCE remains loopback-only, as do /import,
+  # GraphQL and PostgreSQL. The edge never sees the origin demo credentials.
+  BCE_PREVIEW_UPSTREAM_USER=public-rep BCE_PREVIEW_UPSTREAM_PASSWORD=synthetic-only-credential-2026 \
+    python3 .github/scripts/rdte-preview-proxy.py >"$OUT/preview-proxy.log" 2>&1 &
+  PREVIEW_PROXY_PID="$!"
+  preview_ready=0
+  for i in $(seq 1 30); do
+    local_code="$(curl --noproxy '*' -sS --max-time 3 -o "$OUT/proxy-capabilities.json" -w '%{http_code}' http://127.0.0.1:3087/api/v1/capabilities || true)"
+    if [[ "$local_code" == "200" ]] && jq -e '.execute == true and .mutation == false and .cpe_write == false' "$OUT/proxy-capabilities.json" >/dev/null 2>&1; then
+      preview_ready=1
+      break
+    fi
+    sleep 1
+  done
+  if [[ "$preview_ready" != "1" ]]; then
+    echo "::error::Read-only local public-fixture preview proxy did not become healthy"
+    tail -n 60 "$OUT/preview-proxy.log" || true
+    exit 1
+  fi
+  echo "RDTE-PREVIEW: anonymous local read-only proxy capability check PASS; backend is authenticated and isolated"
+  "$CF_BINARY" tunnel --no-autoupdate --url http://127.0.0.1:3087 \
     >"$OUT/cloudflared.log" 2>&1 &
   TUNNEL_PID="$!"
   TUNNEL_URL=""
@@ -541,22 +566,30 @@ if [[ "$GITHUB_HEAD_REF" == "preview/rdte-cloudflare-disposable-20261031" ]]; th
     tail -n 65 "$OUT/cloudflared.log" || true
     exit 1
   fi
-  # Fail closed if the edge fails to reach the origin or bypasses Basic Auth.
+  # The Quick Tunnel exposes ONLY the bounded public fixture proxy, which
+  # inserts demo origin authentication internally. No private data is present.
   verified=0
-  for i in $(seq 1 30); do
-    edge_code="$(curl -sS --max-time 12 -o /dev/null -w '%{http_code}' "$TUNNEL_URL/api/v1/capabilities" || true)"
-    if [[ "$edge_code" == "401" ]]; then verified=1; break; fi
+  for i in $(seq 1 40); do
+    edge_code="$(curl -sS --max-time 12 -o "$OUT/edge-capabilities.json" -w '%{http_code}' "$TUNNEL_URL/api/v1/capabilities" || true)"
+    if [[ "$edge_code" == "200" ]] && jq -e '.execute == true and .mutation == false and .cpe_write == false' "$OUT/edge-capabilities.json" >/dev/null 2>&1; then
+      verified=1
+      break
+    fi
     sleep 2
   done
   if [[ "$verified" != "1" ]]; then
-    echo "::error::Cloudflare edge did not preserve 401 authentication (last code=$edge_code)"
-    tail -n 65 "$OUT/cloudflared.log" || true
+    echo "::error::Cloudflare edge -> public fixture read-only proxy did not pass (last code=$edge_code)"
+    tail -n 60 "$OUT/cloudflared.log" || true
     exit 1
   fi
-  page_status="$(curl -sS --max-time 20 -u "$AUTH" -o "$OUT/tunnel-index.html" -w '%{http_code}' "$TUNNEL_URL/" || true)"
+  page_status="$(curl -sS --max-time 20 -o "$OUT/tunnel-index.html" -w '%{http_code}' "$TUNNEL_URL/" || true)"
   if [[ "$page_status" != "200" ]] || ! grep -qi 'concept explorer' "$OUT/tunnel-index.html"; then
-    echo "::error::Cloudflare link failed authenticated UI verification (code=$page_status)"
-    tail -n 65 "$OUT/cloudflared.log" || true
+    echo "::error::Cloudflare link failed anonymous PUBLIC fixture UI verification (code=$page_status)"
+    exit 1
+  fi
+  deny_status="$(curl -sS --max-time 15 -X POST --data '{}' -o /dev/null -w '%{http_code}' "$TUNNEL_URL/import" || true)"
+  if [[ "$deny_status" != "405" ]]; then
+    echo "::error::Public tunnel did not deny native Bitmagnet import path (code=$deny_status)"
     exit 1
   fi
   # Publish the ephemeral link while THIS job is still active; GH REST job logs
@@ -567,7 +600,7 @@ if [[ "$GITHUB_HEAD_REF" == "preview/rdte-cloudflare-disposable-20261031" ]]; th
     exit 1
   fi
   jq -n --arg link "$TUNNEL_URL" --arg sha "$(git rev-parse HEAD)" \
-    '{body:("### Disposable RDTE Cloudflare viewer now LIVE\n\n**Open:** " + $link + "\n\nSource: " + $sha + ". The authentic 5-publisher public metadata-only Bitmagnet/Explorer checks passed. The temporary viewer requires the existing public-fixture Basic Auth login; see the public integration script for test-only demo credentials. This one-off runner expires automatically; no private data, no Bitmagnet /import/GraphQL or PostgreSQL exposure. NEVER MERGE this preview branch.")}' \
+    '{body:("### Disposable RDTE Cloudflare viewer now LIVE\n\n**Open:** " + $link + "\n\nSource: " + $sha + ". The authentic 5-publisher public metadata-only Bitmagnet/Explorer checks passed. The temporary viewer is PUBLIC and anonymous, but a bounded read-only facade over public fixtures only. Original BCE origin remains Basic Auth-protected and loopback-only. This one-off runner expires automatically; no private data, no Bitmagnet /import/GraphQL or PostgreSQL exposure. NEVER MERGE this preview branch.")}' \
     >"$OUT/tunnel-pr-comment.json"
   curl -fsS --max-time 20 \
     -H "Authorization: Bearer $GH_PREVIEW_ISSUE_TOKEN" \
@@ -580,13 +613,13 @@ if [[ "$GITHUB_HEAD_REF" == "preview/rdte-cloudflare-disposable-20261031" ]]; th
   jq -e '.id > 0 and (.html_url | contains("/pull/31#issuecomment-"))' "$OUT/tunnel-pr-comment-receipt.json" >/dev/null
   echo "RDTE-PREVIEW: live URL published to PR #31: $(jq -r '.html_url' "$OUT/tunnel-pr-comment-receipt.json")"
   echo "RDTE_DISPOSABLE_CLOUDFLARE_URL=$TUNNEL_URL"
-  echo "RDTE-PREVIEW: external Cloudflare HTTPS -> Explorer (401 anonymous / 200 demo login) PASS"
+  echo "RDTE-PREVIEW: external HTTPS -> anonymous public-fixture read-only proxy 200, native import POST 405 PASS"
   if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
     {
       echo ""
       echo "### Temporary read-only RDTE Cloudflare preview"
       echo "- **Open now:** [$TUNNEL_URL]($TUNNEL_URL)"
-      echo "- **Login:** public fixture-only Basic Auth, values in existing public rep script"
+      echo "- **Access:** anonymous PUBLIC fixture-only read-only proxy; original BCE remains authenticated/loopback-only"
       echo "- **Source SHA:** $(git rev-parse HEAD)"
       echo "- **Evidence:** five real publisher metainfo identities through Bitmagnet/PostgreSQL/Explorer"
       echo "- **Security:** no private corpus, payloads, or Bitmagnet import/GraphQL/DB publicly exposed"
@@ -596,7 +629,7 @@ if [[ "$GITHUB_HEAD_REF" == "preview/rdte-cloudflare-disposable-20261031" ]]; th
   # Bounded preview and liveness checks; cleanup removes all containers/tunnel.
   for i in $(seq 1 40); do
     sleep 30
-    if ! kill -0 "$TUNNEL_PID" 2>/dev/null || ! kill -0 "$SERVICE_PID" 2>/dev/null; then
+    if ! kill -0 "$TUNNEL_PID" 2>/dev/null || ! kill -0 "$SERVICE_PID" 2>/dev/null || ! kill -0 "$PREVIEW_PROXY_PID" 2>/dev/null; then
       echo "::error::A bounded preview service stopped unexpectedly"
       exit 1
     fi
