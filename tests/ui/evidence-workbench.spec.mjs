@@ -39,10 +39,10 @@ for(const size of [{name:'desktop',width:1440,height:900},{name:'narrow',width:3
     await withFixture(page);
     await expect(page.getByRole('heading',{name:"Find what's in the index."})).toBeVisible();
     await expect(page.getByRole('navigation',{name:'Primary'})).toBeVisible();
-    await expect(page.getByLabel('Search phrase')).toBeVisible();
+    await expect(page.getByRole('textbox',{name:'Search phrase',exact:true})).toBeVisible();
     await expect(page.locator('details#advanced-settings')).not.toHaveAttribute('open','');
     await page.getByRole('button',{name:'Fedora',exact:true}).click();
-    await expect(page.getByLabel('Search phrase')).toHaveValue('Fedora');
+    await expect(page.getByRole('textbox',{name:'Search phrase',exact:true})).toHaveValue('Fedora');
     await page.getByRole('button',{name:'Run read-only search'}).click();
     await expect(page.locator('#status')).toContainText('Unique observed: 3');
     await expect(page.locator('#direct article')).toHaveCount(1);
