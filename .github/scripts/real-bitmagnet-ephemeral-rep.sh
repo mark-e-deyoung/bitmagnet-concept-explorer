@@ -11,6 +11,8 @@ SERVICE_PID=""
 NETWORK="bce-real-rep"
 DB="bce-real-postgres"
 BITMAGNET="bce-real-bitmagnet"
+SEARXNG="bce-real-searxng"
+SEARXNG_IMAGE="ghcr.io/searxng/searxng@sha256:8c109ceda56554bbf1c6762df23806baf931524385fdc951034005b68e092c3a"
 POSTGRES_IMAGE="postgres@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab"
 BITMAGNET_IMAGE="ghcr.io/bitmagnet-io/bitmagnet@sha256:cf2c16fac5b51f1c18e630b4710175d35d7e44b83012cfd05a2b43712feec05e"
 export NO_PROXY="127.0.0.1,localhost"
@@ -32,7 +34,7 @@ cleanup() {
     echo "=== PostgreSQL log ==="
     docker logs --tail 45 "$DB" 2>&1 || true
   fi
-  docker rm -f "$BITMAGNET" "$DB" >/dev/null 2>&1 || true
+  docker rm -f "$SEARXNG" "$BITMAGNET" "$DB" >/dev/null 2>&1 || true
   docker network rm "$NETWORK" >/dev/null 2>&1 || true
   exit "$status"
 }
@@ -181,6 +183,37 @@ if ! grep -qF "$REAL_TORRENT_ROWS items imported" "$OUT/real-torrent-import.txt"
 fi
 echo "CPE-RDTE-REAL: genuine publisher torrent infohashes imported=$REAL_TORRENT_ROWS"
 
+# Ephemeral actual SearXNG. This is an independent real external-web
+# metasearch implementation, not a response stub or mock. The service is
+# loopback-only. JSON is explicitly enabled; use one public Wikipedia
+# engine to bound provider dependencies. Any engine refusal is preserved.
+docker pull --quiet "$SEARXNG_IMAGE"
+SEARXNG_IDENTITY="$(docker image inspect "$SEARXNG_IMAGE" --format '{{index .RepoDigests 0}}')"
+echo "CPE-LIVE-SWEEP: searxng_image=$SEARXNG_IDENTITY"
+mkdir -p "$OUT/searxng"
+SEARXNG_SECRET="$(openssl rand -hex 32)"
+cat >"$OUT/searxng/settings.yml" <<SEARXCFG
+use_default_settings:
+  engines:
+    keep_only:
+      - wikipedia
+search:
+  safe_search: 2
+  autocomplete: ""
+  formats:
+    - html
+    - json
+server:
+  secret_key: "$SEARXNG_SECRET"
+  bind_address: "0.0.0.0"
+  limiter: false
+SEARXCFG
+docker run -d --name "$SEARXNG" --network "$NETWORK" \
+  -p 127.0.0.1:8888:8080 \
+  -v "$OUT/searxng/settings.yml:/etc/searxng/settings.yml:ro" \
+  "$SEARXNG_IMAGE" >/dev/null
+unset SEARXNG_SECRET
+
 # Compile and start the ACTUAL Explorer service and standalone automation CLI.
 # No service ports are reachable from outside this ephemeral runner.
 export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly
@@ -189,7 +222,8 @@ go build -trimpath -o "$OUT/bce" .
 go build -trimpath -o "$OUT/bce-cli" ./cmd/bce
 BCE_AUTH_USER=public-rep BCE_AUTH_PASSWORD=synthetic-only-credential-2026 \
 BCE_BITMAGNET_GRAPHQL=http://127.0.0.1:3333/graphql \
-BCE_SEARXNG_URL= BCE_CPE_GRAPH_FILE="$GRAPH" BCE_CPE_GRAPH_SHA256="$GRAPH_SHA" \
+BCE_SEARXNG_URL=http://127.0.0.1:8888/search BCE_SEARXNG_SWEEP_ALLOWED=true \
+BCE_CPE_GRAPH_FILE="$GRAPH" BCE_CPE_GRAPH_SHA256="$GRAPH_SHA" \
   "$OUT/bce" -listen 127.0.0.1:3086 >"$OUT/bce.log" 2>&1 &
 SERVICE_PID="$!"
 
@@ -372,6 +406,10 @@ BCE_AUTH_USER=public-rep BCE_AUTH_PASSWORD=synthetic-only-credential-2026 \
 jq -e '.state == "complete" and .read_only == true and (.track_counts.direct // 0) >= 1 and (.track_counts.concept // 0) >= 1' "$OUT/cli.json" >/dev/null
 echo "REAL-BITMAGNET: actual separate Explorer CLI real-query PASS"
 
+# The existing real-system harness now exercises a real independent SearXNG
+# alongside Bitmagnet and produces research-only CPE discovery evidence.
+source .github/scripts/real-dual-stack-cpe-flywheel.sh
+
 if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
   {
     echo "### Real Bitmagnet + Explorer disposable cloud rep"
@@ -386,6 +424,8 @@ if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
     echo "- **Native source-candidate retrieval:** Gutenberg #62 anchor indexed and found using Barsoom research expansion"
     echo "- **Actual publisher .torrent files:** $REAL_TORRENT_ROWS retained by SHA-256 in Actions evidence; original exact v1 infohash verified through Bitmagnet FTS"
     echo "- **Torrent payload / P2P:** none; meta files only, no DHT, tracker, webseed or peer connections"
+    echo "- **External source:** pinned real SearXNG via 127.0.0.1:8888 (Wikipedia engine only; all refusals retained)"
+    echo "- **Dual-track research:** $(jq -r '.external_results' "$RDTE_DIR/flywheel/metrics.json") real external hits and CPE proposal $(jq -r '.proposal_id' "$RDTE_DIR/flywheel/metrics.json")"
     echo "- **BCE tracks:** direct $(jq -r '.track_counts.direct' "$OUT/execute.json"), concept $(jq -r '.track_counts.concept' "$OUT/execute.json")"
     echo "- **Boundaries:** no DHT, public internet ingress, TMDB, CPE accepted facts, images published, private corpus or site deployment"
     echo "- **Cleanup:** both containers and runner-local service removed on job exit"
