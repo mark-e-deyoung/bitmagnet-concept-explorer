@@ -1,7 +1,7 @@
 # Bounded Debian RDTE metainfo source rep — 2026-10-31
 
 ## Grounding and scope
-Debian official BitTorrent distribution list: https://www.debian.org/CD/torrent-cd/ . The Debian-operated mirror directory https://ftp.be.debian.org/debian-cd/current/amd64/bt-cd/ lists `debian-13.7.0-amd64-netinst.iso.torrent` as an authentic distribution item (dated 2026-09-12), distinct from Ubuntu. This source is a *mirror of an official publisher distribution*, not an independent rights certificate.
+Debian official BitTorrent distribution list: https://www.debian.org/CD/torrent-cd/ . The Debian-operated mirror directory https://mirrors.edge.kernel.org/debian-cd/current/amd64/bt-cd/ lists `debian-13.7.0-amd64-netinst.iso.torrent` as an authentic distribution item (dated 2026-09-12), distinct from Ubuntu. This source is a *mirror of an official publisher distribution*, not an independent rights certificate.
 
 The collector only fetches the original `.torrent` metainfo over HTTPS from this fixed hostname, checks strict bounded bencode, excludes private/v2 metainfo, computes the SHA-1 of the original unmodified raw `info` bytes and whole metainfo SHA-256, and records source URL, versioned source item, rights **claim**, source events and audit manifest. No ISO payload, DHT, tracker, swarm, peer, or private corpus content is fetched.
 
@@ -12,3 +12,5 @@ The qualified source URL is a *versioned source record*, not a promise of perpet
 
 ## Holds
 Keep this PR open/draft/unmerged. Do not activate default-branch cron, auto-accumulate, create a new harvester/control plane, publish binaries or images, deploy TrueNAS, promote CPE concepts/facts, or touch local/private data. GHA runner artifact is only temporary; approved custody is managed separately via CPE #348 and product DLE Bitmagnet #18.
+## Observed remote-source failure and corrective action
+First head `a217f95d5309bce406f392f621e82e2ef470603d`, native run `41200660555` failed closed because `ftp.be.debian.org` returned TLS certificate for `mirror.as35701.net`. Error is preserved in immutable native log and PR #25 first-failure comment; no certificate check disabled and no Debian record fabricated. Switched to the independently indexed `mirrors.edge.kernel.org` Debian CD mirror; acceptance requires new **exact-head** native source and real-system CI.
