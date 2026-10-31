@@ -1,0 +1,306 @@
+{
+  "schema_version": "bce-graph-preview-v1",
+  "snapshot_id": "public-gutenberg-lore-research-20261031-v0",
+  "concepts": [
+    {
+      "id": "public:creative-work",
+      "label": "Creative work",
+      "definition": "An authored work of creative expression, distinct from any particular copy or source catalog record.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "creative work"
+        },
+        {
+          "language": "de",
+          "term": "kreatives Werk"
+        },
+        {
+          "language": "th",
+          "term": "งานสร้างสรรค์"
+        },
+        {
+          "language": "ja",
+          "term": "創作物"
+        },
+        {
+          "language": "es",
+          "term": "obra creativa"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "public:literary-work",
+      "label": "Literary work",
+      "definition": "A written narrative or literary expression; separate from edition, translation, publication and adaptation.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "literary work"
+        },
+        {
+          "language": "de",
+          "term": "literarisches Werk"
+        },
+        {
+          "language": "th",
+          "term": "วรรณกรรม"
+        },
+        {
+          "language": "ja",
+          "term": "文学作品"
+        },
+        {
+          "language": "es",
+          "term": "obra literaria"
+        }
+      ],
+      "relations": [
+        {
+          "predicate": "subclass_of",
+          "target_id": "public:creative-work"
+        }
+      ]
+    },
+    {
+      "id": "public:story-world",
+      "label": "Fictional world",
+      "definition": "A fictional setting or world associated with a narrative, distinct from the real-world place or an adaptation's design.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "fictional world"
+        },
+        {
+          "language": "de",
+          "term": "fiktive Welt"
+        },
+        {
+          "language": "th",
+          "term": "โลกสมมติ"
+        },
+        {
+          "language": "ja",
+          "term": "架空世界"
+        },
+        {
+          "language": "es",
+          "term": "mundo ficticio"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "public:fictional-character",
+      "label": "Fictional character",
+      "definition": "An individual represented within a fictional narrative, distinct from an actor, credited role or likeness asset.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "fictional character"
+        },
+        {
+          "language": "de",
+          "term": "fiktive Figur"
+        },
+        {
+          "language": "th",
+          "term": "ตัวละครสมมติ"
+        },
+        {
+          "language": "ja",
+          "term": "架空の人物"
+        },
+        {
+          "language": "es",
+          "term": "personaje ficticio"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "public:edition",
+      "label": "Edition or manifestation",
+      "definition": "A specific edition, transcription, translation or published manifestation of a work; its release date does not establish the work's first publication date.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "edition"
+        },
+        {
+          "language": "de",
+          "term": "Ausgabe"
+        },
+        {
+          "language": "th",
+          "term": "ฉบับพิมพ์"
+        },
+        {
+          "language": "ja",
+          "term": "版"
+        },
+        {
+          "language": "es",
+          "term": "edición"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "public:illustration",
+      "label": "Illustration",
+      "definition": "A distinct creative visual artwork that may be related to a literary work but has its own creator, publication history and rights claims.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "illustration"
+        },
+        {
+          "language": "de",
+          "term": "Illustration"
+        },
+        {
+          "language": "th",
+          "term": "ภาพประกอบ"
+        },
+        {
+          "language": "ja",
+          "term": "挿絵"
+        },
+        {
+          "language": "es",
+          "term": "ilustración"
+        }
+      ],
+      "relations": [
+        {
+          "predicate": "subclass_of",
+          "target_id": "public:creative-work"
+        }
+      ]
+    },
+    {
+      "id": "public:adaptation",
+      "label": "Adaptation",
+      "definition": "A derived creative work based on an earlier work, with a distinct identity, source and rights context.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "adaptation"
+        },
+        {
+          "language": "de",
+          "term": "Adaption"
+        },
+        {
+          "language": "th",
+          "term": "งานดัดแปลง"
+        },
+        {
+          "language": "ja",
+          "term": "翻案"
+        },
+        {
+          "language": "es",
+          "term": "adaptación"
+        }
+      ],
+      "relations": [
+        {
+          "predicate": "subclass_of",
+          "target_id": "public:creative-work"
+        }
+      ]
+    },
+    {
+      "id": "public:source-record",
+      "label": "Source catalog record",
+      "definition": "An external catalog entry asserting title, authorship, subjects or other statements about a referent; not itself a qualified CPE fact.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "catalog record"
+        },
+        {
+          "language": "de",
+          "term": "Katalogeintrag"
+        },
+        {
+          "language": "th",
+          "term": "ระเบียนรายการ"
+        },
+        {
+          "language": "ja",
+          "term": "目録レコード"
+        },
+        {
+          "language": "es",
+          "term": "registro de catálogo"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "public:source-claim",
+      "label": "Sourced assertion",
+      "definition": "An assertion with an identified subject, predicate, object and provenance; source claims are not automatically accepted truths.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "sourced assertion"
+        },
+        {
+          "language": "de",
+          "term": "quellenbelegte Aussage"
+        },
+        {
+          "language": "th",
+          "term": "ข้อความอ้างอิงจากแหล่งข้อมูล"
+        },
+        {
+          "language": "ja",
+          "term": "出典付きの主張"
+        },
+        {
+          "language": "es",
+          "term": "afirmación con fuente"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "public:rights-claim",
+      "label": "Territorial rights statement",
+      "definition": "A source's statement about reuse or rights for a particular item in an identified jurisdiction; not a universal or final permission decision.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "rights statement"
+        },
+        {
+          "language": "de",
+          "term": "Rechtehinweis"
+        },
+        {
+          "language": "th",
+          "term": "คำชี้แจงสิทธิ์"
+        },
+        {
+          "language": "ja",
+          "term": "権利表示"
+        },
+        {
+          "language": "es",
+          "term": "declaración de derechos"
+        }
+      ],
+      "relations": [
+        {
+          "predicate": "subclass_of",
+          "target_id": "public:source-claim"
+        }
+      ]
+    }
+  ]
+}
