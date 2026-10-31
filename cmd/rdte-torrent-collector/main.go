@@ -189,7 +189,7 @@ func fetch(rawurl string, max int) ([]byte, error) {
 	if e != nil || u.Scheme != "https" {
 		return nil, errors.New("HTTPS mandatory")
 	}
-	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "ftp.be.debian.org" {
+	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "mirrors.edge.kernel.org" {
 		return nil, errors.New("unapproved source")
 	}
 	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -197,7 +197,7 @@ func fetch(rawurl string, max int) ([]byte, error) {
 			return errors.New("redirect budget")
 		}
 		host := req.URL.Hostname()
-		if host == "archive.org" || host == "releases.ubuntu.com" || host == "ftp.be.debian.org" || strings.HasSuffix(host, ".archive.org") {
+		if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || strings.HasSuffix(host, ".archive.org") {
 			return nil
 		}
 		return errors.New("off-origin redirect")
@@ -335,7 +335,7 @@ func main() {
 	}
 	// A second independent publisher family: Debian official distributed mirror, version-pinned. No ISO payload.
 	debianRecord := "debian-13.7.0-amd64-netinst.iso.torrent"
-	debianLink := "https://ftp.be.debian.org/debian-cd/current/amd64/bt-cd/" + debianRecord
+	debianLink := "https://mirrors.edge.kernel.org/debian-cd/current/amd64/bt-cd/" + debianRecord
 	if e := admit(*out, &entries, "debian:official-mirror", debianRecord, "official Debian signed distribution; metainfo rights not independently adjudicated", debianLink, "software"); e != nil {
 		events = append(events, "debian "+debianRecord+": "+e.Error())
 	}
