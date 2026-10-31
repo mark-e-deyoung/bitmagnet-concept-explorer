@@ -588,7 +588,7 @@ if [[ "$GITHUB_HEAD_REF" == "preview/rdte-cloudflare-disposable-20261031" ]]; th
     exit 1
   fi
   deny_status="$(curl -sS --max-time 15 -X POST --data '{}' -o /dev/null -w '%{http_code}' "$TUNNEL_URL/import" || true)"
-  if [[ "$deny_status" != "405" ]]; then
+  if [[ "$deny_status" != "405" && "$deny_status" != "403" ]]; then
     echo "::error::Public tunnel did not deny native Bitmagnet import path (code=$deny_status)"
     exit 1
   fi
