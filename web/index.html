@@ -496,11 +496,23 @@ async function loadNativeFacets(){
   const r=await fetch('/api/v1/query/facets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:$('query').value,filters,groups:['contentType','language','genre']})});
   const x=await r.json();if(token!==facetToken)return;if(!r.ok)throw Error(x.error||'native aggregation failed');
   status.textContent='Native query total: '+x.total_count+(x.total_count_is_estimate?' (estimate)':' (reported exact)')+'. These are source metadata aggregates, not CPE semantic counts.';
+  // Buckets are provider metadata, not CPE policy categories.
+  // Expose original values/estimate qualifiers through native disclosures.
+  const groupNames={contentType:'Content type',language:'Language',genre:'Genre'};
   for(const [group,buckets] of Object.entries(x.groups||{})){
-   const h=document.createElement('h3');h.textContent=group;node.append(h);
-   const ol=document.createElement('ol');for(const b of (buckets||[]).slice(0,60)){
-    const li=document.createElement('li');li.textContent=b.label+': '+b.count+(b.is_estimate?' (estimate)':'');ol.append(li);
-   }node.append(ol);
+   const details=document.createElement('details');details.className='facet-group';
+   const summary=document.createElement('summary');
+   summary.textContent=(groupNames[group]||group)+' · '+(buckets||[]).length+' source categories';
+   details.append(summary);
+   const ul=document.createElement('ul');ul.className='facet-buckets';
+   for(const b of (buckets||[]).slice(0,60)){
+    const li=document.createElement('li');
+    const label=document.createElement('span');label.className='facet-label';label.textContent=b.label||'(unlabelled)';
+    const amount=document.createElement('span');amount.className='facet-amount';amount.textContent=String(b.count);
+    if(b.is_estimate){const estimate=document.createElement('span');estimate.className='facet-estimate';estimate.textContent='Estimate';amount.append(estimate);}
+    li.append(label,amount);ul.append(li);
+   }
+   details.append(ul);node.append(details);
   }
  }catch(e){if(token===facetToken)status.textContent='Native aggregate unavailable: '+e.message+'; no absence inference.';}
 }
