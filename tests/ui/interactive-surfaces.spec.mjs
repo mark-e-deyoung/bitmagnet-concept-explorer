@@ -84,7 +84,15 @@ test('both graph selections stay native, keyboard-accessible and visually theme-
  const darkColors=await page.locator('#concept-graph .graph-node-shape').first().evaluate(el=>({
   fill:getComputedStyle(el).fill,stroke:getComputedStyle(el).stroke
  }));
- expect(darkColors.fill).not.toBe(firstColors.fill);
+ // The node fill has a 150ms presentation transition (disabled for reduced
+ // motion). Validate the terminal computed CSS-token color, not its first frame.
+ const selectedDark=await page.evaluate(()=>{
+  const sample=document.createElement('span');sample.style.color='var(--viz-selected)';
+  document.body.append(sample);const color=getComputedStyle(sample).color;sample.remove();return color;
+ });
+ await expect.poll(async()=>page.locator('#concept-graph .graph-node-shape').first().evaluate(el=>getComputedStyle(el).fill))
+  .toBe(selectedDark);
+ expect(selectedDark).not.toBe(firstColors.fill);
  expect(darkColors.stroke).not.toBe(firstColors.stroke);
  const secondary=nodes.filter({hasText:'Edition'});
  await secondary.focus();
