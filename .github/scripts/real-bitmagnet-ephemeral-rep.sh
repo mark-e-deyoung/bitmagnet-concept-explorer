@@ -197,6 +197,9 @@ use_default_settings:
   engines:
     keep_only:
       - wikipedia
+engines:
+  - name: wikipedia
+    display_type: ["infobox", "list"]
 search:
   safe_search: 2
   autocomplete: ""
