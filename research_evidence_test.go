@@ -35,9 +35,9 @@ func TestResearchEvidencePinnedResearchOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	if p.AuthorityStatus != "research-only-no-accepted-cpe-facts" ||
-	   len(p.Works) != 4 || len(p.Entities) != 4 || len(p.Claims) != 5 ||
-	   len(p.ArtCandidates) != 3 || len(p.SourceInventory) != 7 ||
-	   !strings.HasPrefix(digest,"sha256:") {
+		len(p.Works) != 4 || len(p.Entities) != 4 || len(p.Claims) != 5 ||
+		len(p.ArtCandidates) != 3 || len(p.SourceInventory) != 7 ||
+		!strings.HasPrefix(digest, "sha256:") {
 		t.Fatalf("unexpected source-research data: %+v %q", p, digest)
 	}
 	for _, art := range p.ArtCandidates {
