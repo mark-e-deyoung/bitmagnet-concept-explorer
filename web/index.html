@@ -1,11 +1,283 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bitmagnet Concept Explorer</title>
+<title>Explore indexed evidence · Bitmagnet Concept Explorer</title>
+<meta name="description" content="Search, compare and inspect Bitmagnet metadata with an explicit separation between observations and research-only concept previews.">
+<meta name="color-scheme" content="light dark"><meta name="theme-color" content="#edf5f3">
 <style>
-:root{color-scheme:dark}body{font:16px system-ui,sans-serif;background:#101820;color:#eef4fa;max-width:1100px;margin:2rem auto;padding:0 1rem}input,textarea,button{font:inherit;padding:.65rem;border-radius:.35rem;border:1px solid #899ba8}input,textarea{background:#1c2934;color:white;width:100%;box-sizing:border-box}button{background:#c5e5fa;color:#102030;cursor:pointer}button:disabled{opacity:.55}select{font:inherit;padding:.6rem;background:#1c2934;color:white;border:1px solid #899ba8;border-radius:.35rem}fieldset{margin:1rem 0;border:1px solid #526471;border-radius:.5rem}legend{padding:0 .4rem}.graph{width:100%;height:auto;border:1px solid #526471;border-radius:.5rem}.graph-node{cursor:pointer}.graph-node:focus{outline:3px solid #fbd36c}.facet-layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.6rem}.concept-buttons{display:flex;flex-wrap:wrap;gap:.4rem}.concept-buttons button{padding:.3rem .6rem}.concept-buttons button[aria-pressed=true]{outline:3px solid #fbd36c}.muted{color:#bfd2dc}button:focus,input:focus,textarea:focus{outline:3px solid #fbd36c}.note{color:#ffda9a}.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:1rem}.panel{background:#1c2934;border-radius:.5rem;padding:1rem}.item{border-top:1px solid #526471;padding:.7rem 0;overflow-wrap:anywhere}label{display:block;margin:1rem 0 .4rem}small{color:#bfd2dc}pre{white-space:pre-wrap;overflow-wrap:anywhere}
+
+:root {
+  color-scheme: light;
+  --bg:#f3f6f5; --surface:#fffefa; --raised:#edf5f3; --ink:#183039;
+  --subtle:#4e6670; --line:#bfd0d1; --strong:#145d69;
+  --action:#176875; --action-text:#fff; --focus:#b35c30;
+  --copper:#b46437; --gold:#e8c397; --code:#e8efee;
+  --shadow:0 14px 35px rgba(15,51,59,.07);
+  --theme-bar:#e4eeeb;
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme:dark; --bg:#091820; --surface:#122a34; --raised:#17353d;
+    --ink:#edf7f6; --subtle:#bed3d5; --line:#486873; --strong:#8cddd9;
+    --action:#86d5d3; --action-text:#08191f; --focus:#f4b473;
+    --copper:#d69b69; --gold:#624b39; --code:#1a3640;
+    --shadow:0 14px 35px rgba(0,0,0,.22); --theme-bar:#23414a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme:dark; --bg:#091820; --surface:#122a34; --raised:#17353d;
+  --ink:#edf7f6; --subtle:#bed3d5; --line:#486873; --strong:#8cddd9;
+  --action:#86d5d3; --action-text:#08191f; --focus:#f4b473;
+  --copper:#d69b69; --gold:#624b39; --code:#1a3640;
+  --shadow:0 14px 35px rgba(0,0,0,.22); --theme-bar:#23414a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:6.4rem}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--strong);text-underline-offset:.18em;text-decoration-thickness:.08em}
+a:hover{text-decoration-thickness:.13em}
+button,input,textarea,select{font:inherit}
+button,input:not([type=checkbox]):not([type=radio]),textarea,select{
+  min-height:44px;border-radius:10px;border:1px solid var(--line);padding:.65rem .85rem
+}
+input:not([type=checkbox]):not([type=radio]),textarea,select{
+  background:var(--surface);color:var(--ink);width:100%;max-width:100%;
+}
+input::placeholder,textarea::placeholder{color:var(--subtle);opacity:.95}
+button{background:var(--raised);color:var(--ink);cursor:pointer;font-weight:650}
+button:hover:not(:disabled){background:var(--theme-bar)}
+button:disabled{opacity:.6;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,
+a:focus-visible,summary:focus-visible,[tabindex]:focus-visible{
+  outline:3px solid var(--focus);outline-offset:3px
+}
+label{display:block;margin:.9rem 0 .35rem;font-weight:620}
+small,.muted,.helper{color:var(--subtle)}
+p{margin:.7rem 0 1rem} h1,h2,h3{letter-spacing:-.025em;line-height:1.2}
+h1{font-size:clamp(2rem,4vw,3.55rem);margin:.35rem 0 .75rem}
+h2{font-size:clamp(1.32rem,2.6vw,1.62rem);margin:0 0 .65rem}
+h3{font-size:1.06rem}
+.shell{width:min(1160px,100%);padding-inline:clamp(16px,3.2vw,36px);margin-inline:auto}
+.skip-link{position:fixed;top:8px;left:8px;z-index:999;transform:translateY(-160%);
+  padding:.65rem 1rem;background:var(--surface);border:2px solid var(--focus);
+  border-radius:8px;font-weight:750}.skip-link:focus{transform:translateY(0)}
+.site-header{background:var(--surface);border-bottom:1px solid var(--line)}
+@media(min-width:881px){.site-header{position:sticky;top:0;z-index:50}}
+.site-nav{display:flex;gap:1rem;justify-content:space-between;align-items:center;flex-wrap:wrap;padding-block:.7rem}
+.product-brand{display:flex;align-items:center;gap:.7rem;text-decoration:none;color:var(--ink);font-weight:760;font-size:1.08rem;min-height:44px}
+.product-mark{width:40px;height:40px;background:var(--strong);color:var(--surface);
+  border-radius:12px;display:grid;place-items:center;flex-shrink:0;position:relative;overflow:hidden}
+.product-mark svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.product-brand small{font-size:.7rem;text-transform:uppercase;letter-spacing:.13em;display:block;margin-top:-2px}
+.nav-cluster{display:flex;align-items:center;gap:.5rem 1rem;flex-wrap:wrap}
+.primary-nav{display:flex;flex-wrap:wrap;align-items:center;gap:.15rem}
+.primary-nav a{display:inline-flex;min-height:44px;align-items:center;padding:.4rem .7rem;border-radius:9px;
+  text-decoration:none;font-weight:660;color:var(--ink)}
+.primary-nav a:hover{background:var(--raised)}
+.theme-picker{border:0;margin:0;padding:0;display:flex;align-items:center;gap:.25rem}
+.theme-picker legend{float:left;font-size:.78rem;font-weight:730;color:var(--subtle);padding:.3rem .4rem}
+.theme-picker label{display:flex;min-height:44px;align-items:center;gap:.25rem;margin:0;padding:.35rem .55rem;
+  background:var(--theme-bar);font-size:.82rem;cursor:pointer;font-weight:720}
+.theme-picker label:first-of-type{border-radius:9px 0 0 9px}
+.theme-picker label:last-of-type{border-radius:0 9px 9px 0}
+.theme-picker input{accent-color:var(--action);margin:0 .14rem 0 0;width:auto;min-height:initial}
+.theme-picker label:has(input:checked){outline:2px solid var(--strong);outline-offset:-2px;background:var(--raised)}
+.hero{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(210px,.55fr);align-items:center;gap:2rem;padding-block:1.75rem 1.45rem}
+.eyebrow{font-size:.76rem;font-weight:790;text-transform:uppercase;letter-spacing:.12em;color:var(--strong)}
+.hero .lead{font-size:clamp(1.05rem,2vw,1.18rem);max-width:57ch;color:var(--subtle)}
+.hero-signal{height:155px;border:1px solid var(--line);border-radius:18px;position:relative;
+ background:linear-gradient(140deg,var(--surface),var(--raised));overflow:hidden;box-shadow:var(--shadow)}
+.hero-signal .route{position:absolute;left:11%;right:11%;height:3px;border-radius:5px;background:var(--strong);opacity:.75}
+.hero-signal .route:nth-child(1){top:28%;transform:rotate(11deg);transform-origin:right}
+.hero-signal .route:nth-child(2){top:49%;background:var(--copper)}
+.hero-signal .route:nth-child(3){top:70%;transform:rotate(-11deg);transform-origin:right}
+.hero-signal .junction{position:absolute;top:calc(50% - 24px);right:12%;width:48px;height:48px;border-radius:50%;
+ background:var(--surface);border:5px solid var(--strong);box-shadow:0 0 0 8px var(--raised)}
+.hero-signal .junction:after{content:"";position:absolute;inset:12px;border-radius:50%;background:var(--copper)}
+.trust-strip{display:flex;gap:.4rem 1rem;align-items:center;flex-wrap:wrap;margin:1.1rem 0 0}
+.trust-strip span{font-size:.83rem;color:var(--subtle);font-weight:640}
+.trust-strip span+span:before{content:"·";margin-right:.8rem;color:var(--copper)}
+main.shell{padding-bottom:3.2rem}
+.section-card,.panel{background:var(--surface);border:1px solid var(--line);
+ border-radius:17px;box-shadow:var(--shadow);padding:clamp(18px,2.5vw,29px)}
+.section-card{margin-bottom:1.4rem;border-top:4px solid var(--copper)}
+.section-space{margin-top:2.5rem}
+.section-intro{color:var(--subtle);max-width:75ch}
+.section-kicker{display:block;font-size:.75rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--strong);margin-bottom:.5rem}
+.search-form{display:grid;gap:.3rem}
+.search-form .search-primary{max-width:820px}
+.search-form .search-primary input{font-size:1.08rem;padding:.85rem 1rem;border:2px solid var(--line)}
+.search-actions{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin:1rem 0 .4rem}
+.examples{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .5rem;margin-top:.65rem;font-size:.84rem;color:var(--subtle)}
+.examples button{min-height:36px;padding:.3rem .65rem;font-size:.85rem;background:var(--raised);border-color:var(--line)}
+.primary-action{background:var(--action);color:var(--action-text);border-color:var(--action);padding:.7rem 1.4rem;font-weight:800}
+.primary-action:hover:not(:disabled){background:var(--strong);color:var(--surface)}
+details.advanced{margin-top:1rem;border:1px solid var(--line);border-radius:12px;background:var(--raised);padding:0 .9rem}
+details.advanced summary{cursor:pointer;min-height:48px;display:list-item;align-content:center;font-weight:740;padding:.5rem .35rem}
+details.advanced[open]{padding-bottom:.8rem}
+details.advanced fieldset{background:var(--surface)}
+fieldset{border:1px solid var(--line);border-radius:10px;margin:1rem 0;padding:.85rem}
+legend{padding:0 .3rem;font-weight:700}
+.facet-layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.3rem 1rem}
+.facet-layout>div{min-width:0}
+.checkbox-line{font-weight:500;display:flex;gap:.55rem;align-items:flex-start}
+.checkbox-line input{margin-top:.38rem;flex:0 0 auto;accent-color:var(--strong)}
+.note,.status-banner{color:var(--ink);background:var(--raised);border-left:4px solid var(--strong);
+ padding:.75rem .95rem;border-radius:0 9px 9px 0}
+.status-banner{margin:.55rem 0 .85rem;font-size:.94rem}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+.panel{margin:1rem 0}.cols .panel{margin:0;box-shadow:none;border-top:3px solid var(--strong)}
+.cols .panel:nth-child(2){border-top-color:var(--copper)}
+.cols .panel:nth-child(3){border-top-color:#65986f}
+.item{border-top:1px solid var(--line);padding:.85rem 0;overflow-wrap:anywhere}
+.item strong{display:block;line-height:1.3;margin-bottom:.28rem}
+.item div{font-size:.83rem;color:var(--subtle)}
+.graph{width:100%;height:auto;min-height:180px;background:#102d38;border:1px solid var(--line);
+ border-radius:12px;max-width:100%;overflow:visible}
+.graph:empty{display:none}
+.metadata-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:.42rem .8rem;margin:.75rem 0 .25rem}
+.metadata-list>div{background:var(--raised);padding:.55rem .68rem;border-radius:8px;min-width:0}
+.metadata-list dt{font-size:.7rem;font-weight:750;letter-spacing:.04em;color:var(--subtle);text-transform:uppercase}
+.metadata-list dd{margin:.18rem 0 0;font-size:.86rem;font-weight:620;overflow-wrap:anywhere}
+.hash-row{font-size:.75rem;line-height:1.6;color:var(--subtle);margin-top:.55rem}
+.hash-row code{user-select:all;overflow-wrap:anywhere}
+.hash-copy{min-height:36px;padding:.3rem .55rem;font-size:.76rem;margin-left:.5rem}
+.match-reason{color:var(--subtle);font-size:.82rem;margin:.55rem 0 0}
+.graph-node{cursor:pointer}.graph-node:focus{outline:3px solid var(--focus)}
+.concept-buttons{display:flex;flex-wrap:wrap;gap:.45rem}
+.concept-buttons button{min-height:44px;padding:.45rem .75rem;font-size:.88rem}
+.concept-buttons button[aria-pressed=true]{outline:3px solid var(--focus);outline-offset:1px}
+.evidence-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.2rem}
+.evidence-grid>.panel{margin-top:0}
+.machine-note{padding:1.1rem;border:1px solid var(--line);background:var(--raised);border-radius:12px}
+.machine-note a{font-family:ui-monospace,Consolas,monospace;font-size:.84rem}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--code);color:var(--ink);
+ padding:1rem;border-radius:10px;max-height:370px;overflow:auto;font-size:.82rem}
+code{font-family:ui-monospace,Consolas,monospace}
+.site-footer{border-top:1px solid var(--line);padding:1.6rem 0 2rem;color:var(--subtle);font-size:.89rem}
+.footer-inner{display:flex;gap:.8rem 1.5rem;justify-content:space-between;flex-wrap:wrap}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+ clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:880px){.site-nav{align-items:flex-start}.nav-cluster{width:100%;justify-content:space-between}
+ .hero{grid-template-columns:1fr}.hero-signal{display:none}.cols{grid-template-columns:1fr}
+ .evidence-grid{grid-template-columns:1fr}
+}
+@media(max-width:520px){.theme-picker{max-width:100%;flex-wrap:wrap}.theme-picker label{padding-inline:.33rem;gap:.12rem}
+ .site-nav{flex-direction:column}.nav-cluster{flex-direction:column;align-items:stretch}
+ .primary-nav{justify-content:space-between}.theme-picker{justify-content:flex-start}
+ .trust-strip span+span:before{display:none}.trust-strip{gap:.3rem .75rem}
+ .section-card,.panel{padding:16px}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(forced-colors:active){.primary-action,.panel,.section-card,.theme-picker label{border:1px solid CanvasText}
+ .theme-picker label:has(input:checked){outline:3px solid Highlight}
+}
+
+/* R2: Project-native data-bearing interaction tokens. Product identity is
+   independent of SupraCraft; evidence states are labels, never colors alone. */
+:root {
+ --viz-bg:#eef5f4; --viz-grid:#d6e5e3; --viz-edge:#597d89;
+ --viz-node:#205865; --viz-observed:#27694f; --viz-selected:#dfad77;
+ --viz-label:#ffffff; --viz-selected-text:#192e31; --viz-stroke:#285260;
+ --state-success:#206b4d; --state-error:#ac3b37; --state-warn:#a56026;
+}
+@media(prefers-color-scheme:dark){
+ :root:not([data-theme="light"]){
+  --viz-bg:#102a34; --viz-grid:#203f47; --viz-edge:#9ab9c2;
+  --viz-node:#285769; --viz-observed:#286e5a; --viz-selected:#f3c18c;
+  --viz-label:#ffffff; --viz-selected-text:#13272b; --viz-stroke:#bddfe2;
+  --state-success:#79d6ad; --state-error:#ffadad; --state-warn:#ffd091;
+ }
+}
+:root[data-theme="dark"]{
+ --viz-bg:#102a34; --viz-grid:#203f47; --viz-edge:#9ab9c2;
+ --viz-node:#285769; --viz-observed:#286e5a; --viz-selected:#f3c18c;
+ --viz-label:#ffffff; --viz-selected-text:#13272b; --viz-stroke:#bddfe2;
+ --state-success:#79d6ad; --state-error:#ffadad; --state-warn:#ffd091;
+}
+.viz-scroller{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border:1px solid var(--line);
+ background:var(--viz-bg);border-radius:12px}
+.viz-scroller:has(.graph:empty){display:none}
+.viz-scroller:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.viz-scroller .graph{display:block;min-width:560px;width:100%;max-width:none;min-height:0;height:auto;
+ overflow:visible;background:var(--viz-bg);border:0;border-radius:0}
+.viz-scroller .graph:empty{display:none}
+.graph-link{stroke:var(--viz-edge);stroke-linecap:round}
+.graph-node-shape{fill:var(--viz-node);stroke:var(--viz-stroke);stroke-width:2;transition:fill .15s ease}
+.graph-node[data-evidence="observed"] .graph-node-shape{fill:var(--viz-observed)}
+.graph-node-label{fill:var(--viz-label);pointer-events:none;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px}
+.graph-node[aria-pressed="true"] .graph-node-shape{fill:var(--viz-selected);stroke:var(--focus);stroke-width:3}
+.graph-node[aria-pressed="true"] .graph-node-label{fill:var(--viz-selected-text);font-weight:750}
+.graph-node:hover .graph-node-shape{stroke:var(--focus);stroke-width:3}
+.graph-node:focus-visible .graph-node-shape{stroke:var(--focus);stroke-width:5}
+.graph-center{fill:var(--viz-node);stroke:var(--viz-stroke);stroke-width:2}
+.graph-center-label{fill:var(--viz-label);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px}
+.viz-key{display:flex;flex-wrap:wrap;gap:.45rem 1rem;align-items:center;font-size:.82rem;color:var(--subtle);
+ list-style:none;padding:0;margin:.5rem 0 .7rem}
+.viz-key li{display:inline-flex;gap:.35rem;align-items:center}
+.viz-dot{width:13px;height:13px;border-radius:50%;display:inline-block;flex:none;border:2px solid var(--viz-stroke);background:var(--viz-node)}
+.viz-dot.observed{background:var(--viz-observed)}
+.viz-dot.selected{background:var(--viz-selected);border-color:var(--focus)}
+.viz-help{color:var(--subtle);font-size:.84rem}
+.facet-group{border:1px solid var(--line);border-radius:10px;padding:.2rem .75rem;margin:.7rem 0;background:var(--raised)}
+.facet-group summary{min-height:44px;padding:.6rem 0;cursor:pointer;font-weight:750;text-transform:none}
+.facet-buckets{list-style:none;padding:0;margin:0 0 .6rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:.45rem}
+.facet-buckets li{display:flex;align-items:start;justify-content:space-between;gap:.6rem;background:var(--surface);
+ border:1px solid var(--line);border-radius:9px;padding:.48rem .7rem}
+.facet-label{min-width:0;overflow-wrap:anywhere}
+.facet-amount{flex:0 0 auto;font-weight:760;font-variant-numeric:tabular-nums;color:var(--strong)}
+.facet-estimate{display:block;color:var(--subtle);font-weight:500;font-size:.75rem}
+[data-ui-state="busy"]{border-left:4px solid var(--strong)}
+[data-ui-state="error"]{border-left:4px solid var(--state-error)}
+[data-ui-state="blocked"]{border-left:4px solid var(--state-warn)}
+[data-ui-state="ready"]{border-left:4px solid var(--state-success)}
+@media(prefers-reduced-motion:reduce){.graph-node-shape{transition:none}}
+@media(forced-colors:active){
+ .viz-scroller{border:1px solid CanvasText}
+ .graph-node-shape,.graph-center{fill:Canvas;stroke:CanvasText}
+ .graph-node-label,.graph-center-label{fill:CanvasText}
+ .graph-node[aria-pressed="true"] .graph-node-shape,.graph-node:focus-visible .graph-node-shape{stroke:Highlight;stroke-width:5}
+ .graph-node[aria-pressed="true"] .graph-node-label{fill:CanvasText}
+ .graph-link{stroke:CanvasText}
+ .viz-dot{forced-color-adjust:auto}
+}
 </style></head><body>
-<h1>Bitmagnet Concept Explorer</h1><p class="note" id="mode" role="status">Checking service capabilities…</p>
-<form id="q"><label for="query">Direct search query</label><input id="query" required maxlength="512" placeholder="Search text">
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<header class="site-header">
+  <div class="shell site-nav">
+    <a class="product-brand" href="#top">
+      <span class="product-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M4 7h8l12 9-12 9H4"/><path d="M4 16h20M4 25h8"/></svg></span>
+      <span>Concept Explorer<small>Bitmagnet · research workbench</small></span>
+    </a>
+    <div class="nav-cluster">
+      <nav class="primary-nav" aria-label="Primary"><a href="#search">Search</a><a href="#results">Results</a><a href="#concepts">Concepts</a><a href="#sweep">Sweep</a></nav>
+      <fieldset class="theme-picker"><legend>Theme</legend>
+        <label><input class="theme-choice" type="radio" name="bce-theme" value="system" checked aria-label="System theme">System</label>
+        <label><input class="theme-choice" type="radio" name="bce-theme" value="light" aria-label="Light theme">Light</label>
+        <label><input class="theme-choice" type="radio" name="bce-theme" value="dark" aria-label="Dark theme">Dark</label>
+      </fieldset>
+    </div>
+  </div>
+</header>
+<main id="main-content" class="shell" tabindex="-1">
+<section class="hero" id="top" aria-labelledby="page-title">
+  <div><div class="eyebrow">Explore · compare · inspect</div>
+    <h1 id="page-title">Find what's in the index.</h1>
+    <p class="lead">Search Bitmagnet metadata directly, compare optional concept terms, and inspect why records appeared. Every result stays an observation—not a content recommendation or accepted policy fact.</p>
+    <div class="trust-strip"><span>Read-only queries</span><span>Explicit source boundaries</span><span>Evidence before inference</span></div>
+  </div>
+  <div class="hero-signal" aria-hidden="true"><span class="route"></span><span class="route"></span><span class="route"></span><span class="junction"></span></div>
+</section>
+<section id="search" class="section-card" aria-labelledby="search-heading">
+  <span class="section-kicker">01 / Start here</span><h2 id="search-heading">Search indexed metadata</h2>
+  <p class="section-intro">Enter a title, subject or phrase. The first pass checks literal records. Refinements and experimental concept expansion are optional.</p>
+  <p class="status-banner" id="mode" role="status">Checking service capabilities…</p>
+<form class="search-form" id="q">
+  <div class="search-primary"><label for="query">Search phrase</label>
+    <input id="query" required maxlength="512" autocomplete="off" aria-describedby="search-hint" placeholder="e.g. A Princess of Mars">
+    <small id="search-hint">Searches indexed titles and metadata; no torrent payload is downloaded.</small><div class="examples" aria-label="Example search phrases"><span>Try a phrase:</span> <button type="button" class="example-query" data-query="Fedora">Fedora</button> <button type="button" class="example-query" data-query="A Princess of Mars">A Princess of Mars</button> <button type="button" class="example-query" data-query="Ubuntu">Ubuntu</button></div>
+  </div>
+  <details class="advanced" id="advanced-settings"><summary>Refine search · languages, concepts and filters</summary>
 <label for="terms">Exploratory concept expansions, one per line</label><textarea id="terms" rows="4" placeholder="Alternative phrases or multilingual terms"></textarea>
 <fieldset><legend>Filter and organize returned metadata</legend>
 <div class="facet-layout">
@@ -18,48 +290,94 @@
 <div><label for="group">Group by</label><select id="group"><option value="none">None</option><option value="media_type">Media type</option><option value="language">Language</option><option value="adult_metadata">Adult metadata flag</option><option value="track">Retrieval track</option></select></div></div>
 <p><label><input type="checkbox" id="web" style="width:auto"> Include SearXNG web search (explicit opt-in; only query text is sent)</label></p>
 <p><small>Filters, sorts and groups apply to a bounded page, not the entire corpus. Source adult flags are not age ratings, SFW verdicts, or CPE policy decisions. Genre, aesthetic, ROM status and audience suitability require qualified mappings/evidence.</small></p></fieldset>
-<p><button type="submit" id="submit">Plan query</button></p></form>
-<p id="status" aria-live="polite">Results are metadata observations, not concept validation or content recommendations.</p>
+</details>
+<div class="search-actions"><button class="primary-action" type="submit" id="submit">Plan query</button><small>Concept mappings are provisional and never change Bitmagnet data.</small></div></form></section>
+<section class="section-space" id="results" aria-labelledby="results-heading"><span class="section-kicker">02 / Compare evidence</span><h2 id="results-heading">Search results</h2><p class="section-intro">Compare direct matches, experimental concept-term matches, and records returned by both tracks. Empty output or a failed source is not proof of absence.</p>
+<p class="status-banner" id="status" role="status" aria-live="polite">Results are metadata observations, not concept validation or content recommendations.</p>
 <div class="cols">
-<section class="panel" aria-labelledby="direct-title"><h2 id="direct-title">Direct track</h2><div id="direct"></div></section>
-<section class="panel" aria-labelledby="concept-title"><h2 id="concept-title">Concept track</h2><div id="concept"></div></section>
-<section class="panel" aria-labelledby="overlap-title"><h2 id="overlap-title">Overlap</h2><div id="overlap"></div></section>
-</div>
-<section class="panel"><h2>Concept map (pinned CPE projection preview)</h2><p id="graph-status" class="note">Checking configured concept projection…</p>
+<section class="panel" aria-labelledby="direct-title"><h2 id="direct-title">Direct matches</h2><p class="helper">Found using your literal search phrase.</p><div id="direct">Run a search to see direct metadata matches.</div></section>
+<section class="panel" aria-labelledby="concept-title"><h2 id="concept-title">Concept-term matches</h2><p class="helper">Found through optional experimental expansions.</p><div id="concept">Run a search to see expanded-term matches.</div></section>
+<section class="panel" aria-labelledby="overlap-title"><h2 id="overlap-title">Shared matches</h2><p class="helper">Appeared in both independent retrieval tracks.</p><div id="overlap">Run a search to compare overlapping results.</div></section>
+</div></section>
+<section id="concepts" class="panel section-space"><span class="section-kicker">03 / Inspect concepts</span><h2>Concept map (pinned CPE projection preview)</h2><p id="graph-status" class="note">Checking configured concept projection…</p>
 <p><label><input type="checkbox" id="use-concept" style="width:auto"> Include the selected concept's pinned preview lexicalizations in the next query (explicit opt-in)</label></p><label for="concept-filter">Find a concept</label><input id="concept-filter" placeholder="Search concept labels and aliases">
-<svg id="concept-graph" class="graph" viewBox="0 0 700 350" role="img" aria-label="Clickable map of selected concept and its relationships"></svg>
-<p id="concept-detail" aria-live="polite"></p><div id="concept-list" class="concept-buttons" aria-label="Accessible concept selector"></div></section>
-<section class="panel" aria-labelledby="observed-title"><h2 id="observed-title">Concepts observed in the returned Bitmagnet metadata</h2>
+<ul class="viz-key" aria-label="Concept map legend"><li><span class="viz-dot selected" aria-hidden="true"></span>Selected preview concept</li><li><span class="viz-dot" aria-hidden="true"></span>Other preview concept</li></ul>
+<p class="viz-help">When available, navigate the diagram with Tab and Enter. At narrow widths, scroll sideways or use the accessible concept buttons below. Preview relationships are not accepted CPE facts.</p>
+<div class="viz-scroller" tabindex="0" role="region" aria-label="Scrollable provisional concept diagram"><svg id="concept-graph" class="graph" viewBox="0 0 700 350" role="group" aria-label="Interactive provisional concept relationships"></svg></div>
+<p id="concept-detail" aria-live="polite"></p><div id="concept-list" class="concept-buttons" role="group" aria-label="Accessible concept selector"></div></section>
+<section id="observations" class="panel section-space" aria-labelledby="observed-title"><span class="section-kicker">04 / Investigate evidence</span><h2 id="observed-title">Concepts observed in the returned Bitmagnet metadata</h2>
 <p class="note">These are title-lexical evidence candidates from this query's bounded results, not the CPE ontology's related concepts or validated semantic classifications.</p>
 <p id="observed-status" aria-live="polite">Run a search to derive a separate observed graph.</p>
-<svg id="observed-graph" class="graph" viewBox="0 0 700 340" role="img" aria-label="Evidence-linked concepts occurring in returned metadata"></svg>
-<div id="observed-list" class="concept-buttons" aria-label="Concept evidence selectors"></div>
+<ul class="viz-key" aria-label="Observed evidence diagram legend"><li><span class="viz-dot observed" aria-hidden="true"></span>Title-lexical candidate</li><li><span class="viz-dot selected" aria-hidden="true"></span>Selected evidence</li></ul>
+<p class="viz-help">Observed nodes are title-lexical candidates, not semantic classifications. Inspect using the graph or native evidence-selection buttons.</p>
+<div class="viz-scroller" tabindex="0" role="region" aria-label="Scrollable observed evidence diagram"><svg id="observed-graph" class="graph" viewBox="0 0 700 340" role="group" aria-label="Interactive observed title-lexical evidence"></svg></div>
+<div id="observed-list" class="concept-buttons" role="group" aria-label="Concept evidence selectors"></div>
 <div id="observed-items" aria-live="polite"></div></section>
-<section class="panel" aria-labelledby="native-facet-title"><h2 id="native-facet-title">Native Bitmagnet corpus metadata facets</h2>
+<section id="facets" class="panel" aria-labelledby="native-facet-title"><h2 id="native-facet-title">Native Bitmagnet corpus metadata facets</h2>
 <p>Optional native database aggregation. Counts can be estimates; these are not accepted CPE concepts.</p>
 <button type="button" id="native-facet-button">Load native corpus-side counts</button><p id="native-facet-status" aria-live="polite">Not requested.</p><div id="native-facet-data"></div></section>
-<section class="panel" aria-labelledby="sweep-title"><h2 id="sweep-title">Bounded multilingual concept sweep</h2>
+<section id="sweep" class="panel section-space" aria-labelledby="sweep-title"><h2 id="sweep-title">Bounded multilingual concept sweep</h2>
 <p>Search this query using the selected pinned-preview concept's language-specific terms. The private Bitmagnet index is queried first; external SearXNG searches require separate consent and operator permission.</p>
 <label for="sweep-languages">Sweep languages (comma-separated, for example en,de,th,ja,zh)</label>
 <input id="sweep-languages" value="en,de,th" maxlength="100">
 <label for="sweep-local-budget">Maximum Bitmagnet queries (1–12)</label><input id="sweep-local-budget" type="number" min="1" max="12" value="8">
-<label for="sweep-external-budget">Maximum SearXNG queries (1–3)</label><input id="sweep-external-budget" type="number" min="1" max="3 value="3">
+<label for="sweep-external-budget">Maximum SearXNG queries (1–3)</label><input id="sweep-external-budget" type="number" min="1" max="3" value="3">
 <p><label><input type="checkbox" id="sweep-web" style="width:auto"> Enable private SearXNG multilingual sweep</label></p>
 <p><label><input type="checkbox" id="sweep-consent" style="width:auto"> I explicitly authorize sending these selected query terms to the configured private SearXNG, whose engines may forward them to third-party providers</label></p>
 <p><button type="button" id="sweep-plan">Preview sweep plan</button> <button type="button" id="sweep-run">Execute bounded sweep</button> <button type="button" id="sweep-limits">View source budget</button></p>
 <p id="sweep-status" aria-live="polite">No sweep executed; external search is off by default.</p>
 <pre id="sweep-details"></pre></section>
-<section><h2>Separate SearXNG observations</h2><div id="external" class="panel">Not requested.</div></section>
-<section><h2>Metadata groups and evidence</h2><pre id="details"></pre></section>
+<section class="panel section-space" id="external-evidence"><h2>Separate SearXNG observations</h2><p class="section-intro">External results remain separate from indexed Bitmagnet evidence and require explicit opt-in.</p><div id="external">Not requested.</div></section>
+<section class="panel" id="technical-evidence"><h2>Request diagnostics</h2><details class="advanced"><summary>Show raw evidence, groups, coverage and failures</summary><pre id="details"></pre></details></section>
+<section class="machine-note" aria-label="Automation and agent access"><h2>For automation and agents</h2><p>Use the same read-only service contracts as this workbench. Prefer structured endpoints to scraping this page; authority remains research-only.</p><p><a href="/api/v1/capabilities">Service capabilities (JSON)</a> · <a href="/api/v1/concepts">Concept preview (JSON)</a></p></section>
+</main><footer class="site-footer"><div class="shell footer-inner"><span>Bitmagnet Concept Explorer · read-only research interface</span><span>Public observations are not CPE assessments or license determinations.</span></div></footer>
 <script>
 const $=id=>document.getElementById(id);
 let canExecute=false,canInfer=false,queryToken=0,facetToken=0,sweepToken=0,limitsToken=0,sweepDisplayToken=0;
-function displayItems(id,items){const node=$(id);node.replaceChildren();if(items.length===0){node.textContent='No observed results in this bounded query.';return;}
- for(const x of items){const article=document.createElement('article');article.className='item';const title=document.createElement('strong');title.textContent=x.title||'(untitled)';const detail=document.createElement('div');const hash=(x.info_hash||'').slice(0,14);detail.textContent='Type: '+(x.content_type||'unknown')+' · Language IDs: '+(x.languages||[]).join(', ')+' · Seeders: '+(x.seeders??'unknown')+' · Leechers: '+(x.leechers??'unknown')+' · Source adult flag: '+(x.adult_metadata===null||x.adult_metadata===undefined?'unknown':String(x.adult_metadata))+' · Infohash: '+hash+'… · Matches: '+(x.matched_queries||[]).join(', ');article.append(title,detail);node.append(article);}}
+function displayItems(id,items){
+ const node=$(id);node.replaceChildren();
+ if(items.length===0){node.textContent='No observed results in this bounded query.';return;}
+ for(const x of items){
+  const article=document.createElement('article');article.className='item';
+  const title=document.createElement('strong');title.textContent=x.title||'(untitled)';article.append(title);
+  const details=document.createElement('dl');details.className='metadata-list';
+  function datum(name,value){
+   const pair=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');
+   dt.textContent=name;dd.textContent=String(value);pair.append(dt,dd);details.append(pair);
+  }
+  datum('Type',x.content_type||'Unknown');
+  datum('Languages',(x.languages||[]).join(', ')||'Unknown');
+  datum('Seeders',x.seeders??'Unknown');
+  datum('Leechers',x.leechers??'Unknown');
+  datum('Adult source flag',x.adult_metadata==null?'Unknown':String(x.adult_metadata)+' (not a suitability verdict)');
+  article.append(details);
+  const reason=document.createElement('p');reason.className='match-reason';
+  reason.textContent='Matched query terms: '+((x.matched_queries||[]).join(', ')||'not supplied');
+  article.append(reason);
+  const hash=typeof x.info_hash==='string'?x.info_hash:'';
+  if(/^[a-f0-9]{40}$/i.test(hash)){
+   const row=document.createElement('div');row.className='hash-row';
+   const label=document.createElement('span');label.textContent='Original infohash: ';
+   const code=document.createElement('code');code.textContent=hash;row.append(label,code);
+   const button=document.createElement('button');button.type='button';button.className='hash-copy';
+   button.textContent='Copy';button.setAttribute('aria-label','Copy '+(x.title||'result')+' infohash');
+   const notice=document.createElement('span');notice.className='sr-only';notice.setAttribute('role','status');
+   button.addEventListener('click',async()=>{
+    try{
+     if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function')throw Error('Clipboard unavailable');
+     await navigator.clipboard.writeText(hash);
+     notice.textContent='Infohash copied';button.textContent='Copied';
+    }catch(_){notice.textContent='Copy unavailable. Select the displayed infohash to copy manually.';button.textContent='Select text';}
+   });
+   row.append(button,notice);article.append(row);
+  }
+  node.append(article);
+ }
+}
 function clearQueryEvidence(message){
  observedToken++;facetToken++;sweepToken++;limitsToken++;sweepDisplayToken++;
  for(const id of ['direct','concept','overlap','external','details','observed-graph','observed-list','observed-items','observed-status','native-facet-data','native-facet-status','sweep-details','sweep-status']){
-  const node=$(id);node.replaceChildren();node.textContent=message;
+  const node=$(id);node.replaceChildren();node.textContent=message;node.setAttribute?.('data-ui-state','idle');
  }
 }
 async function capabilities(){
@@ -71,7 +389,7 @@ $('q').addEventListener('submit',async event=>{
  const filters={languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[],adult_metadata:$('adult').value};
  if($('minseeders').value!=='')filters.min_seeders=Number($('minseeders').value);
  if($('minleechers').value!=='')filters.min_leechers=Number($('minleechers').value);
- const body={query:$('query').value,expansions,filters,sort:$('sort').value,group_by:$('group').value,include_web:$('web').checked,concept_ids:$('use-concept').checked&&focusConcept?[focusConcept.id]:[]};$('submit').disabled=true;$('status').textContent='Processing bounded request…';
+ const body={query:$('query').value,expansions,filters,sort:$('sort').value,group_by:$('group').value,include_web:$('web').checked,concept_ids:$('use-concept').checked&&focusConcept?[focusConcept.id]:[]};$('submit').disabled=true;$('status').textContent='Processing bounded request…';$('status').setAttribute?.('data-ui-state','busy');
  try{const route=canExecute?'/api/v1/query/execute':'/api/v1/query/plan';
  const response=await fetch(route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
  const data=await response.json();if(token!==queryToken)return;if(!response.ok)throw Error(data.error||('HTTP '+response.status));
@@ -79,12 +397,16 @@ $('q').addEventListener('submit',async event=>{
  const rows=data.results||[];displayItems('direct',rows.filter(x=>x.tracks?.includes('direct')&&!x.tracks?.includes('concept')));displayItems('concept',rows.filter(x=>x.tracks?.includes('concept')&&!x.tracks?.includes('direct')));displayItems('overlap',rows.filter(x=>x.tracks?.includes('concept')&&x.tracks?.includes('direct')));
  await renderObservedGraph(rows);
  if(token!==queryToken)return;
- $('status').textContent='State: '+data.state+' · Unique observed: '+rows.length+' · Direct matches: '+(data.track_counts?.direct??0)+' · Concept matches: '+(data.track_counts?.concept??0);
+ $('status').textContent='State: '+data.state+' · Unique observed: '+rows.length+' · Direct matches: '+(data.track_counts?.direct??0)+' · Concept matches: '+(data.track_counts?.concept??0);$('status').setAttribute?.('data-ui-state','ready');
  $('details').textContent=JSON.stringify({failures:data.failures,warnings:data.warnings,track_counts:data.track_counts,scope:data.filter_scope,before_filters:data.before_filters,after_filters:data.after_filters,groups:data.groups,coverage:data.coverage},null,2);
+ $('native-facet-status').textContent='Counts not requested for this search.';$('native-facet-status').setAttribute?.('data-ui-state','idle');
+ $('native-facet-data').textContent='';
+ $('sweep-status').textContent='No sweep run for this search. External web search is off by default.';$('sweep-status').setAttribute?.('data-ui-state','idle');
+ $('sweep-details').textContent='';
  const external=$('external');external.replaceChildren();
  for(const x of data.external_results||[]){const article=document.createElement('article');article.className='item';const strong=document.createElement('strong');strong.textContent=x.title;const p=document.createElement('div');p.textContent=x.url+' · '+(x.engines||[]).join(', ');article.append(strong,p);external.append(article)}
  if(!(data.external_results||[]).length){external.textContent='No web observations returned. A failed or disabled adapter does not establish absence.'}
- }catch(e){if(token!==queryToken)return;clearQueryEvidence('Current query failed; prior evidence cleared. No absence inference can be drawn from this failure.');$('status').textContent='Query failed: '+e.message;$('details').textContent='No absence inference can be drawn from this failure.';}
+ }catch(e){if(token!==queryToken)return;clearQueryEvidence('Current query failed; prior evidence cleared. No absence inference can be drawn from this failure.');$('status').textContent='Query failed: '+e.message;$('status').setAttribute?.('data-ui-state','error');$('details').textContent='No absence inference can be drawn from this failure.';}
  finally{if(token===queryToken)$('submit').disabled=false;}
 });
 // The graph is read-only and uses only a local, digest-pinned provisional projection.
@@ -107,13 +429,19 @@ async function renderObservedGraph(rows){
   status.textContent='Evidence state: '+data.status+' · '+concepts.length+' lexical candidates · '+edges.length+' evidence links'+(rows.length>subset.length?' · first 200 returned rows only':'')+' · Not CPE assertions';
   if(!concepts.length)return;
   const selected=concepts.slice(0,16),center={x:350,y:170},positions=[];
-  const centerCircle=svgElem('circle',{cx:center.x,cy:center.y,r:48,fill:'#24445d',stroke:'#b2d7eb','stroke-width':2});
+  const centerCircle=svgElem('circle',{cx:center.x,cy:center.y,r:48,class:'graph-center'});
   graph.append(centerCircle);
-  const centerLabel=svgElem('text',{x:center.x,y:center.y+4,'text-anchor':'middle',fill:'#fff','font-size':13});centerLabel.textContent='Results';graph.append(centerLabel);
+  const centerLabel=svgElem('text',{x:center.x,y:center.y+4,'text-anchor':'middle',class:'graph-center-label'});centerLabel.textContent='Results';graph.append(centerLabel);
   function inspect(node){
    items.replaceChildren();
    const matching=new Set(edges.filter(e=>e.concept_id===node.id).map(e=>e.info_hash));
-   const h=document.createElement('h3');h.textContent=node.label+' — '+node.distinct_returned_torrents+' distinct returned torrents';items.append(h);
+   graph.querySelectorAll('.graph-node').forEach(el=>{
+   el.setAttribute('aria-pressed',String(el.getAttribute('data-id')===node.id));
+  });
+  list.querySelectorAll('button').forEach(el=>{
+   el.setAttribute('aria-pressed',String(el.dataset.conceptId===node.id));
+  });
+  const h=document.createElement('h3');h.textContent=node.label+' — '+node.distinct_returned_torrents+' distinct returned torrents';items.append(h);
    const evidence=edges.filter(e=>e.concept_id===node.id);
    for(const e of evidence.slice(0,30)){
     const rec=subset.find(x=>x.info_hash===e.info_hash);if(!rec)continue;
@@ -137,19 +465,19 @@ async function renderObservedGraph(rows){
   selected.forEach((node,i)=>{
    const angle=2*Math.PI*i/selected.length-Math.PI/2;
    const p={x:center.x+260*Math.cos(angle),y:center.y+120*Math.sin(angle)};positions.push(p);
-   graph.append(svgElem('line',{x1:center.x,y1:center.y,x2:p.x,y2:p.y,stroke:'#98b9ca','stroke-width':1.5}));
+   graph.append(svgElem('line',{x1:center.x,y1:center.y,x2:p.x,y2:p.y,class:'graph-link','stroke-width':1.5}));
   });
   selected.forEach((node,i)=>{
-   const p=positions[i],g=svgElem('g',{tabindex:'0',role:'button',class:'graph-node','aria-label':'Inspect returned metadata evidence for '+node.label});
-   const circle=svgElem('circle',{cx:p.x,cy:p.y,r:40,fill:'#315a4a',stroke:'#b2d7eb','stroke-width':2});
-   const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',fill:'#fff','font-size':12});
+   const p=positions[i],g=svgElem('g',{tabindex:'0',role:'button',class:'graph-node','data-evidence':'observed','data-id':node.id,'aria-pressed':'false','aria-label':'Inspect returned metadata evidence for '+node.label});
+   const circle=svgElem('circle',{cx:p.x,cy:p.y,r:40,class:'graph-node-shape'});
+   const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',class:'graph-node-label'});
    label.textContent=node.label.length>14?node.label.slice(0,12)+'…':node.label;g.append(circle,label);
    g.addEventListener('click',()=>inspect(node));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inspect(node)}});
    graph.append(g);
   });
   for(const node of concepts){
    const btn=document.createElement('button');btn.type='button';
-   btn.textContent=node.label+' ('+node.distinct_returned_torrents+')';btn.addEventListener('click',()=>inspect(node));list.append(btn);
+   btn.textContent=node.label+' ('+node.distinct_returned_torrents+')';btn.dataset.conceptId=node.id;btn.setAttribute('aria-pressed','false');btn.addEventListener('click',()=>inspect(node));list.append(btn);
   }
   inspect(concepts[0]);
   if(concepts.length>selected.length)status.textContent+=' · Diagram shows first 16; all available as buttons';
@@ -158,34 +486,56 @@ async function renderObservedGraph(rows){
 async function loadNativeFacets(){
  const token=++facetToken;
  const status=$('native-facet-status'),node=$('native-facet-data');node.replaceChildren();
- if(!canExecute){status.textContent='Bitmagnet target is not configured.';return;}
+ if(!canExecute){status.textContent='Bitmagnet target is not configured.';status.setAttribute?.('data-ui-state','blocked');return;}
  if($('minseeders').value!==''||$('minleechers').value!==''||$('adult').value!=='any'){
-  status.textContent='Clear min-peer and source-adult filters first; those cannot be pushed into this native corpus-wide aggregation without changing semantics.';return;
+  status.textContent='Clear min-peer and source-adult filters first; those cannot be pushed into this native corpus-wide aggregation without changing semantics.';status.setAttribute?.('data-ui-state','blocked');return;
  }
- status.textContent='Requesting bounded Bitmagnet-native metadata aggregations…';
+ status.textContent='Requesting bounded Bitmagnet-native metadata aggregations…';status.setAttribute?.('data-ui-state','busy');
  const filters={languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[]};
  try{
   const r=await fetch('/api/v1/query/facets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:$('query').value,filters,groups:['contentType','language','genre']})});
   const x=await r.json();if(token!==facetToken)return;if(!r.ok)throw Error(x.error||'native aggregation failed');
-  status.textContent='Native query total: '+x.total_count+(x.total_count_is_estimate?' (estimate)':' (reported exact)')+'. These are source metadata aggregates, not CPE semantic counts.';
+  status.textContent='Native query total: '+x.total_count+(x.total_count_is_estimate?' (estimate)':' (reported exact)')+'. These are source metadata aggregates, not CPE semantic counts.';status.setAttribute?.('data-ui-state','ready');
+  // Buckets are provider metadata, not CPE policy categories.
+  // Expose original values/estimate qualifiers through native disclosures.
+  const groupNames={contentType:'Content type',language:'Language',genre:'Genre'};
   for(const [group,buckets] of Object.entries(x.groups||{})){
-   const h=document.createElement('h3');h.textContent=group;node.append(h);
-   const ol=document.createElement('ol');for(const b of (buckets||[]).slice(0,60)){
-    const li=document.createElement('li');li.textContent=b.label+': '+b.count+(b.is_estimate?' (estimate)':'');ol.append(li);
-   }node.append(ol);
+   const details=document.createElement('details');details.className='facet-group';
+   const summary=document.createElement('summary');
+   summary.textContent=(groupNames[group]||group)+' · '+(buckets||[]).length+' source categories';
+   details.append(summary);
+   const ul=document.createElement('ul');ul.className='facet-buckets';
+   for(const b of (buckets||[]).slice(0,60)){
+    const li=document.createElement('li');
+    const label=document.createElement('span');label.className='facet-label';label.textContent=b.label||'(unlabelled)';
+    const amount=document.createElement('span');amount.className='facet-amount';amount.textContent=String(b.count);
+    if(b.is_estimate){const estimate=document.createElement('span');estimate.className='facet-estimate';estimate.textContent='Estimate';amount.append(estimate);}
+    li.append(label,amount);ul.append(li);
+   }
+   details.append(ul);node.append(details);
   }
- }catch(e){if(token===facetToken)status.textContent='Native aggregate unavailable: '+e.message+'; no absence inference.';}
+ }catch(e){if(token===facetToken){status.textContent='Native aggregate unavailable: '+e.message+'; no absence inference.';status.setAttribute?.('data-ui-state','error');}}
 }
 $('native-facet-button').addEventListener('click',loadNativeFacets);
 function svgElem(tag,attrs){const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
-function chooseConcept(id){
+function chooseConcept(id,focusOrigin){
  if(!conceptCatalog)return;
  focusConcept=conceptCatalog.concepts.find(n=>n.id===id)||null;if(!focusConcept)return;
  const n=focusConcept;
- $('concept-detail').textContent=n.label+' — '+(n.definition||'No description')+' · '+n.id+' · relations: '+(n.relations||[]).map(r=>r.predicate+' → '+r.target_id).join(', ');
+ $('concept-detail').textContent='Selected provisional concept: '+n.label+' — '+(n.definition||'No description')+' · '+n.id+' · relations: '+(n.relations||[]).map(r=>r.predicate+' → '+r.target_id).join(', ')+' · Search input has been prepared but no query was executed.';
  $('query').value=n.label;
  $('terms').value=(n.lexicalizations||[]).filter(x=>x.term&&x.term!==n.label).slice(0,31).map(x=>x.term).join('\n');
  renderConceptMap();
+ // Rendering replaces SVG groups and selector buttons. Restore the exact
+ // keyboard/pointer selection target so another Tab/Enter can continue the
+ // same workflow; catalog/filter programmatic updates do not steal focus.
+ if(focusOrigin==='graph'){
+  Array.from($('concept-graph').querySelectorAll('.graph-node'))
+   .find(el=>el.getAttribute('data-id')===id)?.focus();
+ }else if(focusOrigin==='list'){
+  Array.from($('concept-list').querySelectorAll('button'))
+   .find(el=>el.dataset.conceptId===id)?.focus();
+ }
 }
 function renderConceptMap(){
  const graph=$('concept-graph'),list=$('concept-list');graph.replaceChildren();list.replaceChildren();
@@ -199,14 +549,14 @@ function renderConceptMap(){
  position.set(focusConcept.id,{x:350,y:175});
  others.forEach((n,i)=>{const a=2*Math.PI*i/Math.max(1,others.length)-Math.PI/2;position.set(n.id,{x:350+250*Math.cos(a),y:175+125*Math.sin(a)})});
  for(const n of nodes){for(const rel of n.relations||[]){if(!position.has(rel.target_id))continue;const a=position.get(n.id),b=position.get(rel.target_id);
- const line=svgElem('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:'#98b9ca','stroke-width':2});graph.append(line)}}
- for(const n of nodes){const p=position.get(n.id);const group=svgElem('g',{tabindex:'0',role:'button','aria-label':'Explore '+n.label,class:'graph-node'});
- const circle=svgElem('circle',{cx:p.x,cy:p.y,r:n.id===focusConcept.id?51:40,fill:n.id===focusConcept.id?'#fbd36c':'#24445d',stroke:'#b2d7eb','stroke-width':2});
- const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',fill:n.id===focusConcept.id?'#162535':'#ffffff','font-size':12});
+ const line=svgElem('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,class:'graph-link','stroke-width':2});graph.append(line)}}
+ for(const n of nodes){const p=position.get(n.id);const group=svgElem('g',{tabindex:'0',role:'button','aria-label':'Explore '+n.label,class:'graph-node','data-id':n.id,'aria-pressed':String(n.id===focusConcept.id)});
+ const circle=svgElem('circle',{cx:p.x,cy:p.y,r:n.id===focusConcept.id?51:40,class:'graph-node-shape'});
+ const label=svgElem('text',{x:p.x,y:p.y+4,'text-anchor':'middle',class:'graph-node-label'});
  label.textContent=n.label.length>16?n.label.slice(0,14)+'…':n.label;group.append(circle,label);
- group.addEventListener('click',()=>chooseConcept(n.id));group.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseConcept(n.id)}});
+ group.addEventListener('click',()=>chooseConcept(n.id,'graph'));group.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();chooseConcept(n.id,'graph')}});
  graph.append(group);
- const btn=document.createElement('button');btn.type='button';btn.textContent=n.label;btn.setAttribute('aria-pressed',String(n.id===focusConcept.id));btn.addEventListener('click',()=>chooseConcept(n.id));list.append(btn);}
+ const btn=document.createElement('button');btn.type='button';btn.textContent=n.label;btn.dataset.conceptId=n.id;btn.setAttribute('aria-pressed',String(n.id===focusConcept.id));btn.addEventListener('click',()=>chooseConcept(n.id,'list'));list.append(btn);}
 }
 async function loadCatalog(){
  try{const r=await fetch('/api/v1/concepts');const data=await r.json();if(!r.ok)throw Error(data.error||'projection unavailable');
@@ -236,29 +586,49 @@ async function sweepAction(execute){
  try{
   const req=buildSweepRequest();
   if(req.include_searxng&&!req.external_consent)throw Error('External multilingual sweep requires a separate consent checkbox.');
-  status.textContent=execute?'Executing permitted bounded sweep…':'Preparing bounded sweep plan…';
+  status.textContent=execute?'Executing permitted bounded sweep…':'Preparing bounded sweep plan…';status.setAttribute?.('data-ui-state','busy');
   const path=execute?'/api/v1/sweeps/execute':'/api/v1/sweeps/plan';
   const controller=new AbortController();
   clientDeadline=setTimeout(()=>controller.abort(),80000);
   const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req),signal:controller.signal});
   const data=await res.json();if(token!==sweepToken||displayToken!==sweepDisplayToken)return;if(!res.ok)throw Error(data.error||'sweep request refused');
-  status.textContent=execute?'Sweep state: '+data.state+' · local read-only and candidate evidence only':'Plan ready; '+data.bitmagnet_queries.length+' Bitmagnet / '+data.searxng_queries.length+' SearXNG queries';
+  status.textContent=execute?'Sweep state: '+data.state+' · local read-only and candidate evidence only':'Plan ready; '+data.bitmagnet_queries.length+' Bitmagnet / '+data.searxng_queries.length+' SearXNG queries';status.setAttribute?.('data-ui-state','ready');
   details.textContent=JSON.stringify(data,null,2);
- }catch(e){if(token===sweepToken&&displayToken===sweepDisplayToken)status.textContent='Sweep blocked, canceled, or failed: '+e.message+'; no absence conclusion or automatic retry.'}
+ }catch(e){if(token===sweepToken&&displayToken===sweepDisplayToken){status.textContent='Sweep blocked, canceled, or failed: '+e.message+'; no absence conclusion or automatic retry.';status.setAttribute?.('data-ui-state','error');}}
  finally{clearTimeout(clientDeadline);if(token===sweepToken){btn.disabled=false;preview.disabled=false}}
 }
 $('sweep-plan').addEventListener('click',()=>sweepAction(false));
 $('sweep-run').addEventListener('click',()=>sweepAction(true));
 $('sweep-limits').addEventListener('click',async()=>{
  const token=++limitsToken,displayToken=++sweepDisplayToken;
- $('sweep-status').textContent='Reading local sweep limits…';
+ $('sweep-status').textContent='Reading local sweep limits…';$('sweep-status').setAttribute?.('data-ui-state','busy');
  try{
   const res=await fetch('/api/v1/sweeps/limits');const data=await res.json();if(token!==limitsToken||displayToken!==sweepDisplayToken)return;
   if(!res.ok)throw Error(data.error||'limits unavailable');
   $('sweep-status').textContent='SearXNG JSON budget: '+data.remaining_searxng_json_requests+'/'+data.max_searxng_json_requests_per_hour+' remaining in current local window · cooldown: '+data.searxng_cooldown_seconds+'s · sweep deadline: '+data.sweep_deadline_seconds+'s · caller wait: '+data.client_timeout_seconds+'s · active sweep cap: '+data.max_concurrent_sweeps+' · external sweep admitted: '+String(data.searxng_sweep_admitted);
+  $('sweep-status').setAttribute?.('data-ui-state','ready');
   $('sweep-details').textContent=JSON.stringify(data,null,2);
- }catch(e){if(token===limitsToken&&displayToken===sweepDisplayToken)$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
+ }catch(e){if(token===limitsToken&&displayToken===sweepDisplayToken){$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;$('sweep-status').setAttribute?.('data-ui-state','error');}}
 });
 
+// Example phrases fill the search field without silently executing a query.
+document.querySelectorAll('.example-query').forEach(button=>{
+ button.addEventListener('click',()=>{const query=$('query');query.value=button.dataset.query||'';query.focus();});
+});
+// Theme is an optional presentation preference. The API contract is unchanged.
+(function initWorkbenchTheme(){
+ const values=new Set(['system','light','dark']);let saved='system';
+ try {const v=localStorage.getItem('bce-ui-theme');if(values.has(v))saved=v;} catch(_){}
+ function apply(v,save){const value=values.has(v)?v:'system';
+  if(value==='system')document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme',value);
+  document.querySelectorAll('input[name="bce-theme"]').forEach(input=>{input.checked=input.value===value;});
+  if(save){try{localStorage.setItem('bce-ui-theme',value);}catch(_){}}
+ }
+ document.querySelectorAll('input[name="bce-theme"]').forEach(input=>{
+  input.addEventListener('change',()=>{if(input.checked)apply(input.value,true);});
+ });
+ apply(saved,false);
+})();
 capabilities();loadCatalog();
 </script></body></html>

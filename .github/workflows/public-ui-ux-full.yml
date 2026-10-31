@@ -1,0 +1,149 @@
+name: Public UI UX DX full qualification
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "web/**"
+      - "tests/ui/**"
+      - "scripts/ux/**"
+      - "playwright*.mjs"
+      - "package*.json"
+      - ".github/workflows/public-ui-ux-full.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-ux-full-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-crossengine:
+    name: Chromium / Firefox / WebKit, axe, keyboard and responsive
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify public hosted runner and Node >=22
+        run: |
+          git rev-parse HEAD
+          node --version
+          node -e 'if (Number(process.versions.node.split(".")[0])<22)process.exit(1)'
+      - name: Derive and verify npm dependency lock within disposable job
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install independent three-engine browser binaries
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify UI control inventory manifest and drift gate
+        run: npm run ux:manifest-check
+      - name: Qualify synthetic live UI/UX with three browser engines and axe
+        env:
+          CI: "1"
+        run: npm run ux:crossbrowser
+      - name: Retain first failure or passing proof, browser traces, npm closure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bce-crossengine-ux-${{ github.run_id }}
+          path: |
+            build/playwright-crossbrowser-results
+            build/playwright-crossbrowser-report
+            package-lock.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  lighthouse:
+    name: Lighthouse desktop/mobile navigation + interaction + snapshot
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify public runner and Node >=22
+        run: |
+          git rev-parse HEAD
+          node --version
+          node -e 'if (Number(process.versions.node.split(".")[0])<22)process.exit(1)'
+      - name: Generate verified npm dependency closure in disposable runner
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install pinned Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run localhost synthetic Lighthouse whole-user-flow audit
+        env:
+          CI: "1"
+          UX_FIXTURE_PORT: "4175"
+        run: |
+          set -euo pipefail
+          node scripts/ux/fixture-server.mjs > "${RUNNER_TEMP}/ux-fixture.log" 2>&1 &
+          pid="$!"
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --noproxy '*' -fsS --max-time 2 http://127.0.0.1:4175/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --noproxy '*' -fsS http://127.0.0.1:4175/healthz
+          export CHROME_PATH="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$CHROME_PATH"
+          "$CHROME_PATH" --version
+          npm run ux:lighthouse
+      - name: Retain scored HTML/JSON reports, user-flow screenshots and lock receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bce-lighthouse-ux-${{ github.run_id }}
+          path: |
+            build/lighthouse
+            package-lock.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  macos-webkit-ios-simulator:
+    name: macOS Apple WebKit + iOS Simulator Mobile Safari
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify macOS runner, Apple Silicon, and Node >=22
+        run: |
+          sw_vers
+          uname -m
+          node --version
+          node -e 'if (Number(process.versions.node.split(".")[0])<22)process.exit(1)'
+      - name: Generate verified npm dependency closure in disposable runner
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify UI control inventory manifest and drift gate
+        run: npm run ux:manifest-check
+      - name: Install independent WebKit binary on macOS
+        run: npx playwright install --with-deps webkit
+      - name: Qualify UI/UX on native macOS Apple WebKit (Desktop + Mobile)
+        env:
+          CI: "1"
+        run: npx playwright test --config playwright.crossbrowser.config.mjs --project=webkit-desktop --project=webkit-mobile
+      - name: Qualify live UI/UX on booted iOS Simulator in Mobile Safari
+        run: bash scripts/ux/ios-simulator-qualification.sh
+      - name: Retain native macOS WebKit evidence and iOS Simulator screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bce-macos-ios-ux-${{ github.run_id }}
+          path: |
+            build/playwright-crossbrowser-results
+            build/playwright-crossbrowser-report
+            build/ios-simulator
+          if-no-files-found: ignore
+          retention-days: 14
