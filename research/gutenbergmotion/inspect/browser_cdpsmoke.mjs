@@ -69,12 +69,17 @@ try{
   await sleep(100);
   const filtered=await state(expect.visible_count,'CDP native browser text entry');
   if(filtered.value!=='right shoulder')throw Error('native text did not reach input');
+  const shotFilter=await send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
+  const label=mobile?'mobile':'desktop';
+  fs.writeFileSync(path.join(path.dirname(htmlPath),'typed-filter-'+label+'.png'),Buffer.from(shotFilter.data,'base64'));
   const rect=await evaluate('(()=>{const r=document.querySelector("#clear-search").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})()');
   await send('Input.dispatchMouseEvent',{type:'mousePressed',x:rect.x,y:rect.y,button:'left',clickCount:1});
   await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:rect.x,y:rect.y,button:'left',clickCount:1});
   await sleep(100);
   const restored=await state(64,'native pointer Clear');
   if(restored.value!=='')throw Error('Clear did not empty source search');
+  const shotRestored=await send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
+  fs.writeFileSync(path.join(path.dirname(htmlPath),'clear-restored-'+label+'.png'),Buffer.from(shotRestored.data,'base64'));
   console.log('PASS original source Chromium CDP '+width+'x'+height+' typed filter 2/64, pointer Clear 64/64, no horizontal overflow');
  }
 }finally{
