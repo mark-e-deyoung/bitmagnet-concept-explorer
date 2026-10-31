@@ -92,6 +92,7 @@ func validID(s string) bool {
 	}
 	return true
 }
+
 // v0 accepts a narrow GitHub HTTPS origin grammar, without credentials, ports,
 // escapes or query fragments. Other Git forges require a versioned extension.
 func validGitOrigin(source string) bool {
