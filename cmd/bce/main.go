@@ -97,8 +97,12 @@ func main() {
 		path := serviceOrigin + "/api/v1/research-evidence"
 		if *researchSection != "" || *query != "" {
 			values := url.Values{}
-			if *researchSection != "" { values.Set("section", *researchSection) }
-			if *query != "" { values.Set("q", *query) }
+			if *researchSection != "" {
+			    values.Set("section", *researchSection)
+			}
+			if *query != "" {
+			    values.Set("q", *query)
+			}
 			path += "?" + values.Encode()
 		}
 		req, err = http.NewRequest("GET", path, nil)
