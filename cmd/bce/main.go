@@ -98,10 +98,10 @@ func main() {
 		if *researchSection != "" || *query != "" {
 			values := url.Values{}
 			if *researchSection != "" {
-			    values.Set("section", *researchSection)
+				values.Set("section", *researchSection)
 			}
 			if *query != "" {
-			    values.Set("q", *query)
+				values.Set("q", *query)
 			}
 			path += "?" + values.Encode()
 		}
