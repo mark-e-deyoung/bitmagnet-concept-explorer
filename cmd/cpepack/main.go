@@ -38,6 +38,8 @@ func main() {
 	packagesFile := flag.String("packages", "", "offline package array JSON")
 	roots := flag.String("root", "", "root package ID")
 	public := flag.Bool("public", true, "require public dependency closure")
+	format := flag.String("format", "readmodel", "readmodel or oci-layout (public research-only)")
+	outputDir := flag.String("out", "", "new local OCI layout directory for -format oci-layout")
 	flag.Parse()
 	if *lockFile == "" || *packagesFile == "" || *roots == "" {
 		fmt.Fprintln(os.Stderr, "required: -lock -packages -root")
@@ -57,6 +59,23 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+	if *format == "oci-layout" {
+		if !*public || *outputDir == "" {
+			fmt.Fprintln(os.Stderr, "oci-layout requires -public and -out")
+			os.Exit(2)
+		}
+		digest, err := cpepack.WriteOCIArtifact(*outputDir, ps, l, []string{*roots})
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println(digest)
+		return
+	}
+	if *format != "readmodel" {
+		fmt.Fprintln(os.Stderr, "unsupported format")
+		os.Exit(2)
 	}
 	out := json.NewEncoder(os.Stdout)
 	out.SetIndent("", "  ")
