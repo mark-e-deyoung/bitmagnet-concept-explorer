@@ -82,10 +82,10 @@ h3{font-size:1.06rem}
 .theme-picker label:last-of-type{border-radius:0 9px 9px 0}
 .theme-picker input{accent-color:var(--action);margin:0 .14rem 0 0;width:auto;min-height:initial}
 .theme-picker label:has(input:checked){outline:2px solid var(--strong);outline-offset:-2px;background:var(--raised)}
-.hero{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(210px,.55fr);align-items:center;gap:2rem;padding-block:2.4rem 2rem}
+.hero{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(210px,.55fr);align-items:center;gap:2rem;padding-block:1.75rem 1.45rem}
 .eyebrow{font-size:.76rem;font-weight:790;text-transform:uppercase;letter-spacing:.12em;color:var(--strong)}
 .hero .lead{font-size:clamp(1.05rem,2vw,1.18rem);max-width:57ch;color:var(--subtle)}
-.hero-signal{height:180px;border:1px solid var(--line);border-radius:18px;position:relative;
+.hero-signal{height:155px;border:1px solid var(--line);border-radius:18px;position:relative;
  background:linear-gradient(140deg,var(--surface),var(--raised));overflow:hidden;box-shadow:var(--shadow)}
 .hero-signal .route{position:absolute;left:11%;right:11%;height:3px;border-radius:5px;background:var(--strong);opacity:.75}
 .hero-signal .route:nth-child(1){top:28%;transform:rotate(11deg);transform-origin:right}
@@ -124,7 +124,7 @@ legend{padding:0 .3rem;font-weight:700}
 .checkbox-line input{margin-top:.38rem;flex:0 0 auto;accent-color:var(--strong)}
 .note,.status-banner{color:var(--ink);background:var(--raised);border-left:4px solid var(--strong);
  padding:.75rem .95rem;border-radius:0 9px 9px 0}
-.status-banner{margin:.9rem 0 1.2rem;font-size:.94rem}
+.status-banner{margin:.55rem 0 .85rem;font-size:.94rem}
 .cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
 .panel{margin:1rem 0}.cols .panel{margin:0;box-shadow:none;border-top:3px solid var(--strong)}
 .cols .panel:nth-child(2){border-top-color:var(--copper)}
@@ -153,7 +153,8 @@ code{font-family:ui-monospace,Consolas,monospace}
  .hero{grid-template-columns:1fr}.hero-signal{display:none}.cols{grid-template-columns:1fr}
  .evidence-grid{grid-template-columns:1fr}
 }
-@media(max-width:520px){.site-nav{flex-direction:column}.nav-cluster{flex-direction:column;align-items:stretch}
+@media(max-width:520px){.theme-picker{max-width:100%;flex-wrap:wrap}.theme-picker label{padding-inline:.33rem;gap:.12rem}
+ .site-nav{flex-direction:column}.nav-cluster{flex-direction:column;align-items:stretch}
  .primary-nav{justify-content:space-between}.theme-picker{justify-content:flex-start}
  .trust-strip span+span:before{display:none}.trust-strip{gap:.3rem .75rem}
  .section-card,.panel{padding:16px}
@@ -181,8 +182,8 @@ code{font-family:ui-monospace,Consolas,monospace}
     </div>
   </div>
 </header>
-<div class="shell" id="top">
-<section class="hero" aria-labelledby="page-title">
+<main id="main-content" class="shell" tabindex="-1">
+<section class="hero" id="top" aria-labelledby="page-title">
   <div><div class="eyebrow">Explore · compare · inspect</div>
     <h1 id="page-title">Find what's in the index.</h1>
     <p class="lead">Search Bitmagnet metadata directly, compare optional concept terms, and inspect why records appeared. Every result stays an observation—not a content recommendation or accepted policy fact.</p>
@@ -190,8 +191,6 @@ code{font-family:ui-monospace,Consolas,monospace}
   </div>
   <div class="hero-signal" aria-hidden="true"><span class="route"></span><span class="route"></span><span class="route"></span><span class="junction"></span></div>
 </section>
-</div>
-<main id="main-content" class="shell" tabindex="-1">
 <section id="search" class="section-card" aria-labelledby="search-heading">
   <span class="section-kicker">01 / Start here</span><h2 id="search-heading">Search indexed metadata</h2>
   <p class="section-intro">Enter a title, subject or phrase. The first pass checks literal records. Refinements and experimental concept expansion are optional.</p>
@@ -226,12 +225,12 @@ code{font-family:ui-monospace,Consolas,monospace}
 <section id="concepts" class="panel section-space"><span class="section-kicker">03 / Inspect concepts</span><h2>Concept map (pinned CPE projection preview)</h2><p id="graph-status" class="note">Checking configured concept projection…</p>
 <p><label><input type="checkbox" id="use-concept" style="width:auto"> Include the selected concept's pinned preview lexicalizations in the next query (explicit opt-in)</label></p><label for="concept-filter">Find a concept</label><input id="concept-filter" placeholder="Search concept labels and aliases">
 <svg id="concept-graph" class="graph" viewBox="0 0 700 350" role="img" aria-label="Clickable map of selected concept and its relationships"></svg>
-<p id="concept-detail" aria-live="polite"></p><div id="concept-list" class="concept-buttons" aria-label="Accessible concept selector"></div></section>
+<p id="concept-detail" aria-live="polite"></p><div id="concept-list" class="concept-buttons" role="group" aria-label="Accessible concept selector"></div></section>
 <section id="observations" class="panel section-space" aria-labelledby="observed-title"><span class="section-kicker">04 / Investigate evidence</span><h2 id="observed-title">Concepts observed in the returned Bitmagnet metadata</h2>
 <p class="note">These are title-lexical evidence candidates from this query's bounded results, not the CPE ontology's related concepts or validated semantic classifications.</p>
 <p id="observed-status" aria-live="polite">Run a search to derive a separate observed graph.</p>
 <svg id="observed-graph" class="graph" viewBox="0 0 700 340" role="img" aria-label="Evidence-linked concepts occurring in returned metadata"></svg>
-<div id="observed-list" class="concept-buttons" aria-label="Concept evidence selectors"></div>
+<div id="observed-list" class="concept-buttons" role="group" aria-label="Concept evidence selectors"></div>
 <div id="observed-items" aria-live="polite"></div></section>
 <section id="facets" class="panel" aria-labelledby="native-facet-title"><h2 id="native-facet-title">Native Bitmagnet corpus metadata facets</h2>
 <p>Optional native database aggregation. Counts can be estimates; these are not accepted CPE concepts.</p>
