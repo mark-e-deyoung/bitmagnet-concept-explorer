@@ -197,9 +197,21 @@ use_default_settings:
   engines:
     keep_only:
       - wikipedia
+      - archive rdte catalog
 engines:
   - name: wikipedia
     display_type: ["infobox", "list"]
+  - name: archive rdte catalog
+    engine: json_engine
+    shortcut: ia
+    categories: [general]
+    paging: false
+    search_url: "https://archive.org/advancedsearch.php?output=json&rows=10&fl%5B%5D=identifier&fl%5B%5D=title&q={query}"
+    results_query: response/docs
+    url_query: identifier
+    url_prefix: "https://archive.org/details/"
+    title_query: title
+    content_query: identifier
 search:
   safe_search: 2
   autocomplete: ""
@@ -412,6 +424,7 @@ echo "REAL-BITMAGNET: actual separate Explorer CLI real-query PASS"
 # The existing real-system harness now exercises a real independent SearXNG
 # alongside Bitmagnet and produces research-only CPE discovery evidence.
 source .github/scripts/real-dual-stack-cpe-flywheel.sh
+source .github/scripts/real-ia-cpe-flywheel.sh
 
 if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
   {
