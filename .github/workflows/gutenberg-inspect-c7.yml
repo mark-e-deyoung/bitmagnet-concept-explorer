@@ -141,6 +141,10 @@ jobs:
             | tee inspect-evidence/real-interaction.txt
           grep -q 'PASS original source Chromium CDP 1280x900' inspect-evidence/real-interaction.txt
           grep -q 'PASS original source Chromium CDP 390x844' inspect-evidence/real-interaction.txt
+          for shot in typed-filter-desktop typed-filter-mobile clear-restored-desktop clear-restored-mobile; do
+            test -s "inspect-evidence/$shot.png"
+            file "inspect-evidence/$shot.png"
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
