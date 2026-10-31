@@ -40,14 +40,14 @@ echo "==> Simulator booted successfully"
 
 # Start the UX fixture server
 echo "==> Starting local UX fixture server on port 4175..."
-node scripts/ux/fixture-server.mjs > build/ios-simulator/fixture-server.log 2>&1 &
+UX_FIXTURE_PORT=4175 node scripts/ux/fixture-server.mjs > build/ios-simulator/fixture-server.log 2>&1 &
 SERVER_PID=$!
 
 # Wait for fixture server health check
 echo "==> Awaiting fixture server health check..."
 HEALTHY=0
-for i in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:4175/healthz >/dev/null 2>&1; then
+for i in $(seq 1 40); do
+  if curl --noproxy '*' -fsS http://127.0.0.1:4175/healthz >/dev/null 2>&1; then
     HEALTHY=1
     echo "==> Fixture server is healthy on 127.0.0.1:4175 (attempt $i)"
     break

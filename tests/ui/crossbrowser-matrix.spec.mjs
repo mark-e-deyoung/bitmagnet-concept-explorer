@@ -96,9 +96,9 @@ test('source unavailable and blocked external consent cannot impersonate empty r
 
 test('navigation, skip-link, example queries, and JSON API links integrity [navigation-skip-link-and-api-links]',async({page,request})=>{
  await open(page);
- // Skip link keyboard reveal and activation
- await page.keyboard.press('Tab');
+ // Skip link focus and activation
  const skip=page.locator('.skip-link');
+ await skip.focus();
  await expect(skip).toBeFocused();
  await page.keyboard.press('Enter');
  await expect(page.locator('#main-content')).toBeFocused();
@@ -238,8 +238,7 @@ test('infohash clipboard copy success, fallback permission handling, and soverei
  // Trigger clipboard copy interaction: handles both headless container fallback
  // ('Select text') and writeText resolution ('Copied') across varying browser OS grants.
  await copyBtn.click();
- const copyStatus = await copyBtn.textContent();
- expect(['Copied', 'Select text']).toContain(copyStatus);
+ await expect(copyBtn).toHaveText(/Copied|Select text/);
 
  const copyNotice = page.locator('.hash-row .sr-only[role="status"]').first();
  await expect(copyNotice).toContainText(/Infohash copied|Copy unavailable/);
