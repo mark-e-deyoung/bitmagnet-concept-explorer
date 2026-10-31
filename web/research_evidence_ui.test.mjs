@@ -12,7 +12,7 @@ for (const id of [
   assert.ok(html.includes(`id="${id}"`), `research UI control exists: ${id}`);
 }
 const begin = html.indexOf('let researchEvidenceToken=0;');
-const end = html.indexOf('\ncapabilities();loadCatalog();', begin);
+const end = html.indexOf("\n$('sweep-limits').addEventListener('click',async()=>{", begin);
 assert.ok(begin > 0 && end > begin, 'actual evidence inspection UI handler is present');
 const handlerSource = html.slice(begin, end);
 assert.ok(!handlerSource.includes('innerHTML'), 'untrusted source data is never inserted as HTML');
