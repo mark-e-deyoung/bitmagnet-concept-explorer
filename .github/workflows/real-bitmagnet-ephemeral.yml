@@ -39,6 +39,13 @@ jobs:
         with:
           go-version: "1.27.1"
           cache: false
+      - name: Source owner gofmt first-failure correction evidence
+        shell: bash
+        run: |
+          gofmt -w cmd/rdte-torrent-collector/main.go
+          printf 'FORMAT_RDTE_GO_BASE64='
+          base64 -w0 cmd/rdte-torrent-collector/main.go
+          printf '\n'
       - name: Real upstream Bitmagnet and Explorer live isolated integration
         shell: bash
         run: bash .github/scripts/real-bitmagnet-ephemeral-rep.sh
