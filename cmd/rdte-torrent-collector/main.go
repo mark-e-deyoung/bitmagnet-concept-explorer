@@ -317,12 +317,17 @@ func collectArch(out string, entries *[]map[string]any, events *[]string) {
 		*events = append(*events, "arch official HTTPS source rejected: "+err.Error())
 		return
 	}
-	hash, name, _, err := decodeMetainfo(raw)
+	const expectedFileSHA256 = "fc280e5e8b8bd17c9fe5a39c78baea3d7091d51f9b7e68f59d0cb8a4c837af32"
+	if err = verifyPinnedMetainfo(raw, expectedFileSHA256, expectedInfoHash); err != nil {
+		*events = append(*events, "arch immutable publisher metainfo identity rejected: "+err.Error())
+		return
+	}
+	_, name, _, err := decodeMetainfo(raw)
 	if err != nil {
 		*events = append(*events, "arch original metainfo malformed: "+err.Error())
 		return
 	}
-	if hash != expectedInfoHash || name != expectedName {
+	if name != expectedName {
 		*events = append(*events, "arch publisher original infohash/name mismatch; no admission")
 		return
 	}
