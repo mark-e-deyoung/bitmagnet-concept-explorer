@@ -61,6 +61,7 @@ jobs:
           assert filt['source_sha256']==j['source_sha256']
           assert filt['query']=='right shoulder'
           assert all('right shoulder' in v['search_text'] for v in filt['views'])
+          assert [v['match_origin'] for v in filt['views']]==['ORIGINAL_SOURCE_LINE','ADJACENT_SOURCE_CONTEXT']
           assert j['views'][0]['context_start_line']<j['views'][0]['line']
           assert j['views'][0]['context_end_line']>=j['views'][0]['line']
           assert 'When the side is to advance and retire' in j['views'][0]['context']
