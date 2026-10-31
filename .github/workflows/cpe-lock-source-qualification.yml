@@ -4,6 +4,7 @@ on:
     paths:
       - 'internal/cpepack/**'
       - 'cmd/cpepack/**'
+      - 'cpe_workbench_parity_test.go'
       - 'docs/reps/2026-10-31-cpe-federation-source-rep.md'
       - '.github/workflows/cpe-lock-source-qualification.yml'
   workflow_dispatch:
@@ -32,10 +33,10 @@ jobs:
           GOSUMDB: "off"
         run: |
           set -euo pipefail
-          go test -count=2 ./internal/cpepack ./cmd/cpepack
-          go test -race ./internal/cpepack ./cmd/cpepack
-          go vet ./internal/cpepack ./cmd/cpepack
-          test -z "$(gofmt -l internal/cpepack/pack.go internal/cpepack/pack_test.go cmd/cpepack/main.go)"
+          go test -count=2 ./...
+          go test -race ./...
+          go vet ./...
+          test -z "$(gofmt -l internal/cpepack/pack.go internal/cpepack/pack_test.go internal/cpepack/bce_preview.go internal/cpepack/bce_preview_test.go cmd/cpepack/main.go cpe_workbench_parity_test.go)"
       - name: Source-only portable crossbuild
         env:
           GOTOOLCHAIN: local
