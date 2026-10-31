@@ -15,3 +15,15 @@ Numbered and ambiguous actor references are review cues, not independently
 accepted actor tracking. No concept/rights promotion or protected character
 processing is performed. The first independent human annotation of whole
 figures is still pending.
+
+
+### Initial context-screening correction
+
+The 64 original lexical occurrences are **not 64 distinct dances**. Multiple
+source-window hits occur in the same paragraph and share original lines.
+The revised original-source tool deterministically coalesces overlapping
+evidence windows into `review_groups` and preserves all original 64 candidate
+IDs. These groups are solely analyst **review units**; they do not assert
+independent figures, repetitions or reconstructible movement. Original-source
+CI is required to verify the observed group count and to reject malformed
+intervals, order-dependent group identifiers and any score/physical promotion.
