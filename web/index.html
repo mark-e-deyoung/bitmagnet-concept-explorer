@@ -263,17 +263,6 @@ async function sweepAction(execute){
 }
 $('sweep-plan').addEventListener('click',()=>sweepAction(false));
 $('sweep-run').addEventListener('click',()=>sweepAction(true));
-$('sweep-limits').addEventListener('click',async()=>{
- const token=++limitsToken,displayToken=++sweepDisplayToken;
- $('sweep-status').textContent='Reading local sweep limits…';
- try{
-  const res=await fetch('/api/v1/sweeps/limits');const data=await res.json();if(token!==limitsToken||displayToken!==sweepDisplayToken)return;
-  if(!res.ok)throw Error(data.error||'limits unavailable');
-  $('sweep-status').textContent='SearXNG JSON budget: '+data.remaining_searxng_json_requests+'/'+data.max_searxng_json_requests_per_hour+' remaining in current local window · cooldown: '+data.searxng_cooldown_seconds+'s · sweep deadline: '+data.sweep_deadline_seconds+'s · caller wait: '+data.client_timeout_seconds+'s · active sweep cap: '+data.max_concurrent_sweeps+' · external sweep admitted: '+String(data.searxng_sweep_admitted);
-  $('sweep-details').textContent=JSON.stringify(data,null,2);
- }catch(e){if(token===limitsToken&&displayToken===sweepDisplayToken)$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
-});
-
 
 let researchEvidenceToken=0;
 async function loadResearchEvidenceUI(){
@@ -312,6 +301,17 @@ async function loadResearchEvidenceUI(){
  finally{if(token===researchEvidenceToken)button.disabled=false;}
 }
 $('research-evidence-load').addEventListener('click',loadResearchEvidenceUI);
+
+$('sweep-limits').addEventListener('click',async()=>{
+ const token=++limitsToken,displayToken=++sweepDisplayToken;
+ $('sweep-status').textContent='Reading local sweep limits…';
+ try{
+  const res=await fetch('/api/v1/sweeps/limits');const data=await res.json();if(token!==limitsToken||displayToken!==sweepDisplayToken)return;
+  if(!res.ok)throw Error(data.error||'limits unavailable');
+  $('sweep-status').textContent='SearXNG JSON budget: '+data.remaining_searxng_json_requests+'/'+data.max_searxng_json_requests_per_hour+' remaining in current local window · cooldown: '+data.searxng_cooldown_seconds+'s · sweep deadline: '+data.sweep_deadline_seconds+'s · caller wait: '+data.client_timeout_seconds+'s · active sweep cap: '+data.max_concurrent_sweeps+' · external sweep admitted: '+String(data.searxng_sweep_admitted);
+  $('sweep-details').textContent=JSON.stringify(data,null,2);
+ }catch(e){if(token===limitsToken&&displayToken===sweepDisplayToken)$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
+});
 
 capabilities();loadCatalog();
 </script></body></html>
