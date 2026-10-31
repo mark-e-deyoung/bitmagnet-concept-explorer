@@ -164,9 +164,9 @@ echo "PUBLIC-CPE: candidate pack=$PACK_DIR sha256=$GRAPH_SHA"
 # source-filtered; Ubuntu publisher torrents are mandatory in this first rep.
 RDTE_DIR="$OUT/rdte-real-metainfo"
 export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly
-go run ./cmd/rdte-torrent-collector -out "$RDTE_DIR" -minimum 4
+go run ./cmd/rdte-torrent-collector -out "$RDTE_DIR" -minimum 5
 REAL_TORRENT_ROWS="$(jq -r '.entries | length' "$RDTE_DIR/manifest.json")"
-if [[ "$REAL_TORRENT_ROWS" -lt 4 ]]; then
+if [[ "$REAL_TORRENT_ROWS" -lt 5 ]]; then
   echo "::error::No qualifying genuine publisher-provided .torrent metainfo"
   exit 1
 fi
@@ -180,6 +180,12 @@ fi
 ARCH_SOURCE_ROWS="$(jq '[.entries[] | select(.source == "arch:official")] | length' "$RDTE_DIR/manifest.json")"
 if [[ "$ARCH_SOURCE_ROWS" != "1" ]]; then
   echo "::error::Official Arch metainfo was not genuinely admitted"
+  jq '{entries: [.entries[] | {source,infohash,metainfo_sha256}], source_events}' "$RDTE_DIR/manifest.json" || true
+  exit 1
+fi
+FEDORA_SOURCE_ROWS="$(jq '[.entries[] | select(.source == "fedora:official")] | length' "$RDTE_DIR/manifest.json")"
+if [[ "$FEDORA_SOURCE_ROWS" != "1" ]]; then
+  echo "::error::Official Fedora metainfo not acquired or qualified"
   jq '{entries: [.entries[] | {source,infohash,metainfo_sha256}], source_events}' "$RDTE_DIR/manifest.json" || true
   exit 1
 fi
@@ -434,6 +440,36 @@ if [[ "$arch_authentic" != "1" ]]; then
   exit 1
 fi
 echo "CPE-RDTE-REAL: authentic Arch publisher infohash=$ARCH_HASH returned from real Bitmagnet index and Explorer"
+
+# Fourth publisher family; true source bytes, not synthetic hash. First-acceptance
+# run must retain full original torrent SHA256 for a subsequent independent pin.
+FEDORA_HASH="$(jq -r '[.entries[] | select(.source == "fedora:official")][0].infohash' "$RDTE_DIR/manifest.json")"
+if [[ ! "$FEDORA_HASH" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "::error::Missing valid Fedora original infohash"
+  exit 1
+fi
+fedora_authentic=0
+for i in $(seq 1 60); do
+  curl --noproxy '*' -sS --max-time 20 -u "$AUTH" \
+    -H 'Content-Type: application/json' \
+    --data '{"query":"Fedora-Workstation"}' \
+    http://127.0.0.1:3086/api/v1/query/execute -o "$OUT/fedora-real-query.json" || true
+  if jq -e --arg hash "$FEDORA_HASH" '
+    .state == "complete" and .read_only == true and
+    (any(.results[]; .info_hash == $hash and (.tracks | index("direct") != null)))
+  ' "$OUT/fedora-real-query.json" >/dev/null 2>&1; then
+    fedora_authentic=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$fedora_authentic" != "1" ]]; then
+  echo "::error::Fedora original publisher infohash absent from actual Bitmagnet FTS and Explorer"
+  jq '{state,track_counts,results,failures}' "$OUT/fedora-real-query.json" || true
+  exit 1
+fi
+echo "CPE-RDTE-REAL: authentic Fedora publisher infohash=$FEDORA_HASH returned from real Bitmagnet index and Explorer"
+
 
 
 
