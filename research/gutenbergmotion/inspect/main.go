@@ -57,6 +57,8 @@ type EvidenceView struct{
 type Inspection struct{
  Schema string `json:"schema"`
  SourceID string `json:"source_id"`
+ Work string `json:"work"`
+ SourceURL string `json:"source_url"`
  SourceSHA string `json:"source_sha256"`
  Count int `json:"candidate_count"`
  Status string `json:"status"`
@@ -101,8 +103,9 @@ func anchored(source []byte,r SourceReport)(Inspection,error){
  if got!=pinned||r.SHA!=got||r.Bytes!=len(source)||r.Commit!=commit||r.Blob!=blob||r.SourceID!="pg:12926"||r.Schema!="cpe.motion-text-candidates.v0"{
   return Inspection{},errors.New("source or candidate identity mismatch")
  }
- if !strings.HasPrefix(r.URL,"https://github.com/GITenberg/The-Morris-Book-Part-1--13-A-History-of-Morris-Dancing-With-a-Description-of-Eleven-Dances-as__12926/blob/"){
-  return Inspection{},errors.New("unexpected original source link")
+ requiredURL:="https://github.com/GITenberg/The-Morris-Book-Part-1--13-A-History-of-Morris-Dancing-With-a-Description-of-Eleven-Dances-as__12926/blob/"+commit+"/12926.txt"
+ if r.Work!="The Morris Book, Part 1"||r.URL!=requiredURL {
+  return Inspection{},errors.New("original work/edition URL mismatch")
  }
  if len(r.Candidates)>10000{return Inspection{},errors.New("too many candidates")}
  var lines []string
@@ -127,7 +130,7 @@ func anchored(source []byte,r SourceReport)(Inspection,error){
    ActorTerms:strings.Join(c.Actor,", "),TimingTerms:strings.Join(c.Timing,", "),
    RoleInterpretation:roleCue(c.Actor),ContextStatus:"ADJACENT_SOURCE_LINES_NOT_VERIFIED_FIGURE"})
  }
- return Inspection{Schema:"scp.choreography-inspection-readmodel.v0",SourceID:r.SourceID,SourceSHA:got,
+ return Inspection{Schema:"scp.choreography-inspection-readmodel.v0",SourceID:r.SourceID,Work:r.Work,SourceURL:r.URL,SourceSHA:got,
  Count:len(r.Candidates),Status:"UNVALIDATED_SOURCE_TEXT_CANDIDATES",Candidates:r.Candidates,Views:views},nil
 }
 const page=`<!doctype html>
@@ -158,6 +161,7 @@ summary:hover{background:#eff5f9}summary:focus-visible{outline:3px solid #995400
 </style></head><body><main>
 <h1>Historical choreography: source review</h1>
 <p class="caution" role="status">Unreviewed textual matches, not independent dance figures. No accepted actor interpretation, motion measurement, physical contact or CPE concept promotion.</p>
+<p class="meta"><strong>Original work:</strong> <cite>{{.Work}}</cite> · <a href="{{.SourceURL}}" rel="noopener noreferrer">View pinned original source</a></p>
 <p class="meta"><strong>Source:</strong> <code>{{.SourceID}}</code> · <strong>SHA-256:</strong> <code>{{.SourceSHA}}</code></p>
 <p><strong>Occurrences:</strong> {{.Count}} · <strong>Scientific state:</strong> unvalidated source-text candidates.</p>
 <p id="guide">Select a source occurrence to inspect adjacent original lines. These windows provide context, <strong>not</strong> verified complete figures.</p>
