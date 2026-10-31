@@ -1,0 +1,62 @@
+name: Public Gutenberg motion mining (pinned-source research)
+on:
+  pull_request:
+    paths:
+      - 'research/gutenbergmotion/**'
+      - '.github/workflows/gutenberg-motion-public-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-mining:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Verify Go code
+        run: |
+          go test ./research/gutenbergmotion
+          go test -race ./research/gutenbergmotion
+          go vet ./research/gutenbergmotion
+      - name: Fetch exact GITenberg original and verify its Git blob
+        env:
+          BOOK_COMMIT: 1d5ca33372491509805a64cd0425a5164d3108fa
+          BOOK_BLOB: 08984be691ebd69f92a7a271217612f0056cea37
+        run: |
+          set -euo pipefail
+          mkdir /tmp/morris
+          git -C /tmp/morris init -q
+          git -C /tmp/morris remote add origin https://github.com/GITenberg/The-Morris-Book-Part-1--13-A-History-of-Morris-Dancing-With-a-Description-of-Eleven-Dances-as__12926.git
+          git -C /tmp/morris fetch --depth 1 origin "$BOOK_COMMIT"
+          git -C /tmp/morris checkout -q --detach FETCH_HEAD
+          cd /tmp/morris
+          test "$(git rev-parse HEAD)" = "$BOOK_COMMIT"
+          test "$(git hash-object 12926.txt)" = "$BOOK_BLOB"
+          sha256sum 12926.txt > "$GITHUB_WORKSPACE/source.sha256"
+      - name: Mine actual public historical choreography
+        run: |
+          set -euo pipefail
+          go run ./research/gutenbergmotion -input /tmp/morris/12926.txt > motion-candidates.json
+          python3 - <<'PY'
+          import json
+          with open('motion-candidates.json') as f:
+              d=json.load(f)
+          assert d['source_id']=='pg:12926'
+          assert d['git_blob']=='08984be691ebd69f92a7a271217612f0056cea37'
+          assert d['input_bytes']>100000
+          assert len(d['candidates'])>0, 'source produced no grounded candidate'
+          assert all(c['measurement_status']=='UNMEASURED_TEXT_INSTRUCTION' for c in d['candidates'])
+          print('SOURCE_CANDIDATES',len(d['candidates']),'TRUNCATED',d['truncated'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gutenberg-motion-research-receipts
+          path: |
+            source.sha256
+            motion-candidates.json
+          retention-days: 7
+          if-no-files-found: warn
