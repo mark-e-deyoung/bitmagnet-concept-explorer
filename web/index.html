@@ -35,6 +35,20 @@
 <svg id="observed-graph" class="graph" viewBox="0 0 700 340" role="img" aria-label="Evidence-linked concepts occurring in returned metadata"></svg>
 <div id="observed-list" class="concept-buttons" aria-label="Concept evidence selectors"></div>
 <div id="observed-items" aria-live="polite"></div></section>
+<section class="panel" aria-labelledby="research-evidence-title">
+<h2 id="research-evidence-title">Public source research evidence (not accepted CPE knowledge)</h2>
+<p>Inspect a locally configured, SHA-256-pinned public research packet. Work records, catalog claims, illustrations and rights statements remain attributed research candidates—not established facts or reuse approval. No source files are fetched by this view.</p>
+<div class="facet-layout">
+<div><label for="research-evidence-section">Research evidence type</label><select id="research-evidence-section">
+<option value="works">Literary works</option><option value="entities">Fictional entities</option><option value="claims">Source claims</option>
+<option value="art_candidates">Historical art references</option><option value="source_inventory">Source inventory</option>
+</select></div>
+<div><label for="research-evidence-filter">Find source metadata</label><input id="research-evidence-filter" maxlength="256" placeholder="Barsoom, Schoonover, catalog"></div>
+</div>
+<button type="button" id="research-evidence-load">Inspect pinned research</button>
+<p id="research-evidence-status" class="note" role="status" aria-live="polite">Not requested. An optional pinned research packet may be unavailable.</p>
+<div id="research-evidence-records" aria-live="polite"></div>
+</section>
 <section class="panel" aria-labelledby="native-facet-title"><h2 id="native-facet-title">Native Bitmagnet corpus metadata facets</h2>
 <p>Optional native database aggregation. Counts can be estimates; these are not accepted CPE concepts.</p>
 <button type="button" id="native-facet-button">Load native corpus-side counts</button><p id="native-facet-status" aria-live="polite">Not requested.</p><div id="native-facet-data"></div></section>
@@ -259,6 +273,45 @@ $('sweep-limits').addEventListener('click',async()=>{
   $('sweep-details').textContent=JSON.stringify(data,null,2);
  }catch(e){if(token===limitsToken&&displayToken===sweepDisplayToken)$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
 });
+
+
+let researchEvidenceToken=0;
+async function loadResearchEvidenceUI(){
+ const token=++researchEvidenceToken;
+ const status=$('research-evidence-status'),items=$('research-evidence-records');
+ const button=$('research-evidence-load'),section=$('research-evidence-section').value;
+ const text=$('research-evidence-filter').value.trim();
+ button.disabled=true;items.replaceChildren();status.textContent='Inspecting local pinned public research; no source acquisition…';
+ try{
+  const params=new URLSearchParams({section});
+  if(text)params.set('q',text);
+  const response=await fetch('/api/v1/research-evidence?'+params.toString());
+  const data=await response.json();if(token!==researchEvidenceToken)return;
+  if(!response.ok)throw Error(data.error||'local research source unavailable');
+  if(data.authority_status!=='research-only-no-accepted-cpe-facts')throw Error('unexpected research authority state');
+  const rows=(data.items||[]).slice(0,128);
+  status.textContent='Research only · '+rows.length+' matching '+section+' · Pinned digest: '+String(data.digest||'').slice(0,24)+'… · No accepted CPE facts or reuse decision.';
+  if(rows.length===0){items.textContent='No matching research records in this bounded packet; this does not establish absence.';return;}
+  for(const item of rows){
+   const article=document.createElement('article');article.className='item';
+   const heading=document.createElement('strong');heading.textContent=item.title||item.name||item.id||'(untitled source record)';article.append(heading);
+   const detail=document.createElement('div');
+   const parts=[item.id,item.kind,item.creator_name||item.creator,item.predicate?item.predicate+': '+String(item.object||''):null,item.source_family,item.status,item.rights_observation?.status].filter(Boolean);
+   detail.textContent=parts.join(' · ');article.append(detail);
+   const source=item.source_url||item.url;
+   if(typeof source==='string' && source.startsWith('https://')){
+    const link=document.createElement('a');link.href=source;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Inspect attributed source';article.append(link);
+   }
+   if(item.rights_observation){
+    const claim=document.createElement('p');claim.className='muted';
+    claim.textContent='Source rights observation ('+(item.rights_observation.scope||'unknown scope')+'): '+(item.rights_observation.statement||'unverified');article.append(claim);
+   }
+   items.append(article);
+  }
+ }catch(err){if(token===researchEvidenceToken)status.textContent='Research evidence unavailable or refused: '+err.message+'; no absence conclusion.';}
+ finally{if(token===researchEvidenceToken)button.disabled=false;}
+}
+$('research-evidence-load').addEventListener('click',loadResearchEvidenceUI);
 
 capabilities();loadCatalog();
 </script></body></html>
