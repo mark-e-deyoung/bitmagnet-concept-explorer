@@ -559,6 +559,26 @@ if [[ "$GITHUB_HEAD_REF" == "preview/rdte-cloudflare-disposable-20261031" ]]; th
     tail -n 65 "$OUT/cloudflared.log" || true
     exit 1
   fi
+  # Publish the ephemeral link while THIS job is still active; GH REST job logs
+  # are not reliably available mid-step. A narrowly scoped PR issue comment
+  # is the only GITHUB_TOKEN write, and only in this explicitly preview-only PR.
+  if [[ -z "$GH_PREVIEW_ISSUE_TOKEN" ]]; then
+    echo "::error::Missing scoped preview URL publication token"
+    exit 1
+  fi
+  jq -n --arg link "$TUNNEL_URL" --arg sha "$(git rev-parse HEAD)" \
+    '{body:("### Disposable RDTE Cloudflare viewer now LIVE\n\n**Open:** " + $link + "\n\nSource: " + $sha + ". The authentic 5-publisher public metadata-only Bitmagnet/Explorer checks passed. The temporary viewer requires the existing public-fixture Basic Auth login; see the public integration script for test-only demo credentials. This one-off runner expires automatically; no private data, no Bitmagnet /import/GraphQL or PostgreSQL exposure. NEVER MERGE this preview branch.")}' \
+    >"$OUT/tunnel-pr-comment.json"
+  curl -fsS --max-time 20 \
+    -H "Authorization: Bearer $GH_PREVIEW_ISSUE_TOKEN" \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    -H "Content-Type: application/json" \
+    -X POST --data-binary @"$OUT/tunnel-pr-comment.json" \
+    "https://api.github.com/repos/mark-e-deyoung/bitmagnet-concept-explorer/issues/31/comments" \
+    -o "$OUT/tunnel-pr-comment-receipt.json"
+  jq -e '.id > 0 and (.html_url | contains("/pull/31#issuecomment-"))' "$OUT/tunnel-pr-comment-receipt.json" >/dev/null
+  echo "RDTE-PREVIEW: live URL published to PR #31: $(jq -r '.html_url' "$OUT/tunnel-pr-comment-receipt.json")"
   echo "RDTE_DISPOSABLE_CLOUDFLARE_URL=$TUNNEL_URL"
   echo "RDTE-PREVIEW: external Cloudflare HTTPS -> Explorer (401 anonymous / 200 demo login) PASS"
   if [[ -n "$GITHUB_STEP_SUMMARY" ]]; then
