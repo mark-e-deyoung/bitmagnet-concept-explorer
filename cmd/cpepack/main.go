@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,7 +18,11 @@ func read(path string, out any) error {
 		return e
 	}
 	defer f.Close()
-	dec := json.NewDecoder(io.LimitReader(f, 2<<20))
+	raw, e := io.ReadAll(io.LimitReader(f, (2<<20)+1))
+	if e != nil || len(raw) > 2<<20 {
+		return fmt.Errorf("input too large or unreadable")
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if e := dec.Decode(out); e != nil {
 		return e
