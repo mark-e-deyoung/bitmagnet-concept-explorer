@@ -53,11 +53,11 @@
 <section><h2>Metadata groups and evidence</h2><pre id="details"></pre></section>
 <script>
 const $=id=>document.getElementById(id);
-let canExecute=false,canInfer=false,queryToken=0,facetToken=0,sweepToken=0,limitsToken=0;
+let canExecute=false,canInfer=false,queryToken=0,facetToken=0,sweepToken=0,limitsToken=0,sweepDisplayToken=0;
 function displayItems(id,items){const node=$(id);node.replaceChildren();if(items.length===0){node.textContent='No observed results in this bounded query.';return;}
  for(const x of items){const article=document.createElement('article');article.className='item';const title=document.createElement('strong');title.textContent=x.title||'(untitled)';const detail=document.createElement('div');const hash=(x.info_hash||'').slice(0,14);detail.textContent='Type: '+(x.content_type||'unknown')+' · Language IDs: '+(x.languages||[]).join(', ')+' · Seeders: '+(x.seeders??'unknown')+' · Leechers: '+(x.leechers??'unknown')+' · Source adult flag: '+(x.adult_metadata===null||x.adult_metadata===undefined?'unknown':String(x.adult_metadata))+' · Infohash: '+hash+'… · Matches: '+(x.matched_queries||[]).join(', ');article.append(title,detail);node.append(article);}}
 function clearQueryEvidence(message){
- observedToken++;facetToken++;sweepToken++;limitsToken++;
+ observedToken++;facetToken++;sweepToken++;limitsToken++;sweepDisplayToken++;
  for(const id of ['direct','concept','overlap','external','details','observed-graph','observed-list','observed-items','observed-status','native-facet-data','native-facet-status','sweep-details','sweep-status']){
   const node=$(id);node.replaceChildren();node.textContent=message;
  }
@@ -229,7 +229,7 @@ function buildSweepRequest(){
  filters:{languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[]}};
 }
 async function sweepAction(execute){
- const token=++sweepToken;
+ const token=++sweepToken,displayToken=++sweepDisplayToken;
  const status=$('sweep-status'),details=$('sweep-details'),btn=$('sweep-run'),preview=$('sweep-plan');
  let clientDeadline;
  btn.disabled=true;preview.disabled=true;details.textContent='';
@@ -241,22 +241,23 @@ async function sweepAction(execute){
   const controller=new AbortController();
   clientDeadline=setTimeout(()=>controller.abort(),80000);
   const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req),signal:controller.signal});
-  const data=await res.json();if(token!==sweepToken)return;if(!res.ok)throw Error(data.error||'sweep request refused');
+  const data=await res.json();if(token!==sweepToken||displayToken!==sweepDisplayToken)return;if(!res.ok)throw Error(data.error||'sweep request refused');
   status.textContent=execute?'Sweep state: '+data.state+' · local read-only and candidate evidence only':'Plan ready; '+data.bitmagnet_queries.length+' Bitmagnet / '+data.searxng_queries.length+' SearXNG queries';
   details.textContent=JSON.stringify(data,null,2);
- }catch(e){if(token===sweepToken)status.textContent='Sweep blocked, canceled, or failed: '+e.message+'; no absence conclusion or automatic retry.'}
+ }catch(e){if(token===sweepToken&&displayToken===sweepDisplayToken)status.textContent='Sweep blocked, canceled, or failed: '+e.message+'; no absence conclusion or automatic retry.'}
  finally{clearTimeout(clientDeadline);if(token===sweepToken){btn.disabled=false;preview.disabled=false}}
 }
 $('sweep-plan').addEventListener('click',()=>sweepAction(false));
 $('sweep-run').addEventListener('click',()=>sweepAction(true));
 $('sweep-limits').addEventListener('click',async()=>{
- const token=++limitsToken;
+ const token=++limitsToken,displayToken=++sweepDisplayToken;
+ $('sweep-status').textContent='Reading local sweep limits…';
  try{
-  const res=await fetch('/api/v1/sweeps/limits');const data=await res.json();if(token!==limitsToken)return;
+  const res=await fetch('/api/v1/sweeps/limits');const data=await res.json();if(token!==limitsToken||displayToken!==sweepDisplayToken)return;
   if(!res.ok)throw Error(data.error||'limits unavailable');
   $('sweep-status').textContent='SearXNG JSON budget: '+data.remaining_searxng_json_requests+'/'+data.max_searxng_json_requests_per_hour+' remaining in current local window · cooldown: '+data.searxng_cooldown_seconds+'s · sweep deadline: '+data.sweep_deadline_seconds+'s · caller wait: '+data.client_timeout_seconds+'s · active sweep cap: '+data.max_concurrent_sweeps+' · external sweep admitted: '+String(data.searxng_sweep_admitted);
   $('sweep-details').textContent=JSON.stringify(data,null,2);
- }catch(e){if(token===limitsToken)$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
+ }catch(e){if(token===limitsToken&&displayToken===sweepDisplayToken)$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
 });
 
 capabilities();loadCatalog();
