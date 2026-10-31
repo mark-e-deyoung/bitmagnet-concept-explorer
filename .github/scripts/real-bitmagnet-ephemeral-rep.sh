@@ -164,9 +164,9 @@ echo "PUBLIC-CPE: candidate pack=$PACK_DIR sha256=$GRAPH_SHA"
 # source-filtered; Ubuntu publisher torrents are mandatory in this first rep.
 RDTE_DIR="$OUT/rdte-real-metainfo"
 export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly
-go run ./cmd/rdte-torrent-collector -out "$RDTE_DIR" -minimum 3
+go run ./cmd/rdte-torrent-collector -out "$RDTE_DIR" -minimum 4
 REAL_TORRENT_ROWS="$(jq -r '.entries | length' "$RDTE_DIR/manifest.json")"
-if [[ "$REAL_TORRENT_ROWS" -lt 3 ]]; then
+if [[ "$REAL_TORRENT_ROWS" -lt 4 ]]; then
   echo "::error::No qualifying genuine publisher-provided .torrent metainfo"
   exit 1
 fi
@@ -174,6 +174,12 @@ fi
 DEBIAN_SOURCE_ROWS="$(jq '[.entries[] | select(.source == "debian:official-mirror")] | length' "$RDTE_DIR/manifest.json")"
 if [[ "$DEBIAN_SOURCE_ROWS" != "1" ]]; then
   echo "::error::Debian official-mirror metainfo was not genuinely admitted"
+  jq '{entries: [.entries[] | {source,infohash,metainfo_sha256}], source_events}' "$RDTE_DIR/manifest.json" || true
+  exit 1
+fi
+ARCH_SOURCE_ROWS="$(jq '[.entries[] | select(.source == "arch:official")] | length' "$RDTE_DIR/manifest.json")"
+if [[ "$ARCH_SOURCE_ROWS" != "1" ]]; then
+  echo "::error::Official Arch metainfo was not genuinely admitted"
   jq '{entries: [.entries[] | {source,infohash,metainfo_sha256}], source_events}' "$RDTE_DIR/manifest.json" || true
   exit 1
 fi
@@ -400,6 +406,35 @@ if [[ "$debian_authentic" != "1" ]]; then
   exit 1
 fi
 echo "CPE-RDTE-REAL: authentic Debian publisher infohash=$DEBIAN_HASH returned from real Bitmagnet index and Explorer"
+
+# Third authentic publisher family, distinct from Ubuntu/Debian and all synthetic rows.
+ARCH_HASH="$(jq -r '[.entries[] | select(.source == "arch:official")][0].infohash' "$RDTE_DIR/manifest.json")"
+if [[ "$ARCH_HASH" != "9b521219bc48550140a666f74a29048ed78e933b" ]]; then
+  echo "::error::Original Arch publisher infohash was not pinned"
+  exit 1
+fi
+arch_authentic=0
+for i in $(seq 1 60); do
+  curl --noproxy '*' -sS --max-time 20 -u "$AUTH" \
+    -H 'Content-Type: application/json' \
+    --data '{"query":"archlinux"}' \
+    http://127.0.0.1:3086/api/v1/query/execute -o "$OUT/arch-real-query.json" || true
+  if jq -e --arg hash "$ARCH_HASH" '
+    .state == "complete" and .read_only == true and
+    (any(.results[]; .info_hash == $hash and (.tracks | index("direct") != null)))
+  ' "$OUT/arch-real-query.json" >/dev/null 2>&1; then
+    arch_authentic=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$arch_authentic" != "1" ]]; then
+  echo "::error::Arch original publisher infohash absent from actual Bitmagnet FTS and Explorer"
+  jq '{state,track_counts,results,failures}' "$OUT/arch-real-query.json" || true
+  exit 1
+fi
+echo "CPE-RDTE-REAL: authentic Arch publisher infohash=$ARCH_HASH returned from real Bitmagnet index and Explorer"
+
 
 
 # Separate CLI process uses actual authenticated HTTP service and real upstream.
