@@ -12,23 +12,23 @@ import (
 // semantic equivalence without source-native sense evidence and adjudication.
 func validatePilotLexemes(raw []byte, graph ConceptSnapshot) error {
 	var packet struct {
-		SchemaVersion string `json:"schema_version"`
-		PackID string `json:"pack_id"`
+		SchemaVersion         string `json:"schema_version"`
+		PackID                string `json:"pack_id"`
 		SourceGraphSnapshotID string `json:"source_graph_snapshot_id"`
-		AuthorityStatus string `json:"authority_status"`
-		ProvenanceNote string `json:"provenance_note"`
-		QualificationRule string `json:"qualification_rule"`
-		Terms []struct {
-			ConceptID string `json:"concept_id"`
-			Language string `json:"language"`
-			Term string `json:"term"`
-			CandidateRelation string `json:"candidate_relation"`
-			SourceFamily string `json:"source_family"`
-			LexicalSenseRef *string `json:"lexical_sense_ref"`
-			NativeLanguageEvidenceRefs []string `json:"native_language_evidence_refs"`
+		AuthorityStatus       string `json:"authority_status"`
+		ProvenanceNote        string `json:"provenance_note"`
+		QualificationRule     string `json:"qualification_rule"`
+		Terms                 []struct {
+			ConceptID                       string   `json:"concept_id"`
+			Language                        string   `json:"language"`
+			Term                            string   `json:"term"`
+			CandidateRelation               string   `json:"candidate_relation"`
+			SourceFamily                    string   `json:"source_family"`
+			LexicalSenseRef                 *string  `json:"lexical_sense_ref"`
+			NativeLanguageEvidenceRefs      []string `json:"native_language_evidence_refs"`
 			TranslationRelationEvidenceRefs []string `json:"translation_relation_evidence_refs"`
-			IndependentReviewStatus string `json:"independent_review_status"`
-			AllowedAsAcceptedCPE bool `json:"allowed_as_accepted_cpe"`
+			IndependentReviewStatus         string   `json:"independent_review_status"`
+			AllowedAsAcceptedCPE            bool     `json:"allowed_as_accepted_cpe"`
 		} `json:"terms"`
 	}
 	if err := json.Unmarshal(raw, &packet); err != nil {
@@ -48,7 +48,7 @@ func validatePilotLexemes(raw []byte, graph ConceptSnapshot) error {
 	}
 	seen := make(map[string]bool)
 	for _, item := range packet.Terms {
-		key := item.ConceptID+"\x00"+item.Language+"\x00"+item.Term
+		key := item.ConceptID + "\x00" + item.Language + "\x00" + item.Term
 		if !known[key] || seen[key] ||
 			item.CandidateRelation != "unqualified_label_candidate" ||
 			item.SourceFamily != "pilot-author-provided-unverified" ||
