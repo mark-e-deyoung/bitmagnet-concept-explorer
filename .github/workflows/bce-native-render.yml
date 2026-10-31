@@ -111,3 +111,62 @@ jobs:
               raise SystemExit("published mode lost memory limits")
           print("PUBLISHED_SOURCE_ONLY; no TrueNAS deployment, network/TLS or F0-F5 qualification")
           PY
+
+      - name: Render optional digest-pinned read-only public research mounts
+        working-directory: truenas-apps
+        run: |
+          /tmp/bce-render-venv/bin/python .github/scripts/ci.py \
+            --app bitmagnet-concept-explorer \
+            --train community \
+            --test-file pinned-research-values.yaml \
+            --render-only=True --skip-metadata
+          /tmp/bce-render-venv/bin/python - <<'PY'
+          import pathlib, yaml
+          path = pathlib.Path("ix-dev/community/bitmagnet-concept-explorer/templates/rendered/docker-compose.yaml")
+          compose = yaml.safe_load(path.read_text())
+          svc = next(iter(compose["services"].values()))
+          env = svc.get("environment", {})
+          if isinstance(env, list):
+              env = dict(item.split("=",1) for item in env)
+          pairs = {
+              "BCE_CPE_GRAPH_FILE": "/opt/bce/research/graph-preview.json",
+              "BCE_CPE_GRAPH_SHA256": "a" * 64,
+              "BCE_RESEARCH_EVIDENCE_FILE": "/opt/bce/research/catalog-evidence.json",
+              "BCE_RESEARCH_EVIDENCE_SHA256": "b" * 64,
+          }
+          for key, value in pairs.items():
+              if env.get(key) != value:
+                  raise SystemExit("missing/mismatched pinned research env: " + key)
+          volumes = svc.get("volumes") or []
+          expected = {
+              "/opt/bce/research/graph-preview.json": "/mnt/fixture/research/graph-preview.json",
+              "/opt/bce/research/catalog-evidence.json": "/mnt/fixture/research/catalog-evidence.json",
+          }
+          found = {}
+          for v in volumes:
+              if not isinstance(v, dict):
+                  raise SystemExit("unexpected volume format in research render")
+              if v.get("target") in expected:
+                  if v.get("type") != "bind" or v.get("read_only") is not True:
+                      raise SystemExit("research source mount not read-only bind")
+                  found[v["target"]] = v.get("source")
+          if found != expected:
+              raise SystemExit("missing research source bindings: " + repr(found))
+          if svc.get("ports"):
+              raise SystemExit("research file configuration unexpectedly published host port")
+          if svc.get("read_only") is not True:
+              raise SystemExit("research file configuration relaxed read-only root")
+          print("PINNED_RESEARCH_MOUNTS_SOURCE_ONLY: research paths and digests verified, no source content accessed")
+          PY
+      - name: Refuse unpaired research source and digest
+        working-directory: truenas-apps
+        run: |
+          if /tmp/bce-render-venv/bin/python .github/scripts/ci.py \
+            --app bitmagnet-concept-explorer \
+            --train community \
+            --test-file bad-paired-graph-values.yaml \
+            --render-only=True --skip-metadata; then
+            echo "ERROR: accepted graph file without digest" >&2
+            exit 1
+          fi
+          echo "EXPECTED_NEGATIVE: missing graph digest was refused by native source renderer"
