@@ -338,7 +338,6 @@ func collectArch(out string, entries *[]map[string]any, events *[]string) {
 	}
 }
 
-
 // collectFedora is a bounded first-source observation from Fedora's own HTTPS
 // torrent directory; there is NO independent existing file SHA pin yet.
 // Preserve source observation as rights-UNKNOWN research until independent
