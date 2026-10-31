@@ -125,7 +125,7 @@ func validateResearchEvidence(p ResearchEvidencePack) error {
 			!researchURL(c.SourceURL) || c.Predicate == "" ||
 			c.Object == "" || c.SourceFamily == "" || c.EvidenceRole == "" ||
 			(c.Status != "source_report_not_independently_qualified" &&
-			 c.Status != "research_relationship_candidate") {
+				c.Status != "research_relationship_candidate") {
 			return errors.New("invalid or promoted source claim")
 		}
 		if strings.HasPrefix(c.Object, "fictional:") && !entities[c.Object] {
@@ -133,8 +133,8 @@ func validateResearchEvidence(p ResearchEvidencePack) error {
 		}
 	}
 	allowedRights := map[string]bool{
-		"recorded_not_redistribution_approved": true,
-		"item_level_status_unverified": true,
+		"recorded_not_redistribution_approved":                    true,
+		"item_level_status_unverified":                            true,
 		"recorded_source_claim_not_specific_derivative_clearance": true,
 	}
 	for _, a := range p.ArtCandidates {
@@ -222,11 +222,11 @@ func registerResearchEvidence(mux *http.ServeMux) {
 			return
 		}
 		envelope := map[string]any{
-			"pack_id": p.PackID,
-			"digest": digest,
+			"pack_id":          p.PackID,
+			"digest":           digest,
 			"authority_status": p.AuthorityStatus,
 			"rights_semantics": p.RightsSemantics,
-			"warnings": []string{"Source-reported research only; not accepted CPE facts or permission to redistribute art"},
+			"warnings":         []string{"Source-reported research only; not accepted CPE facts or permission to redistribute art"},
 		}
 		switch section {
 		case "":
