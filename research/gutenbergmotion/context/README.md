@@ -27,3 +27,25 @@ IDs. These groups are solely analyst **review units**; they do not assert
 independent figures, repetitions or reconstructible movement. Original-source
 CI is required to verify the observed group count and to reject malformed
 intervals, order-dependent group identifiers and any score/physical promotion.
+
+### Bounded first-pass source-checked complete eight-bar figure
+
+The source-owning Go runner now supports:
+
+```sh
+go run ./research/gutenbergmotion/context -cross-over-first-pass -source 12926.txt > cross-over-first-pass.json
+```
+
+On the exact full pinned book, this yields the **Cross-over** figure, original
+lines 1433–1467, written eight bars, seven source-anchored phrase/rule/cue
+witnesses: partner crossing (bars 1–2), right-shoulder rule, inward turn
+(bars 3–4), recross (bars 5–6), turn to Front (bars 7–8), and jump cue
+(bars 4/8). Every phrase is checked against real original-line text before
+output, and adverse edited spans, headings or editions fail closed.
+
+**Critical hold:** `TextStatus=SOURCE_SPANS_CHECKED_FIRST_PASS_NOT_INDEPENDENT_GOLD`;
+diagrams/notations are not digitally qualified, no music-score source bytes
+have been admitted, and an independent second reviewer has not completed
+the gold check. The first-pass record is a source-grounded *textual figure*
+not validated 3D trajectories, contacts, measured footwork or accepted CPE
+semantics. Do not count it as blind heldout evidence.
