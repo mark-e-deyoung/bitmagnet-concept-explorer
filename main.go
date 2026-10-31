@@ -98,6 +98,7 @@ func makePlan(q Request) (Plan, error) {
 		return Plan{}, errors.New("too many candidate concept expansions")
 	}
 	used := []Expansion{}
+	pinnedMultiwordFTS := false
 	for _, e := range resolved {
 		t := strings.TrimSpace(e.Term)
 		if len([]rune(t)) > 512 || t == "" || len(e.Language) > 32 || len(e.ConceptID) > 256 || strings.TrimSpace(e.Provenance) == "" {
@@ -115,10 +116,17 @@ func makePlan(q Request) (Plan, error) {
 		if !seen[key] {
 			concept.Terms = append(concept.Terms, t)
 			used = append(used, e)
+			if isPinnedProjectionProvenance(e.Provenance) && strings.ContainsRune(t, ' ') {
+				pinnedMultiwordFTS = true
+			}
 			seen[key] = true
 		}
 	}
-	return Plan{Version: "v0-provisional", ReadOnly: true, Tracks: []Track{direct, concept}, ResolvedExpansions: used, ProjectionSnapshot: projectionSnapshot, ProjectionDigest: projectionDigest, Warnings: []string{"CPE projection is a local digest-pinned PREVIEW, not normative CPE authority; expansions are retrieval hypotheses only", "Read-only Bitmagnet execution requires a configured target; no CPE intake/promotion is implemented"}}, nil
+	warnings := []string{"CPE projection is a local digest-pinned PREVIEW, not normative CPE authority; expansions are retrieval hypotheses only", "Read-only Bitmagnet execution requires a configured target; no CPE intake/promotion is implemented"}
+	if pinnedMultiwordFTS {
+		warnings = append(warnings, pinnedMultiwordFTSWarning)
+	}
+	return Plan{Version: "v0-provisional", ReadOnly: true, Tracks: []Track{direct, concept}, ResolvedExpansions: used, ProjectionSnapshot: projectionSnapshot, ProjectionDigest: projectionDigest, Warnings: warnings}, nil
 }
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
