@@ -184,6 +184,7 @@ func decodeMetainfo(b []byte) (hash, name string, size int64, err error) {
 	sum := sha1.Sum(b[start:end])
 	return hex.EncodeToString(sum[:]), string(n), size, nil
 }
+
 // validateMetainfoRedirect fences the entire redirect chain, not only the initial HTTPS URL.
 func validateMetainfoRedirect(req *http.Request, via []*http.Request) error {
 	if req.URL.Scheme != "https" {
