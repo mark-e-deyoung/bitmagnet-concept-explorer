@@ -53,6 +53,7 @@ type EvidenceView struct{
  TimingTerms string `json:"timing_terms_text"`
  RoleInterpretation string `json:"role_interpretation_status"`
  ContextStatus string `json:"context_status"`
+ SearchText string `json:"search_text"`
 }
 type Inspection struct{
  Schema string `json:"schema"`
@@ -61,6 +62,8 @@ type Inspection struct{
  SourceURL string `json:"source_url"`
  SourceSHA string `json:"source_sha256"`
  Count int `json:"candidate_count"`
+ VisibleCount int `json:"visible_count"`
+ Query string `json:"query"`
  Status string `json:"status"`
  ClaimsPhysicalMotion bool `json:"claims_physical_motion"`
  ClaimsChoreographyAcceptance bool `json:"claims_choreography_acceptance"`
@@ -79,7 +82,7 @@ func discover()Capabilities{
  return Capabilities{Schema:"scp.choreography-inspection-capability.v0",
  HumanUI:"OFFLINE_READ_ONLY_HTML_NO_DEVICE_HIL",Automation:"SOURCE_PINNED_CLI_JSON",
  Agent:"DISCOVERABLE_READ_ONLY_CAPABILITIES",
- Modes:[]string{"-capabilities","-format=json -source= -report=","-format=html -source= -report="},
+ Modes:[]string{"-capabilities","-format=json -source= -report= -query=","-format=html -source= -report= -query="},
  Holds:[]string{"research-only","no-native-browser-qa","no-editing","no-accepted-movement","no-CPE-promotion","no-private-character-ingress"}}
 }
 func contextWindow(lines []string,line int)(int,int,string){
@@ -128,10 +131,27 @@ func anchored(source []byte,r SourceReport)(Inspection,error){
   views=append(views,EvidenceView{Index:i,CandidateID:c.ID,Line:c.Line,Evidence:c.Evidence,
    ContextStart:a,ContextEnd:b,Context:context,MotionTerms:strings.Join(c.Motion,", "),
    ActorTerms:strings.Join(c.Actor,", "),TimingTerms:strings.Join(c.Timing,", "),
-   RoleInterpretation:roleCue(c.Actor),ContextStatus:"ADJACENT_SOURCE_LINES_NOT_VERIFIED_FIGURE"})
+   RoleInterpretation:roleCue(c.Actor),ContextStatus:"ADJACENT_SOURCE_LINES_NOT_VERIFIED_FIGURE",
+   SearchText:strings.ToLower(strings.Join([]string{c.ID,c.Evidence,context,strings.Join(c.Motion," "),strings.Join(c.Actor," "),strings.Join(c.Timing," ")}," "))})
  }
  return Inspection{Schema:"scp.choreography-inspection-readmodel.v0",SourceID:r.SourceID,Work:r.Work,SourceURL:r.URL,SourceSHA:got,
- Count:len(r.Candidates),Status:"UNVALIDATED_SOURCE_TEXT_CANDIDATES",Candidates:r.Candidates,Views:views},nil
+ Count:len(r.Candidates),VisibleCount:len(r.Candidates),Status:"UNVALIDATED_SOURCE_TEXT_CANDIDATES",Candidates:r.Candidates,Views:views},nil
+}
+func filterInspection(v Inspection,query string)(Inspection,error){
+ q:=strings.ToLower(strings.TrimSpace(query))
+ if len([]rune(q))>80{return Inspection{},errors.New("query exceeds 80 characters")}
+ result:=v
+ result.Query=q
+ result.Views=[]EvidenceView{}
+ result.Candidates=[]Candidate{}
+ for _,ev:=range v.Views{
+  if strings.Contains(ev.SearchText,q){
+   result.Views=append(result.Views,ev)
+   result.Candidates=append(result.Candidates,v.Candidates[ev.Index])
+  }
+ }
+ result.VisibleCount=len(result.Views)
+ return result,nil
 }
 const page=`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -151,6 +171,11 @@ summary:hover{background:#eff5f9}summary:focus-visible{outline:3px solid #995400
 .details{padding:.1rem 1rem 1rem;border-top:1px solid #afbac4}
 .source-context{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;background:#f1f4f6;padding:.8rem;border-left:3px solid #6c8091;margin:.5rem 0}
 .small{font-size:.89rem}.small code{overflow-wrap:anywhere}
+.search{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:1rem 0}
+.search label{font-weight:600}.search input{flex:1 1 15rem;min-width:0;max-width:30rem;padding:.55rem;font:inherit;background:transparent;color:inherit;border:1px solid #73869a}
+.search button{padding:.55rem .85rem;border:1px solid #6c8091;background:transparent;color:inherit;cursor:pointer}
+.search button:focus-visible,.search input:focus-visible{outline:3px solid #995400}
+li.candidate[hidden]{display:none!important}
 @media(max-width:540px){main{padding:1rem}summary{grid-template-columns:1fr;gap:.3rem}.details{padding:.5rem .75rem 1rem}}
 @media(prefers-color-scheme:dark){
  body{background:#151c25;color:#eef3f9}
@@ -165,15 +190,34 @@ summary:hover{background:#eff5f9}summary:focus-visible{outline:3px solid #995400
 <p class="meta"><strong>Source:</strong> <code>{{.SourceID}}</code> · <strong>SHA-256:</strong> <code>{{.SourceSHA}}</code></p>
 <p><strong>Occurrences:</strong> {{.Count}} · <strong>Scientific state:</strong> unvalidated source-text candidates.</p>
 <p id="guide">Select a source occurrence to inspect adjacent original lines. These windows provide context, <strong>not</strong> verified complete figures.</p>
+<form class="search" role="search" onsubmit="return false">
+<label for="source-search">Filter source evidence</label><input id="source-search" type="search" maxlength="80" autocomplete="off" value="{{.Query}}" placeholder="e.g. right shoulder">
+<button id="clear-search" type="button">Clear</button></form>
+<p aria-live="polite" aria-atomic="true">Showing <output id="visible-count">{{.VisibleCount}}</output> of {{.Count}} source matches</p>
 <ol class="results" aria-label="Source candidate occurrences">
-{{range .Views}}<li class="candidate"><details {{if eq .Index 0}}open{{end}}>
+{{range .Views}}<li class="candidate" data-search="{{.SearchText}}"><details {{if eq .Index 0}}open{{end}}>
 <summary aria-describedby="guide"><span class="line">Line {{.Line}}</span><span class="preview">{{.Evidence}}</span></summary>
 <div class="details"><p class="small"><strong>Original context:</strong> lines {{.ContextStart}}–{{.ContextEnd}} (unreviewed)</p>
 <blockquote class="source-context">{{.Context}}</blockquote>
 <p class="small"><strong>Movement word matches:</strong> {{.MotionTerms}} · <strong>Actor/direction word matches:</strong> {{.ActorTerms}} · <strong>Timing word matches:</strong> {{.TimingTerms}}</p>
 <p class="small"><strong>Interpretation:</strong> {{.RoleInterpretation}} · <strong>Context status:</strong> {{.ContextStatus}}</p>
 <p class="small"><strong>Candidate ID:</strong> <code>{{.CandidateID}}</code></p></div></details></li>{{end}}
-</ol></main></body></html>`
+</ol>
+<script>
+(()=>{"use strict";
+ const input=document.getElementById("source-search");
+ const output=document.getElementById("visible-count");
+ const cards=Array.from(document.querySelectorAll("li.candidate"));
+ function apply(){
+  const query=input.value.trim().toLowerCase();let shown=0;
+  for(const card of cards){const keep=card.dataset.search.includes(query);card.hidden=!keep;if(keep)shown++;}
+  output.textContent=String(shown);
+ }
+ input.addEventListener("input",apply);
+ document.getElementById("clear-search").addEventListener("click",()=>{input.value="";apply();input.focus();});
+ apply();
+})();
+</script></main></body></html>`
 
 func renderHTML(w io.Writer,v Inspection)error{
  t,err:=template.New("inspect").Parse(page);if err!=nil{return err}
@@ -191,17 +235,19 @@ func run(args []string,w io.Writer)error{
  format:=fs.String("format","json","json or html")
  sourcePath:=fs.String("source","","pinned text bytes")
  reportPath:=fs.String("report","","source-bound candidate JSON")
+ query:=fs.String("query","","read-only source filter")
  if err:=fs.Parse(args);err!=nil{return err}
  if fs.NArg()!=0{return errors.New("unexpected positional arguments")}
  enc:=json.NewEncoder(w);enc.SetIndent("","  ")
- if *cap{if *sourcePath!=""||*reportPath!=""{return errors.New("capabilities are input-free")};return enc.Encode(discover())}
+ if *cap{if *sourcePath!=""||*reportPath!=""||*query!=""{return errors.New("capabilities are input-free")};return enc.Encode(discover())}
  if *sourcePath==""||*reportPath==""{return errors.New("source and report are required")}
  if *format!="json"&&*format!="html"{return errors.New("unsupported format")}
  src,err:=os.ReadFile(*sourcePath);if err!=nil{return err}
  f,err:=os.Open(*reportPath);if err!=nil{return err};defer f.Close()
  report,err:=loadReport(f);if err!=nil{return err}
  inspected,err:=anchored(src,report);if err!=nil{return err}
- if *format=="html"{return renderHTML(w,inspected)}
- return enc.Encode(inspected)
+ filtered,err:=filterInspection(inspected,*query);if err!=nil{return err}
+ if *format=="html"{inspected.Query=filtered.Query;inspected.VisibleCount=filtered.VisibleCount;return renderHTML(w,inspected)}
+ return enc.Encode(filtered)
 }
 func main(){if err:=run(os.Args[1:],os.Stdout);err!=nil{fmt.Fprintln(os.Stderr,err);os.Exit(1)}}
