@@ -49,13 +49,14 @@ jq -e '
 echo "CPE-LIVE-SWEEP: Bitmagnet hits=$(jq '.bitmagnet.results|length' "$F/execution.json") SearXNG hits=$(jq '[.external[].hits[]]|length' "$F/execution.json")"
 jq -c '{state,failures,source_counts:{bitmagnet:(.bitmagnet.results|length),external:([.external[].hits[]]|length)},research_proposals:(.research_proposals|length),authority:.plan.authority}' "$F/execution.json"
 
-# Existing CPE #202 research-only API. This source-mapping candidate is
-# nominated by the analyst, NOT corroborated or accepted by the engine.
+# Existing CPE #202 research-only API. This source-mapping hypothesis
+# describes the ACTUAL Barsoom lookup, not unrelated Internet Archive items.
+# The evidence refs prove search observations, NOT semantic relationships.
 jq -n --slurpfile sweep "$F/execution.json" --arg digest "sha256:$GRAPH_HASH" '{
  proposal_kind:"source_mapping_candidate",
- candidate_label:"Archive BitTorrent",
+ candidate_label:"Barsoom",
  language:"en",
- concept_id:"public:source-record",
+ concept_id:"public:story-world",
  projection_digest:$digest,
  evidence:($sweep[0].evidence_refs|.[:8])
 }' >"$F/proposal-request.json"
