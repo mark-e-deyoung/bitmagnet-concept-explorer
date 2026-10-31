@@ -1,0 +1,31 @@
+name: Public RDTE native Windows PowerShell 5.1 metainfo identity
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'tools/rdte/Test-NativePowerShellRawInfo.ps1'
+      - '.github/workflows/rdte-powershell51-metainfo.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rdte-ps51-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authentic-raw-infohash:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact current PR head without credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Run publisher torrent identity through native Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\tools\rdte\Test-NativePowerShellRawInfo.ps1 -OutputDirectory $env:RUNNER_TEMP
