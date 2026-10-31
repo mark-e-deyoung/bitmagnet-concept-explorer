@@ -51,7 +51,7 @@ try{
   return result.result.value;
  }
  async function state(wanted,step){
-  const actual=await evaluate('(()=>{const cards=[...document.querySelectorAll("li.candidate")];return {n:cards.length,visible:cards.filter(x=>!x.hidden).length,shown:document.querySelector("#visible-count").textContent,value:document.querySelector("#source-search").value,overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth};})()');
+  const actual=await evaluate('(()=>{const cards=[...document.querySelectorAll("li.candidate")];return {n:cards.length,visible:cards.filter(x=>!x.hidden).length,shown:document.querySelector("#visible-count").textContent,value:document.querySelector("#source-search").value,overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth,innerWidth:innerWidth,scrollWidth:document.documentElement.scrollWidth,clientWidth:document.documentElement.clientWidth,offenders:[...document.querySelectorAll("*")].filter(x=>x.getBoundingClientRect().right>innerWidth+1).slice(0,8).map(x=>({tag:x.tagName,className:typeof x.className==="string"?x.className:"",right:Math.round(x.getBoundingClientRect().right),scroll:x.scrollWidth,client:x.clientWidth}))};})()');
   if(actual.n!==64||actual.visible!==wanted||Number(actual.shown)!==wanted||actual.overflow)
    throw Error(step+': '+JSON.stringify(actual));
   return actual;
