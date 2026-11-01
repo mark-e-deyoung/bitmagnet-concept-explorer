@@ -1,6 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -59,5 +63,33 @@ func TestCLIJSONInputLimitsMatchRouteContracts(t *testing.T) {
 	}
 	if _, err := readOperationInput(strings.NewReader(""), "sweep"); err == nil {
 		t.Fatal("empty JSON input accepted")
+	}
+}
+
+func TestCLIRejectsOversizedHTTP200ResponseWithoutReturningPrefix(t *testing.T) {
+	responseBody := append([]byte(`{"state":"complete"}`), bytes.Repeat([]byte(" "), maxCLIResponseBytes)...)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(responseBody)
+	}))
+	defer server.Close()
+	resp, err := http.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("synthetic server returned %d", resp.StatusCode)
+	}
+	output, err := readServiceResponse(resp.Body)
+	if err == nil || len(output) != 0 {
+		t.Fatalf("oversized 200 response returned a truncated prefix (%d bytes), err=%v", len(output), err)
+	}
+
+	valid := []byte(`{"state":"complete"}`)
+	output, err = readServiceResponse(strings.NewReader(string(valid)))
+	if err != nil || !json.Valid(output) {
+		t.Fatalf("small valid JSON response rejected: bytes=%q err=%v", output, err)
 	}
 }

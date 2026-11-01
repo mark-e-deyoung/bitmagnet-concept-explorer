@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,6 +21,9 @@ var globalSearxngSlots = make(chan struct{}, 2)
 // no retry on provider refusal. This is a minimum local safeguard, not a
 // substitute for each engine's own terms, quotas and SearXNG configuration.
 var errSearXNGBackoff = errors.New("SearXNG denied or cooldown active")
+
+const searXNGResponseMaxBytes = 2 << 20
+
 var searXNGPace = struct {
 	sync.Mutex
 	Next         map[string]time.Time
@@ -213,8 +215,8 @@ func searchSearXNGDetailed(ctx context.Context, query, language string) (SearXNG
 			Engines []string `json:"engines"`
 		} `json:"results"`
 	}
-	if e := json.NewDecoder(io.LimitReader(resp.Body, 2<<20)).Decode(&payload); e != nil {
-		return SearXNGResearchEnvelope{}, errors.New("invalid SearXNG JSON")
+	if e := decodeBoundedJSON(resp.Body, searXNGResponseMaxBytes, &payload); e != nil {
+		return SearXNGResearchEnvelope{}, errors.New("invalid, trailing or oversized SearXNG JSON")
 	}
 	out := make([]ExternalObservation, 0, 20)
 	for _, item := range payload.Results {

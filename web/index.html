@@ -53,32 +53,39 @@
 <section><h2>Metadata groups and evidence</h2><pre id="details"></pre></section>
 <script>
 const $=id=>document.getElementById(id);
-let canExecute=false,canInfer=false;
+let canExecute=false,canInfer=false,queryToken=0,facetToken=0,sweepToken=0,limitsToken=0,sweepDisplayToken=0;
 function displayItems(id,items){const node=$(id);node.replaceChildren();if(items.length===0){node.textContent='No observed results in this bounded query.';return;}
  for(const x of items){const article=document.createElement('article');article.className='item';const title=document.createElement('strong');title.textContent=x.title||'(untitled)';const detail=document.createElement('div');const hash=(x.info_hash||'').slice(0,14);detail.textContent='Type: '+(x.content_type||'unknown')+' · Language IDs: '+(x.languages||[]).join(', ')+' · Seeders: '+(x.seeders??'unknown')+' · Leechers: '+(x.leechers??'unknown')+' · Source adult flag: '+(x.adult_metadata===null||x.adult_metadata===undefined?'unknown':String(x.adult_metadata))+' · Infohash: '+hash+'… · Matches: '+(x.matched_queries||[]).join(', ');article.append(title,detail);node.append(article);}}
+function clearQueryEvidence(message){
+ observedToken++;facetToken++;sweepToken++;limitsToken++;sweepDisplayToken++;
+ for(const id of ['direct','concept','overlap','external','details','observed-graph','observed-list','observed-items','observed-status','native-facet-data','native-facet-status','sweep-details','sweep-status']){
+  const node=$(id);node.replaceChildren();node.textContent=message;
+ }
+}
 async function capabilities(){
  try{const r=await fetch('/api/v1/capabilities');const c=await r.json();canExecute=r.ok&&c.execute===true;canInfer=r.ok&&c.sovereign_inference_configured===true;$('mode').textContent=canExecute?'Read-only Bitmagnet execution configured. Concept terms are experimental and not CPE-validated.':'Planning only: Bitmagnet execution is not configured. No CPE writes or payload downloads.';$('submit').textContent=canExecute?'Run read-only search':'Plan query';}
  catch(e){$('mode').textContent='Capability check failed; query planning may still be available.';}
 }
 $('q').addEventListener('submit',async event=>{
- event.preventDefault();const expansions=$('terms').value.split('\n').map(s=>s.trim()).filter(Boolean).map(term=>({term,provenance:'manual-unverified'}));
+ event.preventDefault();const token=++queryToken;clearQueryEvidence('Current query in progress; previous evidence cleared.');const expansions=$('terms').value.split('\n').map(s=>s.trim()).filter(Boolean).map(term=>({term,provenance:'manual-unverified'}));
  const filters={languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[],adult_metadata:$('adult').value};
  if($('minseeders').value!=='')filters.min_seeders=Number($('minseeders').value);
  if($('minleechers').value!=='')filters.min_leechers=Number($('minleechers').value);
  const body={query:$('query').value,expansions,filters,sort:$('sort').value,group_by:$('group').value,include_web:$('web').checked,concept_ids:$('use-concept').checked&&focusConcept?[focusConcept.id]:[]};$('submit').disabled=true;$('status').textContent='Processing bounded request…';
  try{const route=canExecute?'/api/v1/query/execute':'/api/v1/query/plan';
  const response=await fetch(route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
- const data=await response.json();if(!response.ok)throw Error(data.error||('HTTP '+response.status));
+ const data=await response.json();if(token!==queryToken)return;if(!response.ok)throw Error(data.error||('HTTP '+response.status));
  if(!canExecute){displayItems('direct',[]);displayItems('concept',[]);displayItems('overlap',[]);$('status').textContent='Plan generated; execution not configured.';$('details').textContent=JSON.stringify(data,null,2);return;}
  const rows=data.results||[];displayItems('direct',rows.filter(x=>x.tracks?.includes('direct')&&!x.tracks?.includes('concept')));displayItems('concept',rows.filter(x=>x.tracks?.includes('concept')&&!x.tracks?.includes('direct')));displayItems('overlap',rows.filter(x=>x.tracks?.includes('concept')&&x.tracks?.includes('direct')));
  await renderObservedGraph(rows);
+ if(token!==queryToken)return;
  $('status').textContent='State: '+data.state+' · Unique observed: '+rows.length+' · Direct matches: '+(data.track_counts?.direct??0)+' · Concept matches: '+(data.track_counts?.concept??0);
  $('details').textContent=JSON.stringify({failures:data.failures,warnings:data.warnings,track_counts:data.track_counts,scope:data.filter_scope,before_filters:data.before_filters,after_filters:data.after_filters,groups:data.groups,coverage:data.coverage},null,2);
  const external=$('external');external.replaceChildren();
  for(const x of data.external_results||[]){const article=document.createElement('article');article.className='item';const strong=document.createElement('strong');strong.textContent=x.title;const p=document.createElement('div');p.textContent=x.url+' · '+(x.engines||[]).join(', ');article.append(strong,p);external.append(article)}
  if(!(data.external_results||[]).length){external.textContent='No web observations returned. A failed or disabled adapter does not establish absence.'}
- }catch(e){$('status').textContent='Query failed: '+e.message;$('details').textContent='No absence inference can be drawn from this failure.';}
- finally{$('submit').disabled=false;}
+ }catch(e){if(token!==queryToken)return;clearQueryEvidence('Current query failed; prior evidence cleared. No absence inference can be drawn from this failure.');$('status').textContent='Query failed: '+e.message;$('details').textContent='No absence inference can be drawn from this failure.';}
+ finally{if(token===queryToken)$('submit').disabled=false;}
 });
 // The graph is read-only and uses only a local, digest-pinned provisional projection.
 let conceptCatalog=null,focusConcept=null;
@@ -149,6 +156,7 @@ async function renderObservedGraph(rows){
  }catch(e){if(token===observedToken)status.textContent='Observed evidence graph unavailable: '+e.message+'; no concept-absence inference is possible.';}
 }
 async function loadNativeFacets(){
+ const token=++facetToken;
  const status=$('native-facet-status'),node=$('native-facet-data');node.replaceChildren();
  if(!canExecute){status.textContent='Bitmagnet target is not configured.';return;}
  if($('minseeders').value!==''||$('minleechers').value!==''||$('adult').value!=='any'){
@@ -158,7 +166,7 @@ async function loadNativeFacets(){
  const filters={languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[]};
  try{
   const r=await fetch('/api/v1/query/facets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:$('query').value,filters,groups:['contentType','language','genre']})});
-  const x=await r.json();if(!r.ok)throw Error(x.error||'native aggregation failed');
+  const x=await r.json();if(token!==facetToken)return;if(!r.ok)throw Error(x.error||'native aggregation failed');
   status.textContent='Native query total: '+x.total_count+(x.total_count_is_estimate?' (estimate)':' (reported exact)')+'. These are source metadata aggregates, not CPE semantic counts.';
   for(const [group,buckets] of Object.entries(x.groups||{})){
    const h=document.createElement('h3');h.textContent=group;node.append(h);
@@ -166,7 +174,7 @@ async function loadNativeFacets(){
     const li=document.createElement('li');li.textContent=b.label+': '+b.count+(b.is_estimate?' (estimate)':'');ol.append(li);
    }node.append(ol);
   }
- }catch(e){status.textContent='Native aggregate unavailable: '+e.message+'; no absence inference.';}
+ }catch(e){if(token===facetToken)status.textContent='Native aggregate unavailable: '+e.message+'; no absence inference.';}
 }
 $('native-facet-button').addEventListener('click',loadNativeFacets);
 function svgElem(tag,attrs){const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
@@ -221,6 +229,7 @@ function buildSweepRequest(){
  filters:{languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[]}};
 }
 async function sweepAction(execute){
+ const token=++sweepToken,displayToken=++sweepDisplayToken;
  const status=$('sweep-status'),details=$('sweep-details'),btn=$('sweep-run'),preview=$('sweep-plan');
  let clientDeadline;
  btn.disabled=true;preview.disabled=true;details.textContent='';
@@ -230,23 +239,25 @@ async function sweepAction(execute){
   status.textContent=execute?'Executing permitted bounded sweep…':'Preparing bounded sweep plan…';
   const path=execute?'/api/v1/sweeps/execute':'/api/v1/sweeps/plan';
   const controller=new AbortController();
-  clientDeadline=setTimeout(()=>controller.abort(),65000);
+  clientDeadline=setTimeout(()=>controller.abort(),80000);
   const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req),signal:controller.signal});
-  const data=await res.json();if(!res.ok)throw Error(data.error||'sweep request refused');
+  const data=await res.json();if(token!==sweepToken||displayToken!==sweepDisplayToken)return;if(!res.ok)throw Error(data.error||'sweep request refused');
   status.textContent=execute?'Sweep state: '+data.state+' · local read-only and candidate evidence only':'Plan ready; '+data.bitmagnet_queries.length+' Bitmagnet / '+data.searxng_queries.length+' SearXNG queries';
   details.textContent=JSON.stringify(data,null,2);
- }catch(e){status.textContent='Sweep blocked, canceled, or failed: '+e.message+'; no absence conclusion or automatic retry.'}
- finally{clearTimeout(clientDeadline);btn.disabled=false;preview.disabled=false}
+ }catch(e){if(token===sweepToken&&displayToken===sweepDisplayToken)status.textContent='Sweep blocked, canceled, or failed: '+e.message+'; no absence conclusion or automatic retry.'}
+ finally{clearTimeout(clientDeadline);if(token===sweepToken){btn.disabled=false;preview.disabled=false}}
 }
 $('sweep-plan').addEventListener('click',()=>sweepAction(false));
 $('sweep-run').addEventListener('click',()=>sweepAction(true));
 $('sweep-limits').addEventListener('click',async()=>{
+ const token=++limitsToken,displayToken=++sweepDisplayToken;
+ $('sweep-status').textContent='Reading local sweep limits…';
  try{
-  const res=await fetch('/api/v1/sweeps/limits');const data=await res.json();
+  const res=await fetch('/api/v1/sweeps/limits');const data=await res.json();if(token!==limitsToken||displayToken!==sweepDisplayToken)return;
   if(!res.ok)throw Error(data.error||'limits unavailable');
   $('sweep-status').textContent='SearXNG JSON budget: '+data.remaining_searxng_json_requests+'/'+data.max_searxng_json_requests_per_hour+' remaining in current local window · cooldown: '+data.searxng_cooldown_seconds+'s · sweep deadline: '+data.sweep_deadline_seconds+'s · caller wait: '+data.client_timeout_seconds+'s · active sweep cap: '+data.max_concurrent_sweeps+' · external sweep admitted: '+String(data.searxng_sweep_admitted);
   $('sweep-details').textContent=JSON.stringify(data,null,2);
- }catch(e){$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
+ }catch(e){if(token===limitsToken&&displayToken===sweepDisplayToken)$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
 });
 
 capabilities();loadCatalog();
