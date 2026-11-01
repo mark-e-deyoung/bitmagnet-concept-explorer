@@ -76,7 +76,7 @@ func previewSweepDiscovery(input SweepDiscoveryRequest) (SweepDiscoveryDraft, er
 	if input.SnapshotDigest != "" && !shaEvidenceRef(input.SnapshotDigest) {
 		return SweepDiscoveryDraft{}, errors.New("invalid CPE research projection digest")
 	}
-	seen := map[string]bool{}
+	seen := map[string]string{}
 	ancestries := map[string]bool{}
 	clean := []SweepDiscoveryEvidence{}
 	for _, v := range input.Evidence {
@@ -87,10 +87,13 @@ func previewSweepDiscovery(input SweepDiscoveryRequest) (SweepDiscoveryDraft, er
 			return SweepDiscoveryDraft{}, errors.New("raw source content or invalid ancestry ref rejected")
 		}
 		key := v.Source + "\x00" + v.EvidenceRef
-		if seen[key] {
+		if priorAncestry, ok := seen[key]; ok {
+			if priorAncestry != v.AncestryRef {
+				return SweepDiscoveryDraft{}, errors.New("conflicting ancestry for duplicate source evidence")
+			}
 			continue
 		}
-		seen[key] = true
+		seen[key] = v.AncestryRef
 		ancestries[v.AncestryRef] = true
 		clean = append(clean, v)
 	}
@@ -103,20 +106,23 @@ func previewSweepDiscovery(input SweepDiscoveryRequest) (SweepDiscoveryDraft, er
 		}
 		return clean[i].EvidenceRef < clean[j].EvidenceRef
 	})
-	// Identity includes the accepted/current snapshot reference supplied by caller,
-	// language, concept target and complete normalized source ancestry. Stable replay.
+	// Research-v1 identity includes the supplied snapshot reference, language,
+	// concept target and normalized source ancestry. Exact duplicate evidence is
+	// idempotent; conflicting ancestry for one source/evidence ref is rejected
+	// above rather than resolved by input order.
 	canonical, _ := json.Marshal(struct {
+		Version    string                   `json:"version"`
 		Kind       string                   `json:"kind"`
 		Label      string                   `json:"label"`
 		Language   string                   `json:"language"`
 		ConceptID  string                   `json:"concept_id"`
 		Projection string                   `json:"projection"`
 		Evidence   []SweepDiscoveryEvidence `json:"evidence"`
-	}{input.Kind, strings.TrimSpace(input.CandidateLabel), strings.ToLower(input.Language), input.ConceptID, input.SnapshotDigest, clean})
+	}{"cpe-discovery-proposal-research-v1", input.Kind, strings.TrimSpace(input.CandidateLabel), strings.ToLower(input.Language), input.ConceptID, input.SnapshotDigest, clean})
 	digest := sha256.Sum256(canonical)
 	warnings := []string{"Digest-only evidence does not verify that a source observation is authentic or semantically correct", "Duplicated search engines or same-origin pages do not add independent corroboration", "Local research preview only: CPE #202 independent review and explicit CPE authority are required for any update"}
 	return SweepDiscoveryDraft{
-		SchemaVersion: "cpe-discovery-proposal-research-v0", ProposalID: "bce-sweep-" + hex.EncodeToString(digest[:]),
+		SchemaVersion: "cpe-discovery-proposal-research-v1", ProposalID: "bce-sweep-v1-" + hex.EncodeToString(digest[:]),
 		Kind: input.Kind, CandidateLabel: strings.TrimSpace(input.CandidateLabel),
 		Language: strings.ToLower(input.Language), ConceptID: input.ConceptID,
 		ProjectionDigest: input.SnapshotDigest, Evidence: clean, DistinctAncestryCount: len(ancestries),
