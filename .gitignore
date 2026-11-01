@@ -1,3 +1,7 @@
 /bce
 *.test
 coverage.out
+scratch/
+build/
+node_modules/
+package-lock.json
