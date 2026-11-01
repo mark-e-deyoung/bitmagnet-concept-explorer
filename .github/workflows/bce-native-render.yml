@@ -1,0 +1,113 @@
+name: Public TrueNAS candidate native source render
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "ix-dev/community/bitmagnet-concept-explorer/**"
+      - ".github/workflows/bce-native-render.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bce-native-render-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify candidate source head
+        run: |
+          git rev-parse HEAD
+          git status --short
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: truenas/apps
+          ref: 77058ecb5b28199f35150912cacb13283a6fb244
+          path: truenas-apps
+          persist-credentials: false
+      - name: Copy only public candidate into exact upstream source tree
+        run: |
+          cp -a ix-dev/community/bitmagnet-concept-explorer truenas-apps/ix-dev/community/
+      - name: Render with upstream catalog renderer, never deploy
+        working-directory: truenas-apps
+        run: |
+          python3 -m venv /tmp/bce-render-venv
+          /tmp/bce-render-venv/bin/python -m pip install --disable-pip-version-check --quiet pyyaml
+          /tmp/bce-render-venv/bin/python .github/scripts/ci.py \
+            --app bitmagnet-concept-explorer \
+            --train community \
+            --test-file basic-values.yaml \
+            --render-only=True --skip-metadata
+      - name: Verify materialized source contract, not runtime deployment
+        working-directory: truenas-apps
+        run: |
+          /tmp/bce-render-venv/bin/python - <<'PY'
+          import pathlib, yaml
+          path = pathlib.Path("ix-dev/community/bitmagnet-concept-explorer/templates/rendered/docker-compose.yaml")
+          obj = yaml.safe_load(path.read_text())
+          if not isinstance(obj, dict) or not isinstance(obj.get("services"), dict):
+              raise SystemExit("renderer emitted no Compose services")
+          if len(obj["services"]) != 1:
+              raise SystemExit("unexpected service count")
+          name, svc = next(iter(obj["services"].items()))
+          print("source-only rendered service:", name)
+          print("resource contract:", svc.get("deploy", {}).get("resources"))
+          print("ports contract:", svc.get("ports"), "expose:", svc.get("expose"))
+          if svc.get("ports"):
+              raise SystemExit("default exposed mode unexpectedly published a host port")
+          if "3086/tcp" not in (svc.get("expose") or []):
+              raise SystemExit("default exposed mode must produce container-only expose")
+          if not svc.get("read_only") or svc.get("privileged"):
+              raise SystemExit("candidate lost nonroot/read-only protection")
+          resources = svc.get("deploy", {}).get("resources", {}).get("limits", {})
+          if str(resources.get("cpus")) not in ("2", "2.0") or resources.get("memory") != "1024M":
+              raise SystemExit("pinned iX library did not enforce fixture CPU/RAM controls")
+          env = svc.get("environment", {})
+          if isinstance(env, list):
+              env = dict(item.split("=",1) for item in env)
+          if env.get("BCE_LISTEN") != "0.0.0.0:3086":
+              raise SystemExit("unexpected BCE listener")
+          if env.get("BCE_AUTH_USER") != "fixture-user":
+              raise SystemExit("lost authentication configuration")
+          print("RENDER_SOURCE_ONLY, no product pull, TrueNAS installation, or F0-F5 qualification")
+          PY
+
+      - name: Render operator-selected published loopback port, never deploy
+        working-directory: truenas-apps
+        run: |
+          /tmp/bce-render-venv/bin/python .github/scripts/ci.py \
+            --app bitmagnet-concept-explorer \
+            --train community \
+            --test-file loopback-published-values.yaml \
+            --render-only=True --skip-metadata
+          /tmp/bce-render-venv/bin/python - <<'PY'
+          import pathlib, yaml
+          path = pathlib.Path("ix-dev/community/bitmagnet-concept-explorer/templates/rendered/docker-compose.yaml")
+          obj = yaml.safe_load(path.read_text())
+          name, svc = next(iter(obj["services"].items()))
+          ports = svc.get("ports") or []
+          print("published loopback source-only:", name, ports)
+          if not ports:
+              raise SystemExit("explicit published mode failed to create a host binding")
+          for item in ports:
+              if isinstance(item, dict):
+                  host_ip = item.get("host_ip")
+                  published = str(item.get("published"))
+                  target = str(item.get("target"))
+                  if (host_ip, published, target) != ("127.0.0.1", "3086", "3086"):
+                      raise SystemExit("published mode did not fail closed to loopback")
+              else:
+                  if not str(item).startswith("127.0.0.1:3086:3086"):
+                      raise SystemExit("unexpected published port contract")
+          if (svc.get("deploy") or {}).get("resources", {}).get("limits", {}).get("memory") != "1024M":
+              raise SystemExit("published mode lost memory limits")
+          print("PUBLISHED_SOURCE_ONLY; no TrueNAS deployment, network/TLS or F0-F5 qualification")
+          PY

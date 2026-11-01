@@ -4,7 +4,7 @@ groups:
   - name: Bitmagnet Integration
     description: Optional read-only Bitmagnet endpoint.
   - name: Network Configuration
-    description: Web interface port. Bind to loopback by default; only change host IP and exposure for a trusted TLS-terminating reverse proxy.
+    description: Container-only exposure is the default. Host publishing is opt-in and defaults to 127.0.0.1; remote Basic Auth requires TLS termination.
   - name: Resources Configuration
     description: CPU and memory limits.
 
@@ -61,7 +61,9 @@ questions:
                   default: exposed
                   enum:
                     - value: exposed
-                      description: Expose ONLY on the selected trusted host IP; for remote access require TLS termination before Basic Auth.
+                      description: Container-only TCP exposure; no host port is published. Use a trusted same-network reverse proxy.
+                    - value: published
+                      description: Explicit host port binding to selected IPs (defaults to loopback); remote Basic Auth requires a TLS-terminating reverse proxy.
                     - value: ""
                       description: Do not expose the port.
               - variable: port_number
