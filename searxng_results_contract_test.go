@@ -9,9 +9,9 @@ import (
 
 func TestSearXNGRequiresResultsArrayOnHTTP200(t *testing.T) {
 	for _, tc := range []struct {
-		name	string
-		body	string
-		invalid	bool
+		name    string
+		body    string
+		invalid bool
 	}{
 		{name: "missing-results", body: `{"suggestions":["unsafe-to-accept-without-results"]}`, invalid: true},
 		{name: "null-results", body: `{"results":null}`, invalid: true},
