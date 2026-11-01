@@ -5,6 +5,7 @@ async function open(page){
  const errors=[];
  page.on('pageerror',err=>errors.push(err.message));
  await page.goto('/',{waitUntil:'domcontentloaded'});
+ await page.addStyleTag({content:'html{scroll-behavior:auto!important}'});
  await expect(page.locator('#concept-list button')).toHaveCount(2);
  return errors;
 }
@@ -21,6 +22,7 @@ test('real-source-shaped synthetic journey: search, selected graph, facet source
  await expect(node).toHaveAttribute('aria-pressed','true');
  await expect(node).toBeFocused();
  await expect(page.getByRole('textbox',{name:'Search phrase',exact:true})).toHaveValue('Edition');
+ await page.locator('#submit').scrollIntoViewIfNeeded();
  await page.locator('#submit').click();
  await expect(page.locator('#status')).toContainText('Unique observed: 2');
  await expect(page.locator('#status')).toHaveAttribute('data-ui-state','ready');
@@ -229,6 +231,7 @@ test('concept filter input, inclusion checkbox opt-in, and keyboard node selecti
 
 test('infohash clipboard copy success, fallback permission handling, and sovereign model hypotheses [hash-clipboard-copy-and-sovereign-hypotheses]',async({page})=>{
  await open(page);
+ await page.locator('#submit').scrollIntoViewIfNeeded();
  await page.locator('#submit').click();
  await expect(page.locator('#status')).toContainText('Unique observed: 2');
 
