@@ -78,7 +78,7 @@ await proveLateResponseCannotRestore(
 await proveLateResponseCannotRestore(
   'sweep', 'async function sweepAction(execute)', "\n$('sweep-plan').addEventListener", '',
 );
-const limitsHandler = extract("$('sweep-limits').addEventListener('click',async()=>{", '\n});\n\ncapabilities();');
+const limitsHandler = extract("$('sweep-limits').addEventListener('click',async()=>{", '\n});\n\n// Example phrases');
 {
   const elements = makeElements();
   const pending = deferred();
