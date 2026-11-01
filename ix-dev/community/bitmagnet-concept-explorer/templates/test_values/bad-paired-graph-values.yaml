@@ -1,0 +1,21 @@
+# PUBLIC NEGATIVE fixture: file path without a SHA must fail native render.
+explorer:
+  auth_user: fixture-user
+  auth_password: fixture-password-not-for-deployment
+bitmagnet:
+  graphql_url: ""
+network:
+  web_port:
+    bind_mode: exposed
+    port_number: 3086
+    host_ips:
+      - 127.0.0.1
+resources:
+  limits:
+    cpus: 2
+    memory: 1024
+research_data:
+  graph_file: /mnt/fixture/research/graph-preview.json
+  graph_sha256: ""
+  evidence_file: ""
+  evidence_sha256: ""

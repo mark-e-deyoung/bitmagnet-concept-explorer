@@ -7,6 +7,8 @@ groups:
     description: Container-only exposure is the default. Host publishing is opt-in and defaults to 127.0.0.1; remote Basic Auth requires TLS termination.
   - name: Resources Configuration
     description: CPU and memory limits.
+  - name: Optional Research Data
+    description: Read-only digest-pinned local source files, research only. No accepted CPE authority is implied.
 
 questions:
   - variable: explorer
@@ -86,6 +88,41 @@ questions:
                       schema:
                         type: string
                         required: true
+
+  - variable: research_data
+    label: Optional Research Data
+    group: Optional Research Data
+    schema:
+      type: dict
+      attrs:
+        - variable: graph_file
+          label: Local research concept graph file
+          description: Optional host file, mounted read-only. Must have matching SHA-256. Never an accepted CPE snapshot.
+          schema:
+            type: string
+            default: ""
+            required: false
+        - variable: graph_sha256
+          label: Research graph file SHA-256
+          description: Exact 64-hex byte digest of graph file. Blank when graph file is absent.
+          schema:
+            type: string
+            default: ""
+            required: false
+        - variable: evidence_file
+          label: Local public research evidence file
+          description: Optional attributed work/art catalog JSON, mounted read-only. Rights entries are source claims.
+          schema:
+            type: string
+            default: ""
+            required: false
+        - variable: evidence_sha256
+          label: Public research evidence SHA-256
+          description: Exact 64-hex digest of evidence file; blank when absent.
+          schema:
+            type: string
+            default: ""
+            required: false
 
   - variable: resources
     label: Resource Limits

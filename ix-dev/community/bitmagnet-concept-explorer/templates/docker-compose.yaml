@@ -9,6 +9,31 @@
 {% do app.environment.add_env("BCE_AUTH_USER", values.explorer.auth_user) %}
 {% do app.environment.add_env("BCE_AUTH_PASSWORD", values.explorer.auth_password) %}
 
+{# Optional data inputs are independently chosen and never accepted CPE authority. #}
+{% set research = values.get("research_data", {}) %}
+{% set graph_file = research.get("graph_file", "") | trim %}
+{% set graph_hash = research.get("graph_sha256", "") | trim %}
+{% set evidence_file = research.get("evidence_file", "") | trim %}
+{% set evidence_hash = research.get("evidence_sha256", "") | trim %}
+
+{% if (graph_file and not graph_hash) or (graph_hash and not graph_file) %}
+  {% do tpl.funcs.fail("CPE research graph file and SHA256 must be supplied together") %}
+{% endif %}
+{% if (evidence_file and not evidence_hash) or (evidence_hash and not evidence_file) %}
+  {% do tpl.funcs.fail("CPE public research evidence file and SHA256 must be supplied together") %}
+{% endif %}
+
+{% if graph_file %}
+  {% do app.add_storage("/opt/bce/research/graph-preview.json", {"type": "host_path", "read_only": True, "host_path_config": {"path": graph_file, "create_host_path": False}}) %}
+  {% do app.environment.add_env("BCE_CPE_GRAPH_FILE", "/opt/bce/research/graph-preview.json") %}
+  {% do app.environment.add_env("BCE_CPE_GRAPH_SHA256", graph_hash) %}
+{% endif %}
+{% if evidence_file %}
+  {% do app.add_storage("/opt/bce/research/catalog-evidence.json", {"type": "host_path", "read_only": True, "host_path_config": {"path": evidence_file, "create_host_path": False}}) %}
+  {% do app.environment.add_env("BCE_RESEARCH_EVIDENCE_FILE", "/opt/bce/research/catalog-evidence.json") %}
+  {% do app.environment.add_env("BCE_RESEARCH_EVIDENCE_SHA256", evidence_hash) %}
+{% endif %}
+
 {% if values.bitmagnet.graphql_url %}
   {% do app.environment.add_env("BCE_BITMAGNET_GRAPHQL", values.bitmagnet.graphql_url) %}
 {% endif %}
