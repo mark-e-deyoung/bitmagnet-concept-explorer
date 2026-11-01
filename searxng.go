@@ -218,6 +218,11 @@ func searchSearXNGDetailed(ctx context.Context, query, language string) (SearXNG
 	if e := decodeBoundedJSON(resp.Body, searXNGResponseMaxBytes, &payload); e != nil {
 		return SearXNGResearchEnvelope{}, errors.New("invalid, trailing or oversized SearXNG JSON")
 	}
+	// A valid empty result set is [], not a missing or null results field.
+	// Never convert malformed provider success into evidence of zero hits.
+	if payload.Results == nil {
+		return SearXNGResearchEnvelope{}, errors.New("SearXNG JSON missing required results array")
+	}
 	out := make([]ExternalObservation, 0, 20)
 	for _, item := range payload.Results {
 		if len(out) >= 20 {
