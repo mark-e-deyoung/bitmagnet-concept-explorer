@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"io"
 	"log"
 	"net"
@@ -48,6 +49,10 @@ type Plan struct {
 	ResolvedExpansions []Expansion `json:"resolved_expansions,omitempty"`
 	ProjectionSnapshot string      `json:"projection_snapshot,omitempty"`
 	ProjectionDigest   string      `json:"projection_digest,omitempty"`
+}
+
+func isPinnedProjectionProvenance(value string) bool {
+	return strings.HasPrefix(value, "digest-pinned-preview:") || strings.HasPrefix(value, "pinned-preview:")
 }
 
 func makePlan(q Request) (Plan, error) {
@@ -98,6 +103,11 @@ func makePlan(q Request) (Plan, error) {
 		if len([]rune(t)) > 512 || t == "" || len(e.Language) > 32 || len(e.ConceptID) > 256 || strings.TrimSpace(e.Provenance) == "" {
 			return Plan{}, errors.New("invalid expansion or missing provenance")
 		}
+		if isPinnedProjectionProvenance(e.Provenance) {
+			if err := validateBitmagnetSafeLiteral(e.Term); err != nil {
+				return Plan{}, fmt.Errorf("CPE-generated lexicalization is not admitted as a native FTS literal: %w", err)
+			}
+		}
 		if len(concept.Terms) >= 32 {
 			return Plan{}, errors.New("too many expansions (maximum 32)")
 		}
@@ -136,7 +146,7 @@ func handler() http.Handler {
 		writeJSON(w, 200, map[string]any{"version": "v0-provisional", "query_plan": true, "execute": bitmagnetEndpointConfigured(), "execution_target_validation": "configuration_only_no_live_probe", "discovery_preview": true, "metadata_facets": true, "native_facet_aggregations": true, "observed_result_lexical_graph": true, "historical_cpe_adapter_plan_preflight": true, "historical_cpe_fts_lower_preview": true, "multilingual_sweep_plan": true, "multilingual_sweep_execute": true, "multilingual_sweep_limits": true, "searxng_sweep_requires_private_operator_consent": true, "cpe_discovery_research_preview_only": true, "sort": true, "grouping": true, "concept_graph_configured": os.Getenv("BCE_CPE_GRAPH_FILE") != "" && os.Getenv("BCE_CPE_GRAPH_SHA256") != "", "searxng_configured": os.Getenv("BCE_SEARXNG_URL") != "", "cpe_write": false, "mutation": false, "sovereign_inference_configured": os.Getenv("BCE_SOVEREIGN_BASE_URL") != "" && os.Getenv("BCE_SOVEREIGN_MODEL") != "", "sovereign_inference_authority": "hypotheses_only_no_policy_or_cpe_write", "audiences": []string{"human", "automation", "agent"}})
 	})
 	mux.HandleFunc("POST /api/v1/query/plan", func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 16384)
+		r.Body = http.MaxBytesReader(w, r.Body, contracts.QueryJSONBytes)
 		defer r.Body.Close()
 		d := json.NewDecoder(r.Body)
 		d.DisallowUnknownFields()
@@ -226,7 +236,7 @@ func main() {
 	if err := validateListenAuth(*addr, user, password); err != nil {
 		log.Fatal(err)
 	}
-	server := &http.Server{Addr: *addr, Handler: authenticated(handler(), user, password), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 30 * time.Second}
+	server := &http.Server{Addr: *addr, Handler: authenticated(handler(), user, password), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: sweepHTTPWriteTimeout, IdleTimeout: 30 * time.Second}
 	log.Printf("concept explorer prototype listening on %s", *addr)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(fmt.Errorf("serve: %w", err))

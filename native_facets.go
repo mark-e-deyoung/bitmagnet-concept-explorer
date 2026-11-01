@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"io"
 	"net/http"
 	"sort"
@@ -186,7 +187,7 @@ func fetchNativeFacets(ctx context.Context, r FacetSearchRequest) (NativeFacetSu
 }
 func registerNativeFacets(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/query/facets", func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 8192)
+		r.Body = http.MaxBytesReader(w, r.Body, contracts.FacetJSONBytes)
 		defer r.Body.Close()
 		d := json.NewDecoder(r.Body)
 		d.DisallowUnknownFields()

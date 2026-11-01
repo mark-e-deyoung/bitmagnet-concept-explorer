@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"io"
 	"net/http"
 )
@@ -126,7 +127,7 @@ func preflightHistoricalCPEPlan(p HistoricalAdapterPlan) (CPEPreflightResult, er
 }
 func registerHistoricalCPEPreflight(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/cpe/adapter-plan/preflight", func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 32768)
+		r.Body = http.MaxBytesReader(w, r.Body, contracts.CPEPreflightJSONBytes)
 		defer r.Body.Close()
 		d := json.NewDecoder(r.Body)
 		d.DisallowUnknownFields()

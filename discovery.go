@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"io"
 	"net/http"
 	"strings"
@@ -56,7 +57,7 @@ func makeProposal(kind, label string, refs []string) (DiscoveryProposal, error) 
 }
 func registerProposals(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/discovery-proposals/preview", func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 8192)
+		r.Body = http.MaxBytesReader(w, r.Body, contracts.LegacyDiscoveryJSONBytes)
 		defer r.Body.Close()
 		var input struct {
 			Kind     string   `json:"proposal_kind"`

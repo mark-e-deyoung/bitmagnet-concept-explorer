@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/mark-e-deyoung/bitmagnet-concept-explorer/internal/contracts"
 	"io"
 	"net/http"
 	"sort"
@@ -132,7 +133,7 @@ func previewSweepDiscovery(input SweepDiscoveryRequest) (SweepDiscoveryDraft, er
 }
 func registerSweepDiscovery(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/sweeps/discovery/preview", func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, 16384)
+		r.Body = http.MaxBytesReader(w, r.Body, contracts.SweepDiscoveryJSONBytes)
 		defer r.Body.Close()
 		d := json.NewDecoder(r.Body)
 		d.DisallowUnknownFields()

@@ -222,18 +222,21 @@ function buildSweepRequest(){
 }
 async function sweepAction(execute){
  const status=$('sweep-status'),details=$('sweep-details'),btn=$('sweep-run'),preview=$('sweep-plan');
+ let clientDeadline;
  btn.disabled=true;preview.disabled=true;details.textContent='';
  try{
   const req=buildSweepRequest();
   if(req.include_searxng&&!req.external_consent)throw Error('External multilingual sweep requires a separate consent checkbox.');
   status.textContent=execute?'Executing permitted bounded sweep…':'Preparing bounded sweep plan…';
   const path=execute?'/api/v1/sweeps/execute':'/api/v1/sweeps/plan';
-  const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req)});
+  const controller=new AbortController();
+  clientDeadline=setTimeout(()=>controller.abort(),65000);
+  const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req),signal:controller.signal});
   const data=await res.json();if(!res.ok)throw Error(data.error||'sweep request refused');
   status.textContent=execute?'Sweep state: '+data.state+' · local read-only and candidate evidence only':'Plan ready; '+data.bitmagnet_queries.length+' Bitmagnet / '+data.searxng_queries.length+' SearXNG queries';
   details.textContent=JSON.stringify(data,null,2);
- }catch(e){status.textContent='Sweep blocked or failed: '+e.message+'; no absence conclusion or fallback.'}
- finally{btn.disabled=false;preview.disabled=false}
+ }catch(e){status.textContent='Sweep blocked, canceled, or failed: '+e.message+'; no absence conclusion or automatic retry.'}
+ finally{clearTimeout(clientDeadline);btn.disabled=false;preview.disabled=false}
 }
 $('sweep-plan').addEventListener('click',()=>sweepAction(false));
 $('sweep-run').addEventListener('click',()=>sweepAction(true));
@@ -241,7 +244,7 @@ $('sweep-limits').addEventListener('click',async()=>{
  try{
   const res=await fetch('/api/v1/sweeps/limits');const data=await res.json();
   if(!res.ok)throw Error(data.error||'limits unavailable');
-  $('sweep-status').textContent='SearXNG JSON budget: '+data.remaining_searxng_json_requests+'/'+data.max_searxng_json_requests_per_hour+' remaining in current local window · cooldown: '+data.searxng_cooldown_seconds+'s · external sweep admitted: '+String(data.searxng_sweep_admitted);
+  $('sweep-status').textContent='SearXNG JSON budget: '+data.remaining_searxng_json_requests+'/'+data.max_searxng_json_requests_per_hour+' remaining in current local window · cooldown: '+data.searxng_cooldown_seconds+'s · sweep deadline: '+data.sweep_deadline_seconds+'s · caller wait: '+data.client_timeout_seconds+'s · active sweep cap: '+data.max_concurrent_sweeps+' · external sweep admitted: '+String(data.searxng_sweep_admitted);
   $('sweep-details').textContent=JSON.stringify(data,null,2);
  }catch(e){$('sweep-status').textContent='Local provider limit status unavailable: '+e.message;}
 });
