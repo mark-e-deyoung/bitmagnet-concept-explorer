@@ -285,6 +285,14 @@ func TestSweepCLIEmitsSameJSONOutcome(t *testing.T) {
 		_, _ = io.WriteString(w, `{"results":[],"suggestions":[]}`)
 	}))
 	defer search.Close()
+	// A fresh synthetic server may reuse a loopback port from a closed fixture.
+	// Its quota starts empty; the second CLI request below still proves exhaustion.
+	endpoint := search.URL + "/search"
+	searXNGPace.Lock()
+	delete(searXNGPace.Next, endpoint)
+	delete(searXNGPace.BlockedUntil, endpoint)
+	delete(searXNGPace.Recent, endpoint)
+	searXNGPace.Unlock()
 	t.Setenv("BCE_SEARXNG_URL", search.URL+"/search")
 	t.Setenv("BCE_SEARXNG_SWEEP_ALLOWED", "true")
 	listener, err := net.Listen("tcp", "127.0.0.1:3086")

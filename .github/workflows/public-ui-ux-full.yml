@@ -29,6 +29,9 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.23.4"
       - name: Verify public hosted runner and Node >=22
         run: |
           git rev-parse HEAD
@@ -55,7 +58,7 @@ jobs:
             build/playwright-crossbrowser-report
             package-lock.json
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
 
   lighthouse:
     name: Lighthouse desktop/mobile navigation + interaction + snapshot
@@ -66,6 +69,9 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.23.4"
       - name: Verify public runner and Node >=22
         run: |
           git rev-parse HEAD
@@ -103,7 +109,7 @@ jobs:
             build/lighthouse
             package-lock.json
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
 
   macos-webkit-ios-simulator:
     name: macOS Apple WebKit + iOS Simulator Mobile Safari
@@ -114,6 +120,9 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.23.4"
       - name: Verify macOS runner, Apple Silicon, and Node >=22
         run: |
           sw_vers
@@ -143,4 +152,4 @@ jobs:
             build/playwright-crossbrowser-report
             build/ios-simulator
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
