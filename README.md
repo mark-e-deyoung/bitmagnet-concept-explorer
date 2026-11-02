@@ -45,4 +45,4 @@ Build the container from this directory with `Containerfile`. The builder image 
 
 The source package is under `ix-dev/community/bitmagnet-concept-explorer/`. It is a candidate for Foundry lifecycle qualification and official catalog review; it is not represented as accepted or listed in the official catalog.
 
-The current release is v0.0.1. See [CHANGELOG.md](CHANGELOG.md).
+The current published release is v0.0.2. `VERSION` identifies the untagged maintenance candidate under review; it is not a published release. See [CHANGELOG.md](CHANGELOG.md) and [maintenance qualification](docs/maintenance-release.md).

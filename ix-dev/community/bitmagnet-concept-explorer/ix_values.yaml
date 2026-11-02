@@ -1,7 +1,7 @@
 images:
   image:
     repository: ghcr.io/mark-e-deyoung/bitmagnet-concept-explorer
-    tag: 0.0.1
+    tag: 0.0.3-rc.1
 
 consts:
   container_name: bitmagnet-concept-explorer

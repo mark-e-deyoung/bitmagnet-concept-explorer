@@ -4,4 +4,5 @@ coverage.out
 scratch/
 build/
 node_modules/
-package-lock.json
+truenas-apps/
+__pycache__/
