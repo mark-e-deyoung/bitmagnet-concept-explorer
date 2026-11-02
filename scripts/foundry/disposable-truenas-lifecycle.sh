@@ -14,7 +14,8 @@ mkdir -p "${WORK_DIR}"
 PINNED_APPS_COMMIT="77058ecb5b28199f35150912cacb13283a6fb244"
 APPS_DIR="${REPO_ROOT}/truenas-apps"
 PROJECT_NAME="bce-foundry-f3-$$"
-CONTAINER_IMAGE="ghcr.io/mark-e-deyoung/bitmagnet-concept-explorer:0.0.1"
+RELEASE_VERSION="$(tr -d '\r\n' < "${REPO_ROOT}/VERSION")"
+CONTAINER_IMAGE="ghcr.io/mark-e-deyoung/bitmagnet-concept-explorer:${RELEASE_VERSION}"
 
 FIXTURE_USER="fixture-user"
 FIXTURE_PASS="fixture-password-not-for-deployment"
@@ -226,10 +227,8 @@ echo ""
 echo ">>> [Stage F2] Building and verifying local OCI container image"
 
 echo "Building ${CONTAINER_IMAGE} locally via Containerfile..."
-if ! docker build -f "${REPO_ROOT}/Containerfile" -t "${CONTAINER_IMAGE}" "${REPO_ROOT}"; then
-  echo "Retrying docker build with GO_BUILDER_IMAGE=golang:1.27.1-bookworm..."
-  docker build --build-arg GO_BUILDER_IMAGE=golang:1.27.1-bookworm -f "${REPO_ROOT}/Containerfile" -t "${CONTAINER_IMAGE}" "${REPO_ROOT}"
-fi
+python3 "${REPO_ROOT}/scripts/release/build_image.py" --image "${CONTAINER_IMAGE}" \
+  --evidence "${WORK_DIR}/artifact-identity.json"
 
 echo "Verifying local OCI container image metadata..."
 IMAGE_USER="$(docker image inspect "${CONTAINER_IMAGE}" --format '{{.Config.User}}')"

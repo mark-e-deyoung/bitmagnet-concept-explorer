@@ -1,8 +1,8 @@
-app_version: 0.0.1
+app_version: 0.0.3-rc.1
 capabilities: []
 categories:
 - utilities
-changelog_url: https://github.com/mark-e-deyoung/bitmagnet-concept-explorer/releases/tag/v0.0.1
+changelog_url: https://github.com/mark-e-deyoung/bitmagnet-concept-explorer/blob/main/CHANGELOG.md
 date_added: '2026-10-30'
 description: Read-only multilingual exploration of metadata indexed by Bitmagnet.
 home: https://github.com/mark-e-deyoung/bitmagnet-concept-explorer

@@ -5,6 +5,10 @@ FROM ${GO_BUILDER_IMAGE} AS build
 
 WORKDIR /src
 COPY . ./
+ARG RELEASE_VERSION
+ARG SOURCE_REVISION
+RUN test -n "${RELEASE_VERSION}" && test "${#SOURCE_REVISION}" -eq 40 \
+    && case "${SOURCE_REVISION}" in *[!0-9a-f]*) exit 1 ;; esac
 
 RUN GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly go test -count=1 ./... \
     && GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly go vet ./...
@@ -17,9 +21,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} \
 FROM scratch
 COPY --from=build /out/bce /bce
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-ARG SOURCE_REVISION=unknown
+ARG RELEASE_VERSION
+ARG SOURCE_REVISION
 LABEL org.opencontainers.image.title="Bitmagnet Concept Explorer" \
-      org.opencontainers.image.version="0.0.1" \
+      org.opencontainers.image.version="${RELEASE_VERSION}" \
       org.opencontainers.image.revision="${SOURCE_REVISION}" \
       org.opencontainers.image.source="https://github.com/mark-e-deyoung/bitmagnet-concept-explorer"
 USER 65532:65532

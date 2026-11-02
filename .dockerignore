@@ -1,0 +1,8 @@
+.git
+node_modules
+build
+scratch
+truenas-apps
+.act.secrets
+.env*
+**/__pycache__

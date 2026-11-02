@@ -34,9 +34,8 @@ jobs:
           git rev-parse HEAD
           node --version
           node -e 'if (Number(process.versions.node.split(".")[0])<22)process.exit(1)'
-      - name: Derive and verify npm dependency lock within disposable job
+      - name: Install reviewed npm dependency closure
         run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm ci --ignore-scripts --no-audit --no-fund
       - name: Install independent three-engine browser binaries
         run: npx playwright install --with-deps chromium firefox webkit
@@ -72,9 +71,8 @@ jobs:
           git rev-parse HEAD
           node --version
           node -e 'if (Number(process.versions.node.split(".")[0])<22)process.exit(1)'
-      - name: Generate verified npm dependency closure in disposable runner
+      - name: Install reviewed npm dependency closure
         run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm ci --ignore-scripts --no-audit --no-fund
       - name: Install pinned Playwright Chromium
         run: npx playwright install --with-deps chromium
@@ -122,9 +120,8 @@ jobs:
           uname -m
           node --version
           node -e 'if (Number(process.versions.node.split(".")[0])<22)process.exit(1)'
-      - name: Generate verified npm dependency closure in disposable runner
+      - name: Install reviewed npm dependency closure
         run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify UI control inventory manifest and drift gate
         run: npm run ux:manifest-check

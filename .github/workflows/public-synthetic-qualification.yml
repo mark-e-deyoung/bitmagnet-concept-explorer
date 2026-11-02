@@ -39,6 +39,8 @@ jobs:
           git rev-parse HEAD
       - name: Offline Go unit and race-independent tests
         run: go test -count=1 ./...
+      - name: Artifact identity negative controls
+        run: python3 -m unittest discover -s scripts/release -p 'test_*.py' -v
       - name: Vet and source-format contract
         run: |
           go vet ./...
@@ -102,7 +104,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Install reviewed browser test dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Install Chromium for real interaction and axe tests
         run: npx playwright install --with-deps chromium
       - name: Run two-viewport browser journeys, theme, axe and screenshot QA
