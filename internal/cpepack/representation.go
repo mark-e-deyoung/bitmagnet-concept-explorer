@@ -139,10 +139,22 @@ func validRepresentation(r RepresentationRef) error {
 	return nil
 }
 
-// MaterializeSubset is an offline read-only projection over the already
-// validated research-only Build projection. It does not fetch or verify bytes.
-// Public views reject all selected direct/transitive restricted representations.
-func MaterializeSubset(source Projection, selector SubsetSelector, refs []RepresentationRef, public bool) (SubsetView, error) {
+// BuildSubset enforces package content-digest, schema/identity, source pin and
+// public package-closure checks through the existing research-only Build gate
+// before selecting concepts or external example references. Git origin itself
+// is still only syntactically pinned (see cpepack R1 research limitations).
+func BuildSubset(packages []Package, lock Lock, packageRoots []string, selector SubsetSelector, refs []RepresentationRef, public bool) (SubsetView, error) {
+	source, err := Build(packages, lock, packageRoots, public)
+	if err != nil {
+		return SubsetView{}, err
+	}
+	return materializeSubset(source, selector, refs, public)
+}
+
+// materializeSubset is internal: callers cannot supply an unverified source
+// projection and claim it has passed the package lock. It neither fetches nor
+// verifies artifact bytes. Public output rejects private/restricted refs.
+func materializeSubset(source Projection, selector SubsetSelector, refs []RepresentationRef, public bool) (SubsetView, error) {
 	empty := SubsetView{}
 	if source.SchemaVersion != SnapshotVersion || source.Authority != "research_only" || !isHex(source.LockSHA256, 64) {
 		return empty, fail("unqualified_source_projection")
