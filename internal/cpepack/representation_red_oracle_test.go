@@ -46,6 +46,15 @@ func TestREDPublicRejectsURIInMetadataIdentifier(t *testing.T) {
 		t.Fatalf("PUBLIC_METADATA_LEAK: URI-shaped modality was exported: %q", b)
 	}
 }
+func TestREDPublicRejectsOpaqueMIMEParameters(t *testing.T) {
+	r := redRef()
+	r.MediaType = `application/json; source="https://example.invalid/private/blob"`
+	view, err := redFixture(r)
+	if err == nil {
+		b, _ := json.Marshal(view)
+		t.Fatalf("PUBLIC_METADATA_LEAK: opaque MIME parameter exported: %q", b)
+	}
+}
 func TestREDPublicRejectsUnboundedExternalMetadata(t *testing.T) {
 	r := redRef()
 	r.FormatVersion = strings.Repeat("X", 65536)
