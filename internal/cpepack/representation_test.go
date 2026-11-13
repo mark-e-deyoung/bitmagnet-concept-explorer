@@ -32,7 +32,7 @@ func sampleRefs() []RepresentationRef {
 }
 func buildTest(t *testing.T, selector SubsetSelector, refs []RepresentationRef, public bool) (SubsetView, error) {
 	t.Helper()
-	return MaterializeSubset(sampleSource(), selector, refs, public)
+	return materializeSubset(sampleSource(), selector, refs, public)
 }
 func expectErr(t *testing.T, want string, selector SubsetSelector, refs []RepresentationRef, public bool) {
 	t.Helper()
@@ -197,7 +197,7 @@ func TestAuthorityAndLockGate(t *testing.T) {
 	for _, mod := range []func(*Projection){func(p *Projection) { p.Authority = "accepted" }, func(p *Projection) { p.LockSHA256 = "" }, func(p *Projection) { p.SchemaVersion = "other" }} {
 		p := sampleSource()
 		mod(&p)
-		_, err := MaterializeSubset(p, sampleSelector("fixture:walk"), nil, true)
+		_, err := materializeSubset(p, sampleSelector("fixture:walk"), nil, true)
 		if err == nil || err.Error() != "unqualified_source_projection" {
 			t.Fatalf("admitted bad authority/lock: %v", err)
 		}
@@ -205,21 +205,21 @@ func TestAuthorityAndLockGate(t *testing.T) {
 }
 func TestStableAncestorSourceLockSelection(t *testing.T) {
 	orig := sampleSource()
-	a, e := MaterializeSubset(orig, sampleSelector("fixture:walk"), sampleRefs(), true)
+	a, e := materializeSubset(orig, sampleSelector("fixture:walk"), sampleRefs(), true)
 	if e != nil {
 		t.Fatal(e)
 	}
 	newer := sampleSource()
 	newer.LockSHA256 = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 	newer.Concepts = append(newer.Concepts, Concept{ID: "fixture:new", Definition: "unrelated"})
-	b, e := MaterializeSubset(newer, sampleSelector("fixture:walk"), sampleRefs(), true)
+	b, e := materializeSubset(newer, sampleSelector("fixture:walk"), sampleRefs(), true)
 	if e != nil {
 		t.Fatal(e)
 	}
 	if a.Digest == b.Digest {
 		t.Fatal("changed source release lock must change view digest")
 	}
-	replay, e := MaterializeSubset(orig, sampleSelector("fixture:walk"), sampleRefs(), true)
+	replay, e := materializeSubset(orig, sampleSelector("fixture:walk"), sampleRefs(), true)
 	if e != nil || replay.Digest != a.Digest {
 		t.Fatal("historical replay was altered")
 	}
