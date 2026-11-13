@@ -4,6 +4,7 @@ package cpepack
 
 import (
 	"encoding/json"
+	"mime"
 	"sort"
 	"strings"
 )
@@ -121,7 +122,13 @@ func validRepresentation(r RepresentationRef) error {
 	default:
 		return fail("invalid_representation_role")
 	}
-	if strings.TrimSpace(r.Modality) == "" || strings.TrimSpace(r.MediaType) == "" || strings.TrimSpace(r.FormatVersion) == "" || strings.TrimSpace(r.SourceRevision) == "" {
+	// These are bounded identifiers, not free-form URLs, local paths, or secrets.
+	// Keep provider locators/credentials out of public-safe reference metadata.
+	if !validID(r.Modality) || !validID(r.FormatVersion) || !validID(r.SourceRevision) {
+		return fail("incomplete_representation_metadata")
+	}
+	mediaType, params, err := mime.ParseMediaType(r.MediaType)
+	if len(r.MediaType) > 192 || err != nil || !strings.Contains(mediaType, "/") || len(params) != 0 || mediaType != r.MediaType {
 		return fail("incomplete_representation_metadata")
 	}
 	if r.Artifact.Kind != "oci" && r.Artifact.Kind != "content-manifest" && r.Artifact.Kind != "raw-sha256" {
