@@ -1,0 +1,82 @@
+[
+  {
+    "package_id": "test.private.domain",
+    "schema_version": "cpe-package-v0",
+    "identity_version": "cpe-package-id-v0",
+    "visibility": "private",
+    "authority": "research_only",
+    "repository": "https://github.com/example/synthetic-cpe-fixtures",
+    "commit_sha": "0123456789abcdef0123456789abcdef01234567",
+    "dependencies": [
+      "test.public.literature"
+    ],
+    "content_sha256": "2c65cea80c92f797670bf8ffa61140d80da8fcf8b24f3a953e69519ac1551aa2",
+    "concepts": [
+      {
+        "id": "private:work",
+        "definition": "A synthetic, non-public extension for closure testing."
+      }
+    ]
+  },
+  {
+    "package_id": "test.public.literature",
+    "schema_version": "cpe-package-v0",
+    "identity_version": "cpe-package-id-v0",
+    "visibility": "public",
+    "authority": "research_only",
+    "repository": "https://github.com/example/synthetic-cpe-fixtures",
+    "commit_sha": "0123456789abcdef0123456789abcdef01234567",
+    "dependencies": [
+      "test.public.base"
+    ],
+    "content_sha256": "90244a7e984b7fa33d9eb76301cef207e56094dc2678ec0083532514876fa727",
+    "concepts": [
+      {
+        "id": "public:literary-work",
+        "definition": "A literary work.",
+        "lexicalizations": [
+          {
+            "language": "de",
+            "term": "Werk"
+          },
+          {
+            "language": "en",
+            "term": "work"
+          }
+        ],
+        "relations": [
+          {
+            "predicate": "subclass_of",
+            "target_id": "public:work"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "package_id": "test.public.base",
+    "schema_version": "cpe-package-v0",
+    "identity_version": "cpe-package-id-v0",
+    "visibility": "public",
+    "authority": "research_only",
+    "repository": "https://github.com/example/synthetic-cpe-fixtures",
+    "commit_sha": "0123456789abcdef0123456789abcdef01234567",
+    "content_sha256": "4912d9b60d4e0881ee8939722253d410b1438c2f7afac424441fcf6f99211d19",
+    "concepts": [
+      {
+        "id": "public:work",
+        "definition": "A creative work.",
+        "lexicalizations": [
+          {
+            "language": "en",
+            "term": "work"
+          },
+          {
+            "language": "th",
+            "term": "งาน"
+          }
+        ]
+      }
+    ]
+  }
+]

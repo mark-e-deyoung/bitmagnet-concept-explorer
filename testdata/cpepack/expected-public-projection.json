@@ -1,0 +1,41 @@
+{
+  "schema_version": "cpe-readmodel-v0",
+  "authority": "research_only",
+  "lock_sha256": "9b0d9d3bb07c81089ba65b7386931f8d0b71f66ccfd82042db3e530a50a49583",
+  "concepts": [
+    {
+      "id": "public:literary-work",
+      "definition": "A literary work.",
+      "lexicalizations": [
+        {
+          "language": "de",
+          "term": "Werk"
+        },
+        {
+          "language": "en",
+          "term": "work"
+        }
+      ],
+      "relations": [
+        {
+          "predicate": "subclass_of",
+          "target_id": "public:work"
+        }
+      ]
+    },
+    {
+      "id": "public:work",
+      "definition": "A creative work.",
+      "lexicalizations": [
+        {
+          "language": "en",
+          "term": "work"
+        },
+        {
+          "language": "th",
+          "term": "งาน"
+        }
+      ]
+    }
+  ]
+}
