@@ -22,6 +22,11 @@ func read(path string, out any) error {
 	if e != nil || len(raw) > 2<<20 {
 		return fmt.Errorf("input too large or unreadable")
 	}
+	// Check exact bytes first: encoding/json permits duplicate keys and silently
+	// substitutes U+FFFD for invalid UTF-8; neither is admissible for a lock.
+	if e := strictJSONAdmission(raw); e != nil {
+		return e
+	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if e := dec.Decode(out); e != nil {
