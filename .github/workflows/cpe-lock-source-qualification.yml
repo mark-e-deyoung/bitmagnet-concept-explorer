@@ -105,3 +105,43 @@ jobs:
             --producer-revision 3e66404fd0188afd4c809441827f9fe3ea585cb2 \
             > "$RUNNER_TEMP/cpe-r36-capability-proposal.json"
           python3 -B -c 'import json,sys; p=json.load(open(sys.argv[1],encoding="utf-8")); assert p["proposal_kind"]=="coverage_gap"; assert p["mapping"]["classification"]=="KNOWN_CONCEPT_RETRIEVAL_MISS_NOT_ONTOLOGY_GAP"; assert p["authority"]=="RESEARCH_PROPOSAL_ONLY"' "$RUNNER_TEMP/cpe-r36-capability-proposal.json"
+      - name: R37 independent Go research proposal intake (public synthetic only)
+        env:
+          GOTOOLCHAIN: local
+          GOPROXY: "off"
+          GOSUMDB: "off"
+        run: |
+          set -euo pipefail
+          go test -count=2 ./cmd/cpeproposal
+          go test -race ./cmd/cpeproposal
+          go vet ./cmd/cpeproposal
+          GOOS=linux GOARCH=amd64 go build -o "$RUNNER_TEMP/cpeproposal-amd64" ./cmd/cpeproposal
+          GOOS=linux GOARCH=arm64 go build -o "$RUNNER_TEMP/cpeproposal-arm64" ./cmd/cpeproposal
+          test -s "$RUNNER_TEMP/cpeproposal-amd64"
+          test -s "$RUNNER_TEMP/cpeproposal-arm64"
+          go run ./cmd/cpepack \
+            -packages testdata/cpepack/packages.json \
+            -lock testdata/cpepack/lock.json \
+            -root test.public.literature > "$RUNNER_TEMP/cpe-r37-research-view.json"
+          expected_lock="$(python3 -B -c 'import json; print(json.load(open("testdata/cpepack/expected-public-projection.json",encoding="utf-8"))["lock_sha256"])')"
+          expected_bytes="$(sha256sum "$RUNNER_TEMP/cpe-r37-research-view.json" | cut -d ' ' -f 1)"
+          evidence_sha="$(printf '%s' 'original-synthetic-source-evidence' | sha256sum | cut -d ' ' -f 1)"
+          python3 -B cmd/cpepack/discovery_r36.py \
+            --snapshot "$RUNNER_TEMP/cpe-r37-research-view.json" \
+            --expected-lock-sha256 "$expected_lock" \
+            --expected-snapshot-sha256 "$expected_bytes" \
+            --concept-id public:literary-work --language th \
+            --observation-type native_source_term --term 'งานวรรณกรรม' \
+            --source-system fixture.public.lexical.source \
+            --evidence-sha256 "$evidence_sha" \
+            --producer-revision 3e66404fd0188afd4c809441827f9fe3ea585cb2 \
+            > "$RUNNER_TEMP/cpe-r37-python-proposal.json"
+          go run ./cmd/cpeproposal \
+            -file "$RUNNER_TEMP/cpe-r37-python-proposal.json" \
+            -expected-source-lock-sha256 "$expected_lock" \
+            -expected-snapshot-sha256 "$expected_bytes" \
+            -expected-producer-revision 3e66404fd0188afd4c809441827f9fe3ea585cb2 \
+            -expected-evidence-sha256 "$evidence_sha" \
+            -expected-source-system fixture.public.lexical.source \
+            > "$RUNNER_TEMP/cpe-r37-intake-verdict.json"
+          python3 -B -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); assert d["status"]=="VALID_RESEARCH_PROPOSAL_ONLY"; assert d["authority"]=="RESEARCH_ONLY"; assert d["disposition"]=="DEFER_INDEPENDENT_GROUNDING"; assert d["equivalence_status"]=="UNKNOWN"; assert d["independent_corroboration"]=="NOT_ESTABLISHED"; assert d["accepted_semantic_changes"]==0' "$RUNNER_TEMP/cpe-r37-intake-verdict.json"
