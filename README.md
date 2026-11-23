@@ -5,7 +5,7 @@ A read-only Go application for exploring metadata indexed by Bitmagnet. It provi
 ## Security and network behavior
 
 - Network-facing routes require Basic Auth. Set `BCE_AUTH_USER` and `BCE_AUTH_PASSWORD` together; the password must contain at least 16 bytes.
-- Basic Auth does not encrypt traffic. Keep the app unexposed or access it through a TLS-terminating reverse proxy. The TrueNAS package exposes the port only for inter-app access and does not offer direct host-port publishing.
+- Basic Auth does not encrypt traffic. Keep the app unexposed or access it through a TLS-terminating reverse proxy. The candidate TrueNAS app defaults to container-only exposure but offers explicit host-port publishing, defaulting to loopback 127.0.0.1. Remote access requires deliberate operator configuration and TLS termination; this source option is not proof of qualified ingress.
 - The optional Bitmagnet GraphQL endpoint must use a literal private or loopback IP address or localhost. The app performs read-only queries.
 - SearXNG is an explicit opt-in; selected query terms may be forwarded by its configured engines to third parties.
 - The app runs as UID/GID 65532 with a read-only root filesystem in the TrueNAS package.
@@ -22,7 +22,7 @@ sha256sum ./graph.json
 # Mount the directory read-only at /data and restart with both settings.
 ```
 
-When updating the projection, replace the versioned file and update its digest together, then restart the app. A mismatch fails closed. The current TrueNAS package does not expose a projection file mount or these settings, so it cannot yet load an operator-provided graph from the catalog UI. No graph is bundled as policy data. A usable CPE projection must first be published and accepted by the upstream Concept Policy Engine authority.
+When updating the projection, replace the versioned file and update its digest together, then restart the app. A mismatch fails closed. **The candidate TrueNAS source wizard already supports optional `research_data.graph_file` and `research_data.graph_sha256` inputs** (merged public PR #13). Its iX template mounts an existing operator-provided host file read-only at `/opt/bce/research/graph-preview.json` and passes the paired digest. It separately supports an optional pinned research-evidence file. Each file/digest pair is required together, and the source renderer refuses unpaired settings. The file must exist and be readable by container UID 65532; the wizard does not create it. Synthetic source-render testing is complete, but Foundry's native target lifecycle, actual TrueNAS permissions, and runtime graph read have not yet been accepted. No graph is bundled as policy data. A version-pinned research graph remains `pinned-preview-not-normative`; a normative CPE projection needs separate CPE authority and acceptance.
 
 ## Sweep time and admission
 

@@ -48,14 +48,20 @@ async function main() {
     }
   }
 
-  // Verify every referenced testcase_id exists in crossbrowser-matrix.spec.mjs
-  const missingTests = [];
-  for (const tid of referencedTestcases) {
-    // Check if the test file contains the testcase identifier
-    const hasIdentifier = testSuiteContent.includes(`[${tid}]`) || testSuiteContent.includes(tid);
-    if (!hasIdentifier) {
-      missingTests.push(tid);
-    }
+  // Do not count comments, fixture strings or function names as executable tests.
+  // Only a Playwright test("title [marker]", async (...) => ...) qualifies.
+  const executableTestcases = new Set(
+    [...testSuiteContent.matchAll(/test\(\s*['"](?:[^'"]|\\.)*\[([a-z0-9-]+)\]['"]\s*,\s*async\s*\(/g)]
+      .map(match => match[1])
+  );
+  const missingTests = [...referencedTestcases].filter(tid => !executableTestcases.has(tid));
+
+  const ids = controls.map(c => c.control_id);
+  if (new Set(ids).size !== ids.length) {
+    throw new Error("Duplicate control_id in inventory");
+  }
+  if (controls.some(c => !["static", "dynamic"].includes(c.type) || !c.selector)) {
+    throw new Error("Invalid inventory control type or empty selector");
   }
 
   if (missingTests.length > 0) {

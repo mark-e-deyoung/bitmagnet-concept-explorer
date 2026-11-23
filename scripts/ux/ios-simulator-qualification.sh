@@ -61,9 +61,26 @@ if [ "$HEALTHY" -ne 1 ]; then
   exit 1
 fi
 
-# Launch Mobile Safari in the iOS simulator pointing to our fixture server
-echo "==> Launching Mobile Safari in iOS Simulator..."
-xcrun simctl openurl "$DEVICE_UUID" "http://127.0.0.1:4175/"
+# On free hosted macOS a bootstatus PASS can precede Safari URL handling readiness.
+# openurl only navigates to our local fixture and is safe to repeat; preserve a hard
+# three-attempt budget and fail rather than claiming a screenshot proves navigation.
+echo "==> Launching Mobile Safari in iOS Simulator (bounded cold-boot retries)..."
+OPENED=0
+OPENURL_ATTEMPTS=0
+for attempt in 1 2 3; do
+  OPENURL_ATTEMPTS="$attempt"
+  if xcrun simctl openurl "$DEVICE_UUID" "http://127.0.0.1:4175/"; then
+    OPENED=1
+    echo "==> Mobile Safari openurl accepted on attempt $attempt"
+    break
+  fi
+  echo "==> Simulator openurl not ready on attempt $attempt; retrying localhost only"
+  sleep 5
+done
+if [ "$OPENED" -ne 1 ]; then
+  echo "==> ERROR: Simulator failed to accept the localhost Mobile Safari URL within three attempts"
+  exit 1
+fi
 
 # Wait for Mobile Safari to load page, execute JS, and complete initial DOM mount
 sleep 8
@@ -91,6 +108,7 @@ cat <<EOF > build/ios-simulator/receipt.json
   "captured_at": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
   "screenshot_file": "ios-safari-concept-explorer.png",
   "screenshot_bytes": $SIZE,
+  "openurl_attempts": $OPENURL_ATTEMPTS,
   "status": "QUALIFIED"
 }
 EOF
