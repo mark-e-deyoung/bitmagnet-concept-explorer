@@ -44,4 +44,6 @@ jobs:
           bash -n scripts/foundry/native-artifact-admission-preflight.sh
           docker compose version
       - name: Execute exact-source iX rendering and strict Foundry artifact gate
+        env:
+          BCE_EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: bash scripts/foundry/native-artifact-admission-preflight.sh
