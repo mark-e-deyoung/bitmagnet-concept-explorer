@@ -13,7 +13,7 @@ trap cleanup EXIT
 
 test "$(git -C "$APPS" rev-parse HEAD)" = "$UPSTREAM" || { echo "Wrong pinned iX source"; exit 1; }
 test "$(git -C "$FOUNDRY" rev-parse HEAD)" = "$FOUNDRY_SHA" || { echo "Wrong Foundry packager"; exit 1; }
-test "$(git -C "$ROOT" rev-parse HEAD)" = "$GITHUB_SHA" || { echo "Product source checkout mismatch"; exit 1; }
+test -n "$BCE_EXPECTED_SOURCE_SHA" && test "$(git -C "$ROOT" rev-parse HEAD)" = "$BCE_EXPECTED_SOURCE_SHA" || { echo "Product exact-head checkout mismatch"; exit 1; }
 cp -a "$ROOT/ix-dev/community/bitmagnet-concept-explorer" "$APPS/ix-dev/community/"
 APP="$APPS/ix-dev/community/bitmagnet-concept-explorer"
 python3 -m venv "$WORK/venv"
