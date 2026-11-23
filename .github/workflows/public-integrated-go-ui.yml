@@ -1,0 +1,72 @@
+name: Public integrated Go service, browser and agent CLI qualification
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "*.go"
+      - "cmd/**"
+      - "internal/**"
+      - "web/**"
+      - "fixtures/concept-graph.synthetic.json"
+      - "scripts/ux/integrated-service-fixture.mjs"
+      - "tests/ui/integrated-service.spec.mjs"
+      - "playwright.integrated-service.config.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/public-integrated-go-ui.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bce-integrated-go-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actual-server-browser-cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.27.1"
+          cache: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22.23.4"
+      - name: Compile exact source service and agent CLI
+        env:
+          GOTOOLCHAIN: local
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOFLAGS: "-mod=readonly"
+        run: |
+          git rev-parse HEAD
+          go build -trimpath -o /tmp/bce-integrated-service .
+          go build -trimpath -o /tmp/bce-integrated-cli ./cmd/bce
+      - name: Install reviewed browser dependencies
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Exercise actual Go server, embedded UI and API-CLI parity
+        env:
+          CI: "1"
+          BCE_SERVICE_BIN: /tmp/bce-integrated-service
+          BCE_CLI_BIN: /tmp/bce-integrated-cli
+        run: npx playwright test --config playwright.integrated-service.config.mjs
+      - name: Retain integrated browser and first-failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bce-integrated-service-ui-${{ github.run_id }}
+          path: |
+            build/playwright-integrated-service-results
+            build/playwright-integrated-service-report
+          retention-days: 14
+          if-no-files-found: ignore
