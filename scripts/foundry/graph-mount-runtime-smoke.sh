@@ -8,7 +8,11 @@ APP="$APPS/ix-dev/community/bitmagnet-concept-explorer"
 PIN="77058ecb5b28199f35150912cacb13283a6fb244"
 IMAGE="ghcr.io/mark-e-deyoung/bitmagnet-concept-explorer:0.0.1"
 WORK="$(mktemp -d "$RUNNER_TEMP/bce-graph-mount-XXXXXX")"
-PROJECT="bce-graph-mount-$$"
+PROJECT="bce-graph-mount-$"
+# TrueNAS ix-lib host-path validator admits /mnt/... only, not $RUNNER_TEMP.
+GRAPH_DIR="/mnt/bce-graph-fixture-$"
+GRAPH_FILE="$GRAPH_DIR/graph.json"
+export GRAPH_FILE
 COMPOSE="$WORK/rendered.yaml"
 BASE_URL="http://127.0.0.1:3086"
 export WORK APP
@@ -18,16 +22,18 @@ cleanup() {
   if [[ -f "$COMPOSE" ]]; then
     docker compose -p "$PROJECT" -f "$COMPOSE" down -v --remove-orphans >/dev/null 2>&1 || true
   fi
+  sudo rm -rf "$GRAPH_DIR"
   rm -rf "$WORK"
   exit "$code"
 }
 trap cleanup EXIT
 test "$(git -C "$APPS" rev-parse HEAD)" = "$PIN" || { echo "Pinned upstream mismatch" >&2; exit 1; }
 cp -a "$ROOT/ix-dev/community/bitmagnet-concept-explorer" "$APPS/ix-dev/community/"
-chmod 755 "$WORK"
-cp "$ROOT/fixtures/concept-graph.synthetic.json" "$WORK/graph.json"
-chmod 644 "$WORK/graph.json"
-export GRAPH_HASH="$(sha256sum "$WORK/graph.json" | cut -d' ' -f1)"
+sudo mkdir -p "$GRAPH_DIR"
+sudo cp "$ROOT/fixtures/concept-graph.synthetic.json" "$GRAPH_FILE"
+sudo chmod 755 "$GRAPH_DIR"
+sudo chmod 644 "$GRAPH_FILE"
+export GRAPH_HASH="$(sha256sum "$GRAPH_FILE" | cut -d' ' -f1)"
 python3 -m venv "$WORK/venv"
 "$WORK/venv/bin/python" -m pip install --disable-pip-version-check --quiet pyyaml
 "$WORK/venv/bin/python" - <<'PY'
@@ -39,7 +45,7 @@ src = base.read_text(encoding="utf-8")
 if "research_data:" in src:
     raise SystemExit("Unexpected research_data in immutable loopback fixture")
 out.write_text(src + "\nresearch_data:\n"
-  + "  graph_file: " + os.environ["WORK"] + "/graph.json\n"
+  + "  graph_file: " + os.environ["GRAPH_FILE"] + "\n"
   + "  graph_sha256: " + os.environ["GRAPH_HASH"] + "\n"
   + "  evidence_file: ''\n  evidence_sha256: ''\n", encoding="utf-8")
 PY
@@ -62,7 +68,7 @@ assert env["BCE_CPE_GRAPH_FILE"] == "/opt/bce/research/graph-preview.json"
 assert env["BCE_CPE_GRAPH_SHA256"] == os.environ["GRAPH_HASH"]
 assert svc.get("read_only") is True and str(svc["user"]) in ("65532", "65532:65532")
 mounts = [v for v in svc.get("volumes", []) if v.get("target") == env["BCE_CPE_GRAPH_FILE"]]
-assert len(mounts) == 1 and mounts[0]["source"] == os.environ["WORK"] + "/graph.json"
+assert len(mounts) == 1 and mounts[0]["source"] == os.environ["GRAPH_FILE"]
 assert mounts[0]["type"] == "bind" and mounts[0]["read_only"] is True
 ports = svc.get("ports", [])
 assert ports and all((p.get("host_ip") if isinstance(p, dict) else str(p).split(":")[0]) == "127.0.0.1" for p in ports)
