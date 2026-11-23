@@ -1,0 +1,31 @@
+name: Public temporary native Go formatter for provider concept RDTE
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "media_lookup.go"
+      - "media_tmdb.go"
+      - "media_jellyfin.go"
+      - "media_native_concepts_test.go"
+      - ".github/workflows/_provider_concept_gofmt_rdte.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  format-stdout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Native gofmt output receipts
+        run: |
+          for f in media_lookup.go media_tmdb.go media_jellyfin.go media_native_concepts_test.go; do
+            printf 'FMT_BEGIN:%s\n' "$f"
+            gofmt "$f" | base64 -w0
+            printf '\nFMT_END:%s\n' "$f"
+          done
