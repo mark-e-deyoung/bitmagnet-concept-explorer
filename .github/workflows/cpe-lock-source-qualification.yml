@@ -68,3 +68,40 @@ jobs:
             --expected-snapshot-sha256 "$expected_bytes" \
             --concept-id public:work --language th > "$RUNNER_TEMP/cpe-r35-th-query.json"
           python3 -B -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); assert d["status"]=="OBSERVED"; assert d["authority"]=="research_only"; assert d["lexicalizations"]==[{"language":"th","term":"งาน"}]' "$RUNNER_TEMP/cpe-r35-th-query.json"
+      - name: R36 bounded research proposal over independent pinned consumer (public synthetic only)
+        env:
+          GOTOOLCHAIN: local
+          GOPROXY: "off"
+          GOSUMDB: "off"
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s cmd/cpepack -p 'discovery_r36_test.py' -v
+          go run ./cmd/cpepack \
+            -packages testdata/cpepack/packages.json \
+            -lock testdata/cpepack/lock.json \
+            -root test.public.literature > "$RUNNER_TEMP/cpe-r36-original-research.json"
+          expected_lock="$(python3 -B -c 'import json; print(json.load(open("testdata/cpepack/expected-public-projection.json",encoding="utf-8"))["lock_sha256"])')"
+          expected_bytes="$(sha256sum "$RUNNER_TEMP/cpe-r36-original-research.json" | cut -d ' ' -f 1)"
+          evidence_sha="$(printf '%s' 'original-synthetic-source-evidence' | sha256sum | cut -d ' ' -f 1)"
+          python3 -B cmd/cpepack/discovery_r36.py \
+            --snapshot "$RUNNER_TEMP/cpe-r36-original-research.json" \
+            --expected-lock-sha256 "$expected_lock" \
+            --expected-snapshot-sha256 "$expected_bytes" \
+            --concept-id public:literary-work --language th \
+            --observation-type native_source_term --term 'งานวรรณกรรม' \
+            --source-system fixture.public.lexical.source \
+            --evidence-sha256 "$evidence_sha" \
+            --producer-revision 3e66404fd0188afd4c809441827f9fe3ea585cb2 \
+            > "$RUNNER_TEMP/cpe-r36-lexical-proposal.json"
+          python3 -B -c 'import json,sys; p=json.load(open(sys.argv[1],encoding="utf-8")); assert p["proposal_kind"]=="lexicalization_candidate"; assert p["authority"]=="RESEARCH_PROPOSAL_ONLY"; assert p["adjudication"]=="UNADJUDICATED"; assert p["mapping"]["equivalence_status"]=="UNKNOWN"; assert p["evidence"]["support_count"]==1; assert p["evidence"]["independent_corroboration"]=="NOT_ESTABLISHED"' "$RUNNER_TEMP/cpe-r36-lexical-proposal.json"
+          python3 -B cmd/cpepack/discovery_r36.py \
+            --snapshot "$RUNNER_TEMP/cpe-r36-original-research.json" \
+            --expected-lock-sha256 "$expected_lock" \
+            --expected-snapshot-sha256 "$expected_bytes" \
+            --concept-id public:work --language en \
+            --observation-type consumer_lookup_miss \
+            --source-system fixture.public.lexical.source \
+            --evidence-sha256 "$evidence_sha" \
+            --producer-revision 3e66404fd0188afd4c809441827f9fe3ea585cb2 \
+            > "$RUNNER_TEMP/cpe-r36-capability-proposal.json"
+          python3 -B -c 'import json,sys; p=json.load(open(sys.argv[1],encoding="utf-8")); assert p["proposal_kind"]=="coverage_gap"; assert p["mapping"]["classification"]=="KNOWN_CONCEPT_RETRIEVAL_MISS_NOT_ONTOLOGY_GAP"; assert p["authority"]=="RESEARCH_PROPOSAL_ONLY"' "$RUNNER_TEMP/cpe-r36-capability-proposal.json"
