@@ -47,3 +47,24 @@ jobs:
           GOOS=linux GOARCH=arm64 go build -o /tmp/cpepack-arm64 ./cmd/cpepack
           test -s /tmp/cpepack-amd64
           test -s /tmp/cpepack-arm64
+      - name: Independent read-only Python consumer parity (public synthetic only)
+        env:
+          GOTOOLCHAIN: local
+          GOPROXY: "off"
+          GOSUMDB: "off"
+        run: |
+          set -euo pipefail
+          python3 --version
+          python3 -B -m unittest discover -s cmd/cpepack -p 'consumer_r35_test.py' -v
+          go run ./cmd/cpepack \
+            -packages testdata/cpepack/packages.json \
+            -lock testdata/cpepack/lock.json \
+            -root test.public.literature > "$RUNNER_TEMP/cpe-r35-public-research-view.json"
+          expected_lock="$(python3 -B -c 'import json; print(json.load(open("testdata/cpepack/expected-public-projection.json",encoding="utf-8"))["lock_sha256"])')"
+          expected_bytes="$(sha256sum "$RUNNER_TEMP/cpe-r35-public-research-view.json" | cut -d ' ' -f 1)"
+          python3 -B cmd/cpepack/consumer_r35.py \
+            --snapshot "$RUNNER_TEMP/cpe-r35-public-research-view.json" \
+            --expected-lock-sha256 "$expected_lock" \
+            --expected-snapshot-sha256 "$expected_bytes" \
+            --concept-id public:work --language th > "$RUNNER_TEMP/cpe-r35-th-query.json"
+          python3 -B -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); assert d["status"]=="OBSERVED"; assert d["authority"]=="research_only"; assert d["lexicalizations"]==[{"language":"th","term":"งาน"}]' "$RUNNER_TEMP/cpe-r35-th-query.json"
