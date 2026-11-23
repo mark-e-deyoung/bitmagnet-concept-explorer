@@ -1,0 +1,53 @@
+name: Public pairwise Edge desktop and Android-style mobile UX
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "playwright.edge-mobile.config.mjs"
+      - ".github/workflows/public-edge-mobile-ux.yml"
+      - "web/**"
+      - "tests/ui/**"
+      - "scripts/ux/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bce-edge-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  edge-and-small-mobile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify source and install pinned test dependencies
+        run: |
+          git rev-parse HEAD
+          node --version
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install browsers in disposable public runner
+        run: npx playwright install --with-deps msedge chromium
+      - name: Verify inventory and source-shaped browser journeys
+        env:
+          CI: "1"
+        run: |
+          npm run ux:manifest-check
+          npx playwright test --config playwright.edge-mobile.config.mjs
+      - name: Retain screenshots, traces and reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bce-edge-mobile-${{ github.run_id }}
+          path: |
+            build/playwright-edge-mobile-results
+            build/playwright-edge-mobile-report
+          retention-days: 14
+          if-no-files-found: ignore
