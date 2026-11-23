@@ -125,7 +125,8 @@ func lookupJellyfin(ctx context.Context, client *http.Client, q MediaLookupReque
 					break
 				}
 			}
-			if existing != "" && existing != q.TMDbID {
+			if existing != q.TMDbID {
+				// An absent provider ID cannot establish ownership from a title.
 				mismatch = true
 			}
 			if existing == q.TMDbID {
@@ -140,7 +141,8 @@ func lookupJellyfin(ctx context.Context, client *http.Client, q MediaLookupReque
 					break
 				}
 			}
-			if existing != "" && existing != q.IMDbID {
+			if existing != q.IMDbID {
+				// Do not silently accept a same-title item when a known ID is missing.
 				mismatch = true
 			}
 			if existing == q.IMDbID {
