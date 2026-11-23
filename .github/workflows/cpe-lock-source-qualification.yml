@@ -145,12 +145,7 @@ jobs:
             -expected-source-system fixture.public.lexical.source \
             > "$RUNNER_TEMP/cpe-r37-intake-verdict.json"
           python3 -B -c 'import json,sys; d=json.load(open(sys.argv[1],encoding="utf-8")); assert d["status"]=="VALID_RESEARCH_PROPOSAL_ONLY"; assert d["authority"]=="RESEARCH_ONLY"; assert d["disposition"]=="DEFER_INDEPENDENT_GROUNDING"; assert d["equivalence_status"]=="UNKNOWN"; assert d["independent_corroboration"]=="NOT_ESTABLISHED"; assert d["accepted_semantic_changes"]==0' "$RUNNER_TEMP/cpe-r37-intake-verdict.json"
-      - name: R37 native gofmt custody (public source only)
+      - name: R37 native Go formatting gate (public source only)
         run: |
           set -euo pipefail
-          printf 'R37_GOFMT_MAIN_BEGIN\n'
-          gofmt cmd/cpeproposal/main.go | base64 -w0
-          printf '\nR37_GOFMT_MAIN_END\n'
-          printf 'R37_GOFMT_TEST_BEGIN\n'
-          gofmt cmd/cpeproposal/main_test.go | base64 -w0
-          printf '\nR37_GOFMT_TEST_END\n'
+          test -z "$(gofmt -l cmd/cpeproposal/main.go cmd/cpeproposal/main_test.go)"
