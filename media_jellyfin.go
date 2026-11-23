@@ -70,6 +70,15 @@ func lookupJellyfin(ctx context.Context, client *http.Client, q MediaLookupReque
 	var items jellyfinItems
 	var direct bool
 	switch {
+	case len(q.JellyfinGenres)>0:
+		params := url.Values{}
+		params.Set("Genres",strings.Join(q.JellyfinGenres,","))
+		params.Set("IncludeItemTypes","Movie,Series")
+		params.Set("Fields","ProviderIds,ProductionYear")
+		params.Set("Recursive","true")
+		params.Set("Limit","10")
+		state,err := readMediaJSON(ctx,client,endpoint+"/Items?"+params.Encode(),"Authorization",auth,&items)
+		if err!=nil || state!="ok" {p.State=state;return p}
 	case q.JellyfinItemID != "":
 		var item jellyfinItem
 		state, err := readMediaJSON(ctx, client, endpoint+"/Items/"+q.JellyfinItemID, "Authorization", auth, &item)
@@ -113,6 +122,7 @@ func lookupJellyfin(ctx context.Context, client *http.Client, q MediaLookupReque
 			continue
 		}
 		basis := "title_search_candidate_unconfirmed"
+		if len(q.JellyfinGenres)>0 { basis="source_native_genre_candidate_unmapped" }
 		if direct {
 			basis = "selected_local_item_detail_unconfirmed"
 		}
@@ -160,6 +170,10 @@ func lookupJellyfin(ctx context.Context, client *http.Client, q MediaLookupReque
 		p.Candidates = append(p.Candidates, jellyfinCandidate(item, "candidate", basis))
 	}
 	p.State = "candidates_need_identity_confirmation"
+	if len(q.JellyfinGenres)>0 {
+		p.State="provider_native_concept_results_unmapped"
+		p.Warnings=append(p.Warnings,"Local Jellyfin genre filter is source-native, not an accepted CPE concept mapping or full-library coverage")
+	}
 	if len(p.Candidates) == 0 {
 		p.State = "no_candidate_non_diagnostic"
 	}
