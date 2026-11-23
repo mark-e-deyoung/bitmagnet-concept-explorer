@@ -8,9 +8,10 @@ APP="$APPS/ix-dev/community/bitmagnet-concept-explorer"
 PIN="77058ecb5b28199f35150912cacb13283a6fb244"
 IMAGE="ghcr.io/mark-e-deyoung/bitmagnet-concept-explorer:0.0.1"
 WORK="$(mktemp -d "$RUNNER_TEMP/bce-graph-mount-XXXXXX")"
-PROJECT="bce-graph-mount-$"
+TOKEN="$(basename "$WORK" | tr "[:upper:]" "[:lower:]" | tr -cd "[:alnum:]")"
+PROJECT="bce-graph-mount-$TOKEN"
 # TrueNAS ix-lib host-path validator admits /mnt/... only, not $RUNNER_TEMP.
-GRAPH_DIR="/mnt/bce-graph-fixture-$"
+GRAPH_DIR="/mnt/bce-graph-fixture-$TOKEN"
 GRAPH_FILE="$GRAPH_DIR/graph.json"
 export GRAPH_FILE
 COMPOSE="$WORK/rendered.yaml"
