@@ -8,7 +8,11 @@ test("real Go UI retrieves synthetic Bitmagnet data without semantic promotion",
   expect(capability.execute).toBe(true);
   expect(capability.query_plan).toBe(true);
   await page.goto("/", {waitUntil: "domcontentloaded"});
-  await expect(page.locator("#concept-list button")).toHaveCount(7);
+  const catalog = await (await request.get("/api/v1/concepts")).json();
+  expect(catalog.concepts).toHaveLength(7);
+  // The human relationship view intentionally shows the selected focus neighborhood,
+  // not every node in the complete catalog. The root fixture has three outgoing edges.
+  await expect(page.locator("#concept-list button")).toHaveCount(4);
   await page.locator("#query").fill("Animation");
   await page.locator("#submit").click();
   await expect(page.locator("#status")).toHaveAttribute("data-ui-state", "ready");
