@@ -123,8 +123,9 @@ func TestJellyfinModernAuthorizationExactIDAndRelatedWithoutWrites(t *testing.T)
 			}
 			_, _ = w.Write([]byte(`{"Items":[
 				{"Id":"aaaaaaaaaaaa","Name":"Collision","Type":"Movie","ProductionYear":2020,"ProviderIds":{"Tmdb":"123"}},
-				{"Id":"bbbbbbbbbbbb","Name":"Collision","Type":"Movie","ProductionYear":2020,"ProviderIds":{"Tmdb":"456"}}
-			],"TotalRecordCount":2}`))
+				{"Id":"bbbbbbbbbbbb","Name":"Collision","Type":"Movie","ProductionYear":2020,"ProviderIds":{"Tmdb":"456"}},
+				{"Id":"dddddddddddd","Name":"Collision","Type":"Movie","ProductionYear":2020,"ProviderIds":{}}
+			],"TotalRecordCount":3}`))
 		case "/Items/aaaaaaaaaaaa":
 			_, _ = w.Write([]byte(`{"Id":"aaaaaaaaaaaa","Name":"Collision","Type":"Movie","ProductionYear":2020,"ProviderIds":{"Tmdb":"123"}}`))
 		case "/Items/aaaaaaaaaaaa/Similar":
