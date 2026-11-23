@@ -38,4 +38,27 @@
   {% do app.environment.add_env("BCE_BITMAGNET_GRAPHQL", values.bitmagnet.graphql_url) %}
 {% endif %}
 
+{# Optional owner-private credentials. Never invent passwords or a source origin. #}
+{% set media = values.get("media_lookup", {}) %}
+{% set jellyfin_url = media.get("jellyfin_base_url", "") | trim %}
+{% set jellyfin_token = media.get("jellyfin_token", "") %}
+{% set tmdb_token = media.get("tmdb_read_token", "") %}
+{% set feedback_key = media.get("feedback_hmac_key", "") %}
+{% if (jellyfin_url and not jellyfin_token) or (jellyfin_token and not jellyfin_url) %}
+  {% do tpl.funcs.fail("Jellyfin server URL and read token must be configured together") %}
+{% endif %}
+{% if feedback_key and feedback_key | length < 32 %}
+  {% do tpl.funcs.fail("Local CPE feedback HMAC key must contain at least 32 characters") %}
+{% endif %}
+{% if jellyfin_url %}
+  {% do app.environment.add_env("BCE_JELLYFIN_BASE_URL", jellyfin_url) %}
+  {% do app.environment.add_env("BCE_JELLYFIN_TOKEN", jellyfin_token) %}
+{% endif %}
+{% if tmdb_token %}
+  {% do app.environment.add_env("BCE_TMDB_READ_TOKEN", tmdb_token) %}
+{% endif %}
+{% if feedback_key %}
+  {% do app.environment.add_env("BCE_DISCOVERY_HMAC_KEY", feedback_key) %}
+{% endif %}
+
 {{ tpl.render() | tojson }}
