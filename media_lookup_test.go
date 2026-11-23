@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"strconv"
 	"sync/atomic"
 	"testing"
 )
@@ -107,7 +108,7 @@ func TestJellyfinModernAuthorizationExactIDAndRelatedWithoutWrites(t *testing.T)
 	var requests atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
 		requests.Add(1)
-		if r.Method!="GET" || r.Header.Get("Authorization")!="MediaBrowser Token=""+strings.Repeat("K",32)+""" {
+		if r.Method!="GET" || r.Header.Get("Authorization")!="MediaBrowser Token="+strconv.Quote(strings.Repeat("K",32)) {
 			t.Errorf("Jellyfin GET-only / modern authentication violated: %s",r.Method)
 		}
 		switch r.URL.Path {
