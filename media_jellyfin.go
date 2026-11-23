@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -45,10 +46,15 @@ func lookupJellyfin(ctx context.Context, client *http.Client, q MediaLookupReque
 		p.State = "unconfigured_local_library"
 		return p
 	}
-	if len(token) > 256 || len(token) < 16 || strings.ContainsAny(token, ""\
-") {
+	if len(token) > 256 || len(token) < 16 {
 		p.State = "invalid_server_token_configuration"
 		return p
+	}
+	for _, b := range token {
+		if b == 34 || b == 92 || b == 10 || b == 13 {
+			p.State = "invalid_server_token_configuration"
+			return p
+		}
 	}
 	baseURL, err := providerURL(base, false)
 	if err != nil {
@@ -56,7 +62,7 @@ func lookupJellyfin(ctx context.Context, client *http.Client, q MediaLookupReque
 		return p
 	}
 	endpoint := strings.TrimSuffix(baseURL.String(), "/")
-	auth := "MediaBrowser Token="" + token + """
+	auth := "MediaBrowser Token=" + strconv.Quote(token)
 	var items jellyfinItems
 	var direct bool
 	switch {
