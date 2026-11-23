@@ -84,11 +84,11 @@ func validateMediaLookup(q MediaLookupRequest) error {
 			return errors.New("invalid title control character")
 		}
 	}
-	nativeConcepts := len(q.TMDbGenreIDs)+len(q.TMDbKeywordIDs)+len(q.JellyfinGenres)
+	nativeConcepts := len(q.TMDbGenreIDs) + len(q.TMDbKeywordIDs) + len(q.JellyfinGenres)
 	if nativeConcepts > 6 || len(q.TMDbGenreIDs) > 3 || len(q.TMDbKeywordIDs) > 3 || len(q.JellyfinGenres) > 3 {
 		return errors.New("provider-native concept filter budget exceeded")
 	}
-	for _, id := range append(append([]int{},q.TMDbGenreIDs...),q.TMDbKeywordIDs...) {
+	for _, id := range append(append([]int{}, q.TMDbGenreIDs...), q.TMDbKeywordIDs...) {
 		if id < 1 || id > 1000000000 {
 			return errors.New("invalid provider-native numeric concept identifier")
 		}
@@ -104,10 +104,10 @@ func validateMediaLookup(q MediaLookupRequest) error {
 			}
 		}
 	}
-	if nativeConcepts > 0 && (strings.TrimSpace(q.Title)!="" || q.IMDbID!="" || q.TMDbID!="" || q.JellyfinItemID!="" || q.IncludeRelated || q.Year!=0) {
+	if nativeConcepts > 0 && (strings.TrimSpace(q.Title) != "" || q.IMDbID != "" || q.TMDbID != "" || q.JellyfinItemID != "" || q.IncludeRelated || q.Year != 0) {
 		return errors.New("provider-native concept discovery is exclusive of item identity/related lookup")
 	}
-	if strings.TrimSpace(q.Title) == "" && q.IMDbID == "" && q.TMDbID == "" && q.JellyfinItemID == "" && nativeConcepts==0 {
+	if strings.TrimSpace(q.Title) == "" && q.IMDbID == "" && q.TMDbID == "" && q.JellyfinItemID == "" && nativeConcepts == 0 {
 		return errors.New("title, explicit media identity or provider-native concept filter required")
 	}
 	if q.Year != 0 && (q.Year < 1888 || q.Year > 2100) {

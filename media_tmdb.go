@@ -86,14 +86,22 @@ func lookupTMDb(ctx context.Context, client *http.Client, q MediaLookupRequest) 
 	path := ""
 	params := url.Values{}
 	switch {
-	case len(q.TMDbGenreIDs)+len(q.TMDbKeywordIDs)>0:
+	case len(q.TMDbGenreIDs)+len(q.TMDbKeywordIDs) > 0:
 		path = "/discover/" + mode
 		genres, keywords := []string{}, []string{}
-		for _, id := range q.TMDbGenreIDs { genres=append(genres,strconv.Itoa(id)) }
-		for _, id := range q.TMDbKeywordIDs { keywords=append(keywords,strconv.Itoa(id)) }
-		if len(genres)>0 { params.Set("with_genres",strings.Join(genres,",")) }
-		if len(keywords)>0 { params.Set("with_keywords",strings.Join(keywords,",")) }
-		params.Set("page","1")
+		for _, id := range q.TMDbGenreIDs {
+			genres = append(genres, strconv.Itoa(id))
+		}
+		for _, id := range q.TMDbKeywordIDs {
+			keywords = append(keywords, strconv.Itoa(id))
+		}
+		if len(genres) > 0 {
+			params.Set("with_genres", strings.Join(genres, ","))
+		}
+		if len(keywords) > 0 {
+			params.Set("with_keywords", strings.Join(keywords, ","))
+		}
+		params.Set("page", "1")
 	case q.TMDbID != "":
 		path = "/" + mode + "/" + q.TMDbID
 	case q.IMDbID != "":
@@ -166,7 +174,9 @@ func lookupTMDb(ctx context.Context, client *http.Client, q MediaLookupRequest) 
 			break
 		}
 		basis := "title_candidate_unconfirmed"
-		if len(q.TMDbGenreIDs)+len(q.TMDbKeywordIDs)>0 { basis="provider_native_concept_candidate_unmapped" }
+		if len(q.TMDbGenreIDs)+len(q.TMDbKeywordIDs) > 0 {
+			basis = "provider_native_concept_candidate_unmapped"
+		}
 		if q.TMDbID != "" {
 			basis = "supplied_tmdb_id_detail_unconfirmed"
 		}
@@ -179,9 +189,9 @@ func lookupTMDb(ctx context.Context, client *http.Client, q MediaLookupRequest) 
 		p.Warnings = append(p.Warnings, "Candidate list is bounded; no match absence inference")
 	}
 	p.State = "candidates_need_identity_confirmation"
-	if len(q.TMDbGenreIDs)+len(q.TMDbKeywordIDs)>0 {
-		p.State="provider_native_concept_results_unmapped"
-		p.Warnings=append(p.Warnings,"Source-native TMDb genre/keyword filters do not establish any CPE concept mapping or full-catalog recall")
+	if len(q.TMDbGenreIDs)+len(q.TMDbKeywordIDs) > 0 {
+		p.State = "provider_native_concept_results_unmapped"
+		p.Warnings = append(p.Warnings, "Source-native TMDb genre/keyword filters do not establish any CPE concept mapping or full-catalog recall")
 	}
 	if len(p.Candidates) == 0 {
 		p.State = "no_candidate_non_diagnostic"
