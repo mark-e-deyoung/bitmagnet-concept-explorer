@@ -49,9 +49,9 @@ func TestFeedbackBindsActualBoundedMetadataWithPrivateStableAncestry(t *testing.
 	if e != nil {
 		t.Fatal(e)
 	}
-	if a.State != "local_review_export_only" || a.ObservationCount != 2 || a.Proposal == nil || a.Proposal.DistinctAncestryCount != 2 ||
+	if a.State != "local_review_export_only" || a.ObservationCount != 2 || a.Proposal == nil || a.Proposal.DistinctAncestryCount != 1 ||
 		a.Proposal.Authority != "not_accepted_not_transmitted" || a.Proposal.ProposalID != b.Proposal.ProposalID {
-		t.Fatalf("not a stable proposal %#v", a)
+		t.Fatalf("not a stable, source-ancestry-conservative proposal %#v", a)
 	}
 	data, _ := json.Marshal(a)
 	if bytes.Contains(data, []byte("PRIVATE FIXTURE")) || bytes.Contains(data, []byte("111111111111")) ||
