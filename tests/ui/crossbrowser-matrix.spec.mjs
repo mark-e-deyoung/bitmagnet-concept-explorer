@@ -297,3 +297,27 @@ test('secondary diagnostics disclosure, raw evidence inspection, and WCAG axe co
  expect(a11y.violations,a11y.violations.map(x=>x.id+' '+x.description).join('; ')).toEqual([]);
  await reflow(page,'diagnostics populated');
 });
+
+
+test('inventory DOM admission: selectors must resolve in their actual UI state [inventory-dom-admission]',async({page})=>{
+ // A manifest string existing in HTML is NOT evidence of a working DOM control.
+ // Exercise the same synthetic populated states as the user journeys, per engine.
+ await open(page);
+ const {readFileSync}=await import('node:fs');
+ const manifest=JSON.parse(readFileSync(new URL('./control-inventory.json',import.meta.url),'utf8'));
+ const missing=[];
+ for(const control of manifest.controls.filter(c=>c.type==='static')){
+   if(await page.locator(control.selector).count()===0) missing.push(control.control_id+':'+control.selector);
+ }
+ expect(missing,'All declared static controls must exist in the rendered browser DOM').toEqual([]);
+ await page.locator('#submit').click();
+ await expect(page.locator('#status')).toHaveAttribute('data-ui-state','ready');
+ await page.locator('#observed-list button').first().click();
+ await page.locator('#native-facet-button').click();
+ await expect(page.locator('#native-facet-data details.facet-group')).toHaveCount(3);
+ const absent=[];
+ for(const control of manifest.controls.filter(c=>c.type==='dynamic')){
+   if(await page.locator(control.selector).count()===0) absent.push(control.control_id+':'+control.selector);
+ }
+ expect(absent,'All declared dynamic controls must be visible in their owning populated journey').toEqual([]);
+});
