@@ -53,8 +53,8 @@ jobs:
       - name: Install reviewed browser dependencies
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
-          npx playwright install --with-deps chromium
-      - name: Exercise actual Go server, embedded UI and API-CLI parity
+          npx playwright install --with-deps chromium firefox webkit
+      - name: Exercise actual Go server across Chromium/Firefox/WebKit desktop and mobile, accessibility and CLI parity
         env:
           CI: "1"
           BCE_SERVICE_BIN: /tmp/bce-integrated-service
