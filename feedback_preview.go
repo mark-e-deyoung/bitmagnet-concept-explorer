@@ -75,7 +75,7 @@ func buildFeedbackPreview(ctx context.Context, input FeedbackPreviewRequest, key
 		Warnings: []string{
 			"Only bounded current-query Bitmagnet metadata was observed; no full-corpus coverage is implied",
 			"Keyed digests protect identifiers against trivial enumeration, not source authenticity or semantic correctness",
-			"Same-origin results are not independent semantic corroboration; proposal remains local and untransmitted",
+			"All unqualified Bitmagnet observations share one source-family ancestry; distinct hashes are not independent semantic corroboration",
 		},
 	}
 	if result.State != "complete" {
@@ -95,7 +95,7 @@ func buildFeedbackPreview(ctx context.Context, input FeedbackPreviewRequest, key
 		seen[obs.InfoHash] = true
 		ev = append(ev, SweepDiscoveryEvidence{
 			Source:      "bitmagnet",
-			AncestryRef: feedbackHMAC(key, "bce-bitmagnet-infohash-v1", obs.InfoHash),
+			AncestryRef: feedbackHMAC(key, "bce-bitmagnet-unqualified-source-family-v1", "bitmagnet"),
 			EvidenceRef: feedbackHMAC(key, "bce-bitmagnet-observation-v1", obs.InfoHash, obs.Title, input.Query.Query),
 		})
 		if len(ev) == 16 {
