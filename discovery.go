@@ -56,6 +56,7 @@ func makeProposal(kind, label string, refs []string) (DiscoveryProposal, error) 
 	return DiscoveryProposal{SchemaVersion: "research-v0", ProposalID: "bce-" + hex.EncodeToString(hash[:]), Producer: "bitmagnet-concept-explorer", Kind: kind, CandidateLabel: label, ConceptID: nil, SourceScope: "bitmagnet-metadata", Evidence: clean, Confidence: "unassessed", Uncertainty: "Retrieval observation only; independent semantic assessment required", Privacy: "evidence digests only; label requires local review before sharing", State: "local-export-only"}, nil
 }
 func registerProposals(mux *http.ServeMux) {
+	registerFeedbackPreview(mux)
 	mux.HandleFunc("POST /api/v1/discovery-proposals/preview", func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, contracts.LegacyDiscoveryJSONBytes)
 		defer r.Body.Close()
