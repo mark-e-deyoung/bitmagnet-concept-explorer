@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"strconv"
 )
 
 type jellyfinItem struct {
