@@ -49,3 +49,62 @@ test("no matching provisional terms remains separate from CPE acceptance", async
   expect(graph.concepts).toEqual([]);
   expect(graph.warnings.join(" ")).toContain("does not certify CPE semantic acceptance");
 });
+
+
+test("real Go plan API and CLI produce equal bounded read-only plans", async ({request, baseURL}) => {
+  const args = ["-server", baseURL, "-operation", "plan", "-query", "Animation"];
+  const planInput = {
+    query: "Animation", expansions: [], concept_ids: null,
+    filters: {adult_metadata: "any"}, sort: "info_hash", group_by: "none",
+    include_web: false
+  };
+  const api = await request.post("/api/v1/query/plan", {data: planInput});
+  expect(api.status(), await api.text()).toBe(200);
+  const apiPlan = await api.json();
+  const cli = spawnSync(process.env.BCE_CLI_BIN, args, {
+    encoding: "utf-8", timeout: 12000,
+    env: {...process.env, BCE_AUTH_USER: "", BCE_AUTH_PASSWORD: ""}
+  });
+  expect(cli.error).toBeUndefined();
+  expect(cli.status, cli.stderr).toBe(0);
+  const cliPlan = JSON.parse(cli.stdout);
+  expect(cliPlan).toEqual(apiPlan);
+  expect(apiPlan.read_only).toBe(true);
+  expect(apiPlan.tracks[0].name).toBe("direct");
+  expect(apiPlan.tracks[0].terms).toEqual(["Animation"]);
+  expect(apiPlan.warnings.join(" ")).toContain("not normative CPE authority");
+});
+
+test("real Go execute API and CLI retain equivalent observed results without web egress", async ({request, baseURL}) => {
+  const input = {
+    query: "Animation", expansions: [], concept_ids: null,
+    filters: {adult_metadata: "any"}, sort: "info_hash", group_by: "none",
+    include_web: false
+  };
+  const api = await request.post("/api/v1/query/execute", {data: input});
+  expect(api.status(), await api.text()).toBe(200);
+  const apiResult = await api.json();
+  const cli = spawnSync(process.env.BCE_CLI_BIN,
+    ["-server", baseURL, "-operation", "execute", "-query", "Animation"], {
+      encoding: "utf-8", timeout: 12000,
+      env: {...process.env, BCE_AUTH_USER: "", BCE_AUTH_PASSWORD: ""}
+    });
+  expect(cli.error).toBeUndefined();
+  expect(cli.status, cli.stderr).toBe(0);
+  const cliResult = JSON.parse(cli.stdout);
+  const stable = result => ({
+    state: result.state,
+    observations: (result.results || []).map(item => ({
+      title: item.title, info_hash: item.info_hash,
+      tracks: [...(item.tracks || [])].sort()
+    })).sort((a, b) => a.title.localeCompare(b.title)),
+    counts: result.track_counts
+  });
+  const a = stable(apiResult), b = stable(cliResult);
+  expect(a).toEqual(b);
+  expect(a.observations).toHaveLength(1);
+  expect(a.observations[0].title).toBe("Synthetic Integrated Animation Result");
+  expect(a.observations[0].tracks).toContain("direct");
+  expect(apiResult.external_results || []).toHaveLength(0);
+  expect(cliResult.external_results || []).toHaveLength(0);
+});
