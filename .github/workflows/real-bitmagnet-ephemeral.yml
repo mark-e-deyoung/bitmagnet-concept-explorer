@@ -3,6 +3,19 @@ name: Public real Bitmagnet ephemeral system rep
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    # Heavy real PostgreSQL+Bitmagnet+Gutenberg runtime costs minutes and network.
+    # Run on actual source/provider contracts, not unrelated docs/UX-only PRs.
+    paths:
+      - "*.go"
+      - "cmd/**"
+      - "internal/**"
+      - "web/**"
+      - "go.mod"
+      - "go.sum"
+      - ".github/scripts/real-bitmagnet-ephemeral-rep.sh"
+      - ".github/scripts/sample-public-gutenberg-catalog.py"
+      - ".github/workflows/real-bitmagnet-ephemeral.yml"
+      - "fixtures/public-bitmagnet-rep.ndjson"
   workflow_dispatch:
   # Scheduled only AFTER this draft is independently accepted onto main.
   # A schedule in an open PR branch is not active on GitHub.
