@@ -10,6 +10,7 @@ No third-party libraries or network calls.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -57,9 +58,11 @@ def _exact_fields(obj: Any, required: set[str], optional: set[str] = frozenset()
     return obj
 
 
-def read_projection(path: Path, expected_sha: str) -> dict[str, Any]:
+def read_projection(path: Path, expected_sha: str, expected_snapshot_sha: str) -> dict[str, Any]:
     if SHA256.fullmatch(expected_sha) is None:
         raise Rejected("INVALID_EXPECTED_LOCK")
+    if SHA256.fullmatch(expected_snapshot_sha) is None:
+        raise Rejected("INVALID_EXPECTED_SNAPSHOT_BYTES")
     try:
         with path.open("rb") as stream:
             raw = stream.read(MAX_BYTES + 1)
@@ -67,6 +70,8 @@ def read_projection(path: Path, expected_sha: str) -> dict[str, Any]:
         raise Rejected("UNREADABLE_SNAPSHOT") from exc
     if len(raw) > MAX_BYTES:
         raise Rejected("OVERSIZED_SNAPSHOT")
+    if hashlib.sha256(raw).hexdigest() != expected_snapshot_sha:
+        raise Rejected("SNAPSHOT_BYTES_MISMATCH")
     try:
         document = json.loads(
             raw.decode("utf-8", "strict"),
@@ -145,11 +150,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", required=True, type=Path)
     parser.add_argument("--expected-lock-sha256", required=True)
+    parser.add_argument("--expected-snapshot-sha256", required=True)
     parser.add_argument("--concept-id", required=True)
     parser.add_argument("--language", default=None)
     args = parser.parse_args(argv)
     try:
-        projection = read_projection(args.snapshot, args.expected_lock_sha256)
+        projection = read_projection(args.snapshot, args.expected_lock_sha256,
+                                     args.expected_snapshot_sha256)
         result = query(projection, args.concept_id, args.language)
     except Rejected as exc:
         print(str(exc), file=sys.stderr)
