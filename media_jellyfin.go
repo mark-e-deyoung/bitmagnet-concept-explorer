@@ -10,25 +10,29 @@ import (
 )
 
 type jellyfinItem struct {
-	ID string `json:"Id"`
-	Name string `json:"Name"`
-	Type string `json:"Type"`
-	ProductionYear int `json:"ProductionYear"`
-	ProviderIDs map[string]string `json:"ProviderIds"`
+	ID             string            `json:"Id"`
+	Name           string            `json:"Name"`
+	Type           string            `json:"Type"`
+	ProductionYear int               `json:"ProductionYear"`
+	ProviderIDs    map[string]string `json:"ProviderIds"`
 }
 type jellyfinItems struct {
-	Items []jellyfinItem `json:"Items"`
-	TotalRecordCount int `json:"TotalRecordCount"`
+	Items            []jellyfinItem `json:"Items"`
+	TotalRecordCount int            `json:"TotalRecordCount"`
 }
 
 func jellyfinCandidate(r jellyfinItem, relationship string, basis string) MediaIdentityCandidate {
 	kind := "movie"
-	if r.Type == "Series" { kind = "series" }
+	if r.Type == "Series" {
+		kind = "series"
+	}
 	ids := map[string]string{}
 	for key, value := range r.ProviderIDs {
 		switch strings.ToLower(key) {
 		case "tmdb", "imdb", "tvdb":
-			if len(value) <= 64 { ids[strings.ToLower(key)] = value }
+			if len(value) <= 64 {
+				ids[strings.ToLower(key)] = value
+			}
 		}
 	}
 	return MediaIdentityCandidate{
@@ -69,7 +73,10 @@ func lookupJellyfin(ctx context.Context, client *http.Client, q MediaLookupReque
 	case q.JellyfinItemID != "":
 		var item jellyfinItem
 		state, err := readMediaJSON(ctx, client, endpoint+"/Items/"+q.JellyfinItemID, "Authorization", auth, &item)
-		if err != nil || state != "ok" { p.State = state; return p }
+		if err != nil || state != "ok" {
+			p.State = state
+			return p
+		}
 		items.Items = []jellyfinItem{item}
 		direct = true
 	case strings.TrimSpace(q.Title) != "":
@@ -80,7 +87,10 @@ func lookupJellyfin(ctx context.Context, client *http.Client, q MediaLookupReque
 		params.Set("Recursive", "true")
 		params.Set("Limit", "10")
 		state, err := readMediaJSON(ctx, client, endpoint+"/Items?"+params.Encode(), "Authorization", auth, &items)
-		if err != nil || state != "ok" { p.State = state; return p }
+		if err != nil || state != "ok" {
+			p.State = state
+			return p
+		}
 	default:
 		p.State = "title_or_confirmed_local_item_required"
 		return p
@@ -93,55 +103,89 @@ func lookupJellyfin(ctx context.Context, client *http.Client, q MediaLookupReque
 		p.Warnings = append(p.Warnings, "Local library result page is capped; missing items do not establish absence")
 	}
 	for _, item := range items.Items {
-		if item.Type != "Movie" && item.Type != "Series" {continue}
-		if (q.Kind == "movie" && item.Type != "Movie") || (q.Kind == "series" && item.Type != "Series") {continue}
-		if item.ID == "" {continue}
+		if item.Type != "Movie" && item.Type != "Series" {
+			continue
+		}
+		if (q.Kind == "movie" && item.Type != "Movie") || (q.Kind == "series" && item.Type != "Series") {
+			continue
+		}
+		if item.ID == "" {
+			continue
+		}
 		basis := "title_search_candidate_unconfirmed"
-		if direct {basis="selected_local_item_detail_unconfirmed"}
+		if direct {
+			basis = "selected_local_item_detail_unconfirmed"
+		}
 		mismatch := false
 		if q.TMDbID != "" {
 			existing := ""
-			for k,v := range item.ProviderIDs {if strings.EqualFold(k,"tmdb"){existing=v;break}}
-			if existing!="" && existing!=q.TMDbID {mismatch=true}
-			if existing==q.TMDbID {basis="exact_local_tmdb_provider_id"}
+			for k, v := range item.ProviderIDs {
+				if strings.EqualFold(k, "tmdb") {
+					existing = v
+					break
+				}
+			}
+			if existing != "" && existing != q.TMDbID {
+				mismatch = true
+			}
+			if existing == q.TMDbID {
+				basis = "exact_local_tmdb_provider_id"
+			}
 		}
 		if q.IMDbID != "" {
 			existing := ""
-			for k,v := range item.ProviderIDs {if strings.EqualFold(k,"imdb"){existing=v;break}}
-			if existing!="" && existing!=q.IMDbID {mismatch=true}
-			if existing==q.IMDbID {basis="exact_local_imdb_provider_id"}
+			for k, v := range item.ProviderIDs {
+				if strings.EqualFold(k, "imdb") {
+					existing = v
+					break
+				}
+			}
+			if existing != "" && existing != q.IMDbID {
+				mismatch = true
+			}
+			if existing == q.IMDbID {
+				basis = "exact_local_imdb_provider_id"
+			}
 		}
 		if mismatch {
 			p.Warnings = append(p.Warnings, "Local item had conflicting external identity; review required")
 			continue
 		}
-		if q.Year > 0 && item.ProductionYear != 0 && item.ProductionYear != q.Year && basis=="title_search_candidate_unconfirmed" {
+		if q.Year > 0 && item.ProductionYear != 0 && item.ProductionYear != q.Year && basis == "title_search_candidate_unconfirmed" {
 			p.Warnings = append(p.Warnings, "Same title with conflicting production year is not automatically owned")
 			continue
 		}
-		p.Candidates = append(p.Candidates, jellyfinCandidate(item,"candidate",basis))
+		p.Candidates = append(p.Candidates, jellyfinCandidate(item, "candidate", basis))
 	}
 	p.State = "candidates_need_identity_confirmation"
-	if len(p.Candidates)==0 {p.State = "no_candidate_non_diagnostic"}
+	if len(p.Candidates) == 0 {
+		p.State = "no_candidate_non_diagnostic"
+	}
 	if q.IncludeRelated {
 		if q.JellyfinItemID == "" {
-			p.Warnings=append(p.Warnings,"Related local titles require a selected Jellyfin item ID; never choose the first title match")
+			p.Warnings = append(p.Warnings, "Related local titles require a selected Jellyfin item ID; never choose the first title match")
 		} else {
 			params := url.Values{}
-			params.Set("Limit","8")
-			params.Set("Fields","ProviderIds,ProductionYear")
+			params.Set("Limit", "8")
+			params.Set("Fields", "ProviderIds,ProductionYear")
 			var similar jellyfinItems
-			target := endpoint+"/Items/"+q.JellyfinItemID+"/Similar?"+params.Encode()
-			state,err := readMediaJSON(ctx,client,target,"Authorization",auth,&similar)
-			if err!=nil || state!="ok" {
-				p.Warnings=append(p.Warnings,"Local related-item lookup "+state+"; no absence inference")
+			target := endpoint + "/Items/" + q.JellyfinItemID + "/Similar?" + params.Encode()
+			state, err := readMediaJSON(ctx, client, target, "Authorization", auth, &similar)
+			if err != nil || state != "ok" {
+				p.Warnings = append(p.Warnings, "Local related-item lookup "+state+"; no absence inference")
 			} else {
 				for _, item := range similar.Items {
-					if item.ID=="" || len(p.Related)==8 {break}
-					if item.Type!="Movie" && item.Type!="Series" {continue}
-					p.Related=append(p.Related,jellyfinCandidate(item,"jellyfin_similar_not_cpe_evidence","local_provider_related_only"))
+					if item.ID == "" || len(p.Related) == 8 {
+						break
+					}
+					if item.Type != "Movie" && item.Type != "Series" {
+						continue
+					}
+					p.Related = append(p.Related, jellyfinCandidate(item, "jellyfin_similar_not_cpe_evidence", "local_provider_related_only"))
 				}
-				if similar.TotalRecordCount>8 || len(similar.Items)>8 {p.Warnings=append(p.Warnings,"Related local items bounded")}
+				if similar.TotalRecordCount > 8 || len(similar.Items) > 8 {
+					p.Warnings = append(p.Warnings, "Related local items bounded")
+				}
 			}
 		}
 	}

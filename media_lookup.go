@@ -19,51 +19,51 @@ import (
 )
 
 type MediaLookupRequest struct {
-	Language             string   `json:"language,omitempty"`
-	Title                string   `json:"title,omitempty"`
-	Kind                 string   `json:"kind"`
-	Year                 int      `json:"year,omitempty"`
-	IMDbID               string   `json:"imdb_id,omitempty"`
-	TMDbID               string   `json:"tmdb_id,omitempty"`
-	JellyfinItemID       string   `json:"jellyfin_item_id,omitempty"`
-	Providers            []string `json:"providers"`
-	IncludeRelated       bool     `json:"include_related,omitempty"`
-	AllowExternalLookup  bool     `json:"allow_external_lookup,omitempty"`
+	Language            string   `json:"language,omitempty"`
+	Title               string   `json:"title,omitempty"`
+	Kind                string   `json:"kind"`
+	Year                int      `json:"year,omitempty"`
+	IMDbID              string   `json:"imdb_id,omitempty"`
+	TMDbID              string   `json:"tmdb_id,omitempty"`
+	JellyfinItemID      string   `json:"jellyfin_item_id,omitempty"`
+	Providers           []string `json:"providers"`
+	IncludeRelated      bool     `json:"include_related,omitempty"`
+	AllowExternalLookup bool     `json:"allow_external_lookup,omitempty"`
 }
 
 type MediaIdentityCandidate struct {
-	Source             string            `json:"source"`
-	ItemID             string            `json:"item_id"`
-	Kind               string            `json:"kind"`
-	Title              string            `json:"title"`
-	Year               int               `json:"year,omitempty"`
-	ExternalIDs        map[string]string `json:"external_ids,omitempty"`
-	MatchBasis         string            `json:"match_basis"`
-	Relationship       string            `json:"relationship"`
-	GenreIDs           []int             `json:"source_genre_ids,omitempty"`
+	Source       string            `json:"source"`
+	ItemID       string            `json:"item_id"`
+	Kind         string            `json:"kind"`
+	Title        string            `json:"title"`
+	Year         int               `json:"year,omitempty"`
+	ExternalIDs  map[string]string `json:"external_ids,omitempty"`
+	MatchBasis   string            `json:"match_basis"`
+	Relationship string            `json:"relationship"`
+	GenreIDs     []int             `json:"source_genre_ids,omitempty"`
 }
 
 type MediaProviderOutcome struct {
-	Source            string                   `json:"source"`
-	State             string                   `json:"state"`
-	Candidates        []MediaIdentityCandidate `json:"candidates"`
-	Related           []MediaIdentityCandidate `json:"related"`
-	Warnings          []string                 `json:"warnings"`
-	Attribution       string                   `json:"attribution,omitempty"`
+	Source      string                   `json:"source"`
+	State       string                   `json:"state"`
+	Candidates  []MediaIdentityCandidate `json:"candidates"`
+	Related     []MediaIdentityCandidate `json:"related"`
+	Warnings    []string                 `json:"warnings"`
+	Attribution string                   `json:"attribution,omitempty"`
 }
 
 type MediaLookupResponse struct {
-	Version    string                 `json:"version"`
-	ReadOnly   bool                   `json:"read_only"`
-	Scope      string                 `json:"scope"`
-	Outcomes   []MediaProviderOutcome `json:"outcomes"`
-	Warnings   []string               `json:"warnings"`
+	Version  string                 `json:"version"`
+	ReadOnly bool                   `json:"read_only"`
+	Scope    string                 `json:"scope"`
+	Outcomes []MediaProviderOutcome `json:"outcomes"`
+	Warnings []string               `json:"warnings"`
 }
 
 var (
-	imdbIDPattern = regexp.MustCompile(`^tt[0-9]{7,10}$`)
+	imdbIDPattern     = regexp.MustCompile(`^tt[0-9]{7,10}$`)
 	jellyfinIDPattern = regexp.MustCompile(`^[0-9a-fA-F-]{8,64}$`)
-	tmdbIDPattern = regexp.MustCompile(`^[1-9][0-9]{0,10}$`)
+	tmdbIDPattern     = regexp.MustCompile(`^[1-9][0-9]{0,10}$`)
 )
 
 func validateMediaLookup(q MediaLookupRequest) error {
@@ -150,8 +150,8 @@ func providerURL(raw string, remoteTMDb bool) (*url.URL, error) {
 
 func mediaHTTPClient() *http.Client {
 	return &http.Client{
-		Timeout: 7 * time.Second,
-		Transport: &http.Transport{Proxy: nil},
+		Timeout:       7 * time.Second,
+		Transport:     &http.Transport{Proxy: nil},
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
 }
@@ -205,7 +205,7 @@ func lookupMedia(ctx context.Context, q MediaLookupRequest) (MediaLookupResponse
 	}
 	out := MediaLookupResponse{
 		Version: "media-lookup-provisional-v1", ReadOnly: true,
-		Scope: "explicit_identity_or_bounded_first_page_only",
+		Scope:    "explicit_identity_or_bounded_first_page_only",
 		Outcomes: []MediaProviderOutcome{},
 		Warnings: []string{
 			"Media title/genre/recommendation metadata is not accepted CPE concept evidence",
