@@ -5,7 +5,6 @@ import (
     "encoding/json"
     "os"
     "path/filepath"
-    "reflect"
     "strings"
     "testing"
 
@@ -24,6 +23,17 @@ type r32Fixture struct {
     lockPath string
     selectorPath string
     refsPath string
+}
+// JSON is the exported consumer contract: the Go library may use nil or
+// non-nil empty slices internally while the wire representation is identical.
+// Do not use reflect.DeepEqual across a JSON round-trip (original R32 false RED).
+func r32JSONEqual(t *testing.T, a, b any) bool {
+    t.Helper()
+    left, err := json.Marshal(a)
+    if err != nil {t.Fatal(err)}
+    right, err := json.Marshal(b)
+    if err != nil {t.Fatal(err)}
+    return bytes.Equal(left, right)
 }
 func r32LoadFixture(t *testing.T) r32Fixture {
     t.Helper()
@@ -87,7 +97,7 @@ func TestR32LegacyCLIMatchesExistingDirectResearchProjection(t *testing.T) {
     if status!=0 {t.Fatalf("legacy CLI status %d: %s",status,diagnostic)}
     var got cpepack.Projection
     if err:=json.Unmarshal([]byte(out),&got);err!=nil {t.Fatal(err)}
-    if !reflect.DeepEqual(direct,got) || got.Authority!="research_only" {
+    if !r32JSONEqual(t,direct,got) || got.Authority!="research_only" {
         t.Fatalf("legacy CLI changed existing projection: got=%+v want=%+v",got,direct)
     }
 }
@@ -100,7 +110,7 @@ func TestR32SubsetCLIMatchesExistingDirectReadLibrary(t *testing.T) {
     if status!=0 {t.Fatalf("subset CLI status %d: %s",status,diagnostic)}
     var got cpepack.SubsetView
     if err:=json.Unmarshal([]byte(out),&got);err!=nil {t.Fatal(err)}
-    if !reflect.DeepEqual(direct,got) || got.Authority!="research_only" {
+    if !r32JSONEqual(t,direct,got) || got.Authority!="research_only" {
         t.Fatalf("CLI and library have different content: got=%+v want=%+v",got,direct)
     }
     if len(got.Concepts)!=2 || len(got.Representations)!=1 {
@@ -117,7 +127,7 @@ func TestR32PinnedCLIAdmitsOnlyExpectedResearchSelection(t *testing.T) {
     if status!=0 {t.Fatalf("pinned CLI status %d: %s",status,diagnostic)}
     var got cpepack.SubsetView
     if err:=json.Unmarshal([]byte(out),&got);err!=nil {t.Fatal(err)}
-    if !reflect.DeepEqual(direct,got){t.Fatal("pinned CLI diverged from direct verified library result")}
+    if !r32JSONEqual(t,direct,got){t.Fatal("pinned CLI diverged from direct verified library result")}
     if got.Authority!="research_only" {t.Fatalf("unexpected authority upgrade: %s",got.Authority)}
 }
 
