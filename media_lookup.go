@@ -29,6 +29,9 @@ type MediaLookupRequest struct {
 	Providers           []string `json:"providers"`
 	IncludeRelated      bool     `json:"include_related,omitempty"`
 	AllowExternalLookup bool     `json:"allow_external_lookup,omitempty"`
+	TMDbGenreIDs        []int    `json:"tmdb_genre_ids,omitempty"`
+	TMDbKeywordIDs      []int    `json:"tmdb_keyword_ids,omitempty"`
+	JellyfinGenres      []string `json:"jellyfin_genres,omitempty"`
 }
 
 type MediaIdentityCandidate struct {
@@ -81,8 +84,31 @@ func validateMediaLookup(q MediaLookupRequest) error {
 			return errors.New("invalid title control character")
 		}
 	}
-	if strings.TrimSpace(q.Title) == "" && q.IMDbID == "" && q.TMDbID == "" && q.JellyfinItemID == "" {
-		return errors.New("title or explicit media identity required")
+	nativeConcepts := len(q.TMDbGenreIDs)+len(q.TMDbKeywordIDs)+len(q.JellyfinGenres)
+	if nativeConcepts > 6 || len(q.TMDbGenreIDs) > 3 || len(q.TMDbKeywordIDs) > 3 || len(q.JellyfinGenres) > 3 {
+		return errors.New("provider-native concept filter budget exceeded")
+	}
+	for _, id := range append(append([]int{},q.TMDbGenreIDs...),q.TMDbKeywordIDs...) {
+		if id < 1 || id > 1000000000 {
+			return errors.New("invalid provider-native numeric concept identifier")
+		}
+	}
+	for _, value := range q.JellyfinGenres {
+		if len([]rune(value)) < 2 || len([]rune(value)) > 50 || strings.TrimSpace(value) != value ||
+			strings.ContainsAny(value, "/?&#") {
+			return errors.New("invalid local source-native genre name")
+		}
+		for _, char := range value {
+			if char == 0 || char == 10 || char == 13 {
+				return errors.New("invalid local source-native genre control")
+			}
+		}
+	}
+	if nativeConcepts > 0 && (strings.TrimSpace(q.Title)!="" || q.IMDbID!="" || q.TMDbID!="" || q.JellyfinItemID!="" || q.IncludeRelated || q.Year!=0) {
+		return errors.New("provider-native concept discovery is exclusive of item identity/related lookup")
+	}
+	if strings.TrimSpace(q.Title) == "" && q.IMDbID == "" && q.TMDbID == "" && q.JellyfinItemID == "" && nativeConcepts==0 {
+		return errors.New("title, explicit media identity or provider-native concept filter required")
 	}
 	if q.Year != 0 && (q.Year < 1888 || q.Year > 2100) {
 		return errors.New("year outside bounded historical range")
@@ -209,6 +235,7 @@ func lookupMedia(ctx context.Context, q MediaLookupRequest) (MediaLookupResponse
 		Outcomes: []MediaProviderOutcome{},
 		Warnings: []string{
 			"Media title/genre/recommendation metadata is not accepted CPE concept evidence",
+			"Provider-native genre/keyword IDs and local genre names require independently qualified CPE source mapping before any semantic claim",
 			"Title/year matches are candidates, not resolved ownership or proof of absence",
 			"Third-party content is never automatically forwarded to models or persisted",
 		},
