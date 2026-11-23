@@ -28,10 +28,10 @@ func feedbackFixture(t *testing.T, body string) *httptest.Server {
 
 func feedbackInput() FeedbackPreviewRequest {
 	return FeedbackPreviewRequest{
-		Query: Request{Query: "fictional animation"},
-		ProposalKind: "lexicalization_candidate",
+		Query:          Request{Query: "fictional animation"},
+		ProposalKind:   "lexicalization_candidate",
 		CandidateLabel: "งานแอนิเมชัน",
-		Language: "th",
+		Language:       "th",
 	}
 }
 

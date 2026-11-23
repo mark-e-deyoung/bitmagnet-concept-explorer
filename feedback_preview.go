@@ -29,11 +29,11 @@ type FeedbackPreviewRequest struct {
 }
 
 type FeedbackPreviewResponse struct {
-	SchemaVersion string               `json:"schema_version"`
-	State         string               `json:"state"`
-	ObservationCount int               `json:"observation_count"`
-	Proposal      *SweepDiscoveryDraft `json:"proposal,omitempty"`
-	Warnings      []string             `json:"warnings"`
+	SchemaVersion    string               `json:"schema_version"`
+	State            string               `json:"state"`
+	ObservationCount int                  `json:"observation_count"`
+	Proposal         *SweepDiscoveryDraft `json:"proposal,omitempty"`
+	Warnings         []string             `json:"warnings"`
 }
 
 func feedbackHMAC(key []byte, domain string, fields ...string) string {
@@ -69,8 +69,8 @@ func buildFeedbackPreview(ctx context.Context, input FeedbackPreviewRequest, key
 		return FeedbackPreviewResponse{}, errors.New("local source observation could not execute")
 	}
 	response := FeedbackPreviewResponse{
-		SchemaVersion: "bce-feedback-preview-v1",
-		State: "non_diagnostic",
+		SchemaVersion:    "bce-feedback-preview-v1",
+		State:            "non_diagnostic",
 		ObservationCount: len(result.Results),
 		Warnings: []string{
 			"Only bounded current-query Bitmagnet metadata was observed; no full-corpus coverage is implied",
@@ -94,7 +94,7 @@ func buildFeedbackPreview(ctx context.Context, input FeedbackPreviewRequest, key
 		}
 		seen[obs.InfoHash] = true
 		ev = append(ev, SweepDiscoveryEvidence{
-			Source: "bitmagnet",
+			Source:      "bitmagnet",
 			AncestryRef: feedbackHMAC(key, "bce-bitmagnet-infohash-v1", obs.InfoHash),
 			EvidenceRef: feedbackHMAC(key, "bce-bitmagnet-observation-v1", obs.InfoHash, obs.Title, input.Query.Query),
 		})
