@@ -1,0 +1,42 @@
+name: Public TrueNAS wizard provider secret-render qualification
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "ix-dev/community/bitmagnet-concept-explorer/questions.yaml"
+      - "ix-dev/community/bitmagnet-concept-explorer/templates/docker-compose.yaml"
+      - "scripts/foundry/provider-secret-config-smoke.sh"
+      - ".github/workflows/public-provider-config-render.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bce-provider-config-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-secret-render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: truenas/apps
+          ref: 77058ecb5b28199f35150912cacb13283a6fb244
+          persist-credentials: false
+          path: truenas-apps
+      - name: Exact source and shell syntax
+        run: |
+          git rev-parse HEAD
+          bash -n scripts/foundry/provider-secret-config-smoke.sh
+      - name: Actual pinned iX source rendering and fail-closed config negatives
+        env:
+          BCE_EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/foundry/provider-secret-config-smoke.sh

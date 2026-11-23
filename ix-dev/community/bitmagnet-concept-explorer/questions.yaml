@@ -9,6 +9,8 @@ groups:
     description: CPU and memory limits.
   - name: Optional Research Data
     description: Read-only digest-pinned local source files, research only. No accepted CPE authority is implied.
+  - name: Optional Provider and Research Credentials
+    description: Optional server-side read-only TMDb/Jellyfin inputs and local CPE feedback HMAC key. Secrets are for administrator-controlled app environment only; no provider calls are automatic.
 
 questions:
   - variable: explorer
@@ -121,6 +123,44 @@ questions:
           description: Exact 64-hex digest of evidence file; blank when absent.
           schema:
             type: string
+            default: ""
+            required: false
+
+  - variable: media_lookup
+    label: Optional Media Discovery and Feedback
+    group: Optional Provider and Research Credentials
+    schema:
+      type: dict
+      attrs:
+        - variable: jellyfin_base_url
+          label: Local Jellyfin server origin
+          description: Optional literal private/loopback IP origin (e.g. http://192.168.1.9:8096). Never expose personal library content outside the trusted network.
+          schema:
+            type: string
+            default: ""
+            required: false
+        - variable: jellyfin_token
+          label: Jellyfin read-only API token
+          description: Stored in app environment, admin-visible in TrueNAS deployment details. Scope separately and protect access to app administration.
+          schema:
+            type: string
+            private: true
+            default: ""
+            required: false
+        - variable: tmdb_read_token
+          label: TMDb API read token
+          description: Optional server-side Bearer read token. The API requires explicit per-query external-lookup consent; live use also requires current TMDb terms/attribution compliance.
+          schema:
+            type: string
+            private: true
+            default: ""
+            required: false
+        - variable: feedback_hmac_key
+          label: Local CPE research feedback HMAC key
+          description: Optional server-local key of at least 32 bytes for privacy-keyed Bitmagnet observation refs. Do not reuse account passwords or publish real-key-derived refs.
+          schema:
+            type: string
+            private: true
             default: ""
             required: false
 
