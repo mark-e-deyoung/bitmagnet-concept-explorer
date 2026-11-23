@@ -1,5 +1,6 @@
 import {test, expect} from "@playwright/test";
 import {spawnSync} from "node:child_process";
+import AxeBuilder from "@axe-core/playwright";
 
 test("real Go UI retrieves synthetic Bitmagnet data without semantic promotion", async ({page, request}) => {
   const caps = await request.get("/api/v1/capabilities");
@@ -18,6 +19,10 @@ test("real Go UI retrieves synthetic Bitmagnet data without semantic promotion",
   await expect(page.locator("#status")).toHaveAttribute("data-ui-state", "ready");
   await expect(page.locator("#status")).toContainText("Unique observed: 1");
   await expect(page.locator("#results")).toContainText("Synthetic Integrated Animation Result");
+  const scan = await new AxeBuilder({page}).withTags(["wcag2a","wcag2aa","wcag21a","wcag21aa","wcag22a","wcag22aa"]).analyze();
+  expect(scan.violations, scan.violations.map(v=>v.id+": "+v.description).join("; ")).toEqual([]);
+  const excess = await page.evaluate(() => Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth));
+  expect(excess,"Real Go UI must reflow on this browser viewport").toBeLessThanOrEqual(1);
 });
 
 test("automated CLI and agent API agree on actual Go concept graph", async ({request, baseURL}) => {

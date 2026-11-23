@@ -1,0 +1,49 @@
+name: Public BCE → Foundry native artifact admission preflight
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "scripts/foundry/native-artifact-admission-preflight.sh"
+      - ".github/workflows/public-foundry-artifact-preflight.yml"
+      - "ix-dev/community/bitmagnet-concept-explorer/**"
+      - "VERSION"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bce-foundry-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  product-foundry-artifact:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: truenas/apps
+          ref: 77058ecb5b28199f35150912cacb13283a6fb244
+          persist-credentials: false
+          path: truenas-apps
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: SemperSupra/truenas-app-foundry
+          ref: 79545f02b9f88d1b0d6f6c0c12da1d063fd94388
+          persist-credentials: false
+          path: foundry-public
+      - name: Verify syntax, source identity and disposable engine
+        run: |
+          git rev-parse HEAD
+          bash -n scripts/foundry/native-artifact-admission-preflight.sh
+          docker compose version
+      - name: Execute exact-source iX rendering and strict Foundry artifact gate
+        env:
+          BCE_EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/foundry/native-artifact-admission-preflight.sh
