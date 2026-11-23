@@ -2,7 +2,10 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/ui',
-  testIgnore: '**/crossbrowser-matrix.spec.mjs', // separate real multi-engine fixture workflow
+  testIgnore: [
+    '**/crossbrowser-matrix.spec.mjs', // separate multi-engine synthetic workflow
+    '**/integrated-service.spec.mjs', // separate real Go service fixture and CLI workflow
+  ],
   timeout: 30000,
   expect: { timeout: 8000 },
   fullyParallel: true,
