@@ -1,0 +1,43 @@
+name: Public synthetic Explorer graph mount runtime canary
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "scripts/foundry/graph-mount-runtime-smoke.sh"
+      - ".github/workflows/public-graph-mount-smoke.yml"
+      - "ix-dev/community/bitmagnet-concept-explorer/**"
+      - "fixtures/concept-graph.synthetic.json"
+      - "Containerfile"
+      - "*.go"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bce-graph-mount-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-graph-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: truenas/apps
+          ref: 77058ecb5b28199f35150912cacb13283a6fb244
+          persist-credentials: false
+          path: truenas-apps
+      - name: Check script syntax and exact source
+        run: |
+          git rev-parse HEAD
+          bash -n scripts/foundry/graph-mount-runtime-smoke.sh
+          docker version
+      - name: Qualify synthetic iX render, pinned graph bind, runtime API and teardown
+        run: bash scripts/foundry/graph-mount-runtime-smoke.sh
