@@ -112,6 +112,14 @@ func validateMediaLookup(q MediaLookupRequest) error {
 	return nil
 }
 
+func mediaLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
 func providerURL(raw string, remoteTMDb bool) (*url.URL, error) {
 	u, e := url.Parse(raw)
 	if e != nil || u.Host == "" || u.User != nil || u.Fragment != "" || u.RawQuery != "" || u.RawPath != "" ||
@@ -122,7 +130,7 @@ func providerURL(raw string, remoteTMDb bool) (*url.URL, error) {
 		if u.Scheme == "https" && strings.EqualFold(u.Hostname(), "api.themoviedb.org") && u.Path == "/3" && u.Port() == "" {
 			return u, nil
 		}
-		if u.Scheme == "http" && u.Path == "/3" && isLoopbackHost(u.Hostname()) {
+		if u.Scheme == "http" && u.Path == "/3" && mediaLoopbackHost(u.Hostname()) {
 			return u, nil // explicit test-only loopback provider, never a public arbitrary host
 		}
 		return nil, errors.New("TMDb endpoint must be official HTTPS or loopback fixture")
@@ -131,7 +139,7 @@ func providerURL(raw string, remoteTMDb bool) (*url.URL, error) {
 		return nil, errors.New("Jellyfin endpoint must have no path")
 	}
 	host := u.Hostname()
-	if !isLoopbackHost(host) {
+	if !mediaLoopbackHost(host) {
 		ip := net.ParseIP(host)
 		if ip == nil || !ip.IsPrivate() {
 			return nil, errors.New("Jellyfin endpoint must be a literal private/loopback address")
