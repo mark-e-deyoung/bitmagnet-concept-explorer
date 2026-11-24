@@ -22,12 +22,15 @@ import (
 // callers from multiplying the per-request fan-out against the same database.
 var globalBitmagnetSlots = make(chan struct{}, 4)
 
-const gqlSearch = `query Search($input: TorrentContentSearchQueryInput!) { torrentContent { search(input: $input) { hasNextPage items { contentType title seeders leechers languages { id name } content { adult } torrent { infoHash name size } } } } }`
+const gqlSearch = `query Search($input: TorrentContentSearchQueryInput!) { torrentContent { search(input: $input) { hasNextPage items { contentType contentSource contentId title seeders leechers languages { id name } content { adult releaseYear } torrent { infoHash name size } } } } }`
 
 type Observation struct {
 	InfoHash            string   `json:"info_hash"`
 	Title               string   `json:"title"`
 	ContentType         string   `json:"content_type,omitempty"`
+	ContentSource       string   `json:"content_source,omitempty"`
+	ContentID           string   `json:"content_id,omitempty"`
+	ReleaseYear         *int     `json:"release_year,omitempty"`
 	Seeders             *int     `json:"seeders"`
 	Leechers            *int     `json:"leechers"`
 	Languages           []string `json:"languages,omitempty"`
@@ -63,16 +66,19 @@ type gqlResult struct {
 			Search struct {
 				HasNextPage *bool `json:"hasNextPage"`
 				Items       []struct {
-					Title       string `json:"title"`
-					ContentType string `json:"contentType"`
-					Seeders     *int   `json:"seeders"`
-					Leechers    *int   `json:"leechers"`
+					Title         string `json:"title"`
+					ContentType   string `json:"contentType"`
+					ContentSource string `json:"contentSource"`
+					ContentID     string `json:"contentId"`
+					Seeders       *int   `json:"seeders"`
+					Leechers      *int   `json:"leechers"`
 					Languages   []struct {
 						ID   string `json:"id"`
 						Name string `json:"name"`
 					} `json:"languages"`
 					Content *struct {
-						Adult *bool `json:"adult"`
+						Adult       *bool `json:"adult"`
+						ReleaseYear *int  `json:"releaseYear"`
 					} `json:"content"`
 					Torrent struct {
 						InfoHash string `json:"infoHash"`
@@ -152,10 +158,22 @@ func fetchTerm(ctx context.Context, client *http.Client, ep, term string, q Requ
 			}
 		}
 		var adult *bool
+		var year *int
 		if item.Content != nil {
 			adult = item.Content.Adult
+			if item.Content.ReleaseYear != nil && *item.Content.ReleaseYear >= 1888 && *item.Content.ReleaseYear <= 2100 {
+				value := *item.Content.ReleaseYear
+				year = &value
+			}
 		}
-		out = append(out, Observation{InfoHash: hash, Title: item.Title, ContentType: item.ContentType, Seeders: item.Seeders, Leechers: item.Leechers, Languages: langs, AdultMetadata: adult})
+		source := strings.ToLower(strings.TrimSpace(item.ContentSource))
+		providerID := strings.TrimSpace(item.ContentID)
+		if source == "" || providerID == "" || len(source) > 48 || len(providerID) > 128 {
+			source, providerID = "", ""
+		}
+		out = append(out, Observation{InfoHash: hash, Title: item.Title, ContentType: item.ContentType,
+			ContentSource: source, ContentID: providerID, ReleaseYear: year,
+			Seeders: item.Seeders, Leechers: item.Leechers, Languages: langs, AdultMetadata: adult})
 	}
 	return out, parsed.Data.TorrentContent.Search.HasNextPage, nil
 }
@@ -313,6 +331,8 @@ func mergeObservationMetadata(dst *Observation, src Observation) {
 	}
 	mergeString("title", &dst.Title, src.Title)
 	mergeString("content_type", &dst.ContentType, src.ContentType)
+	mergeString("content_source", &dst.ContentSource, src.ContentSource)
+	mergeString("content_id", &dst.ContentID, src.ContentID)
 
 	mergeInt := func(field string, target **int, incoming *int) {
 		if contains(dst.ConflictingMetadata, field) {
@@ -331,6 +351,7 @@ func mergeObservationMetadata(dst *Observation, src Observation) {
 		}
 	}
 	mergeInt("seeders", &dst.Seeders, src.Seeders)
+	mergeInt("release_year", &dst.ReleaseYear, src.ReleaseYear)
 	mergeInt("leechers", &dst.Leechers, src.Leechers)
 
 	if !contains(dst.ConflictingMetadata, "adult_metadata") {
