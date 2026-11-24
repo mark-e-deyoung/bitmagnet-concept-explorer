@@ -1,0 +1,43 @@
+name: Public real Bitmagnet to CPE feedback short RDTE
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/scripts/real-bitmagnet-feedback-fast-lane.sh"
+      - ".github/workflows/public-real-feedback-fast.yml"
+      - "feedback_preview.go"
+      - "media_lookup.go"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bce-real-feedback-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-upstream-feedback:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - name: Checkout exact immutable public PR head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Fixed Go version
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: "1.27.1"
+          cache: false
+      - name: Shell syntax and bounded real Bitmagnet smoke
+        env:
+          BCE_EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          GOPROXY: "off"
+          GOSUMDB: "off"
+          GOFLAGS: "-mod=readonly"
+        run: |
+          bash -n .github/scripts/real-bitmagnet-feedback-fast-lane.sh
+          bash .github/scripts/real-bitmagnet-feedback-fast-lane.sh
