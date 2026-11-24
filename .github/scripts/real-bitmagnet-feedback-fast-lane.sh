@@ -172,4 +172,66 @@ curl --noproxy '*' -fsS --max-time 8 -u "$AUTH" \
   --data-binary @"$OUT/tmdb-no-consent.json" "$BCE/api/v1/media/lookup" -o "$OUT/media.json"
 jq -e '.outcomes[0].state=="requires_explicit_external_consent"' "$OUT/media.json" >/dev/null
 echo "REAL_FEEDBACK_NO_EXTERNAL_PROVIDER_CALL_PASS"
-echo "REAL_FEEDBACK_FAST_LANE_PASS: no authentic publisher torrent, private local corpus, CPE adjudication, or native TrueNAS F4 claimed"
+if [[ "${BCE_RDTE_AUTHENTIC_PUBLISHER:-0}" == "1" ]]; then
+  # Real Bitmagnet FTS is asynchronous. Query a verified publisher infohash,
+  # not an invented fixture string, through the ACTUAL compiled Explorer.
+  cat >"$OUT/debian-original-query.json" <<'JSON'
+{"query":"debian","include_web":false}
+JSON
+  found=0
+  for i in $(seq 1 75); do
+    curl --noproxy '*' -sS --max-time 10 -u "$AUTH" \
+      -H 'Content-Type: application/json' \
+      --data-binary @"$OUT/debian-original-query.json" \
+      "$BCE/api/v1/query/execute" -o "$OUT/publisher-execute.json" || true
+    if jq -e --arg hash "$DEBIAN_PUBLISHER_HASH" '
+      .state=="complete" and .read_only==true and
+      any(.results[]; .info_hash==$hash and (.tracks|index("direct")!=null))
+    ' "$OUT/publisher-execute.json" >/dev/null 2>&1; then found=1;break;fi
+    sleep 2
+  done
+  if [[ "$found" != 1 ]]; then
+    echo "::error::Authentic Debian original publisher infohash absent from pinned Bitmagnet FTS via compiled BCE"
+    jq '{state,track_counts,failures,coverage}' "$OUT/publisher-execute.json" || true
+    exit 1
+  fi
+  echo "REAL_PUBLISHER_CHAIN: original Debian infohash returned via Bitmagnet GraphQL->BCE FTS"
+
+  # Agent/automation CLI calls same authenticated Go API with exact source ID.
+  go build -trimpath -o "$OUT/bce-cli" ./cmd/bce
+  BCE_AUTH_USER=fixture-auditor BCE_AUTH_PASSWORD=fixture-password-only-public \
+    "$OUT/bce-cli" -server "$BCE" -operation execute -query debian >"$OUT/publisher-cli.json"
+  jq -e --arg hash "$DEBIAN_PUBLISHER_HASH" '
+    .state=="complete" and .read_only==true and
+    any(.results[]; .info_hash==$hash and (.tracks|index("direct")!=null))
+  ' "$OUT/publisher-cli.json" >/dev/null
+  echo "REAL_PUBLISHER_CHAIN: automation CLI returned same original publisher identity"
+
+  # Feedback HMACs local source IDs. Bitmagnet evidence shares one source
+  # ancestry and CPE remains unmodified, nonnormative and untransmitted.
+  cat >"$OUT/publisher-feedback-input.json" <<'JSON'
+{"query":{"query":"debian","include_web":false},"proposal_kind":"lexicalization_candidate","candidate_label":"public-publisher-observation-review","language":"en"}
+JSON
+  curl --noproxy '*' -fsS --max-time 12 -u "$AUTH" \
+    -H 'Content-Type: application/json' \
+    --data-binary @"$OUT/publisher-feedback-input.json" \
+    "$BCE/api/v1/discovery/feedback/preview" -o "$OUT/publisher-feedback.json"
+  jq -e '
+    .schema_version=="bce-feedback-preview-v1" and
+    .state=="local_review_export_only" and .observation_count>=1 and
+    .proposal.schema_version=="cpe-discovery-proposal-research-v1" and
+    .proposal.distinct_ancestry_count==1 and
+    .proposal.authority=="not_accepted_not_transmitted" and
+    .proposal.state=="local-review-export-only" and
+    all(.proposal.evidence[]; .source=="bitmagnet" and
+       (.evidence_ref|test("^sha256:[0-9a-f]{64}$")) and
+       (.ancestry_ref|test("^sha256:[0-9a-f]{64}$")))
+  ' "$OUT/publisher-feedback.json" >/dev/null
+  if grep -Fq "$DEBIAN_PUBLISHER_HASH" "$OUT/publisher-feedback.json";then
+    echo "::error::Original publisher infohash escaped into privacy-keyed CPE feedback draft"
+    exit 1
+  fi
+  echo "REAL_PUBLISHER_CHAIN_PASS: 5 pinned original publishers imported, FTS/agent CLI verified, local HMAC research only"
+else
+  echo "REAL_FEEDBACK_FAST_LANE_PASS: fictional data only; no authentic publisher torrent, private local corpus, CPE adjudication, or native TrueNAS F4 claimed"
+fi
