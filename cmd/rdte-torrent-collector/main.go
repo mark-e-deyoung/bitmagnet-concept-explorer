@@ -333,13 +333,13 @@ func collectDebian(out string, entries *[]map[string]any, events *[]string) {
 		*events = append(*events, "debian-13.8 mirror bytes disagree; both records withheld")
 		return
 	}
-	hash, name, size, err := decodeMetainfo(a)
+	candidateHash, name, size, err := decodeMetainfo(a)
 	if err != nil || name != "debian-13.8.0-amd64-netinst.iso" || size <= 0 {
 		*events = append(*events, "debian-13.8 matching mirror bytes do not satisfy exact release/name/v1 bencode oracle")
 		return
 	}
 	sum := sha256.Sum256(a)
-	*events = append(*events, "debian-13.8 dual-mirror first-source research observation only: sha256="+hex.EncodeToString(sum[:])+" infohash="+hash+" ; next run must independently freeze original identity")
+	*events = append(*events, "debian-13.8 dual-mirror first-source research observation only: sha256="+hex.EncodeToString(sum[:])+" infohash="+candidateHash+" ; next run must independently freeze original identity")
 	err = admitBytes(out, entries, "debian:dual-mirror-unpinned", candidate,
 		"two HTTPS mirrors agree original bytes; upstream rights and immutable source authority not independently admitted",
 		firstURL, "software", a)
