@@ -326,9 +326,23 @@ test('inventory DOM admission: selectors must resolve in their actual UI state [
  await page.locator('#lookup-submit').click();
  await expect(page.locator('#lookup-results button')).toHaveCount(1);
  const absent=[];
- for(const control of manifest.controls.filter(c=>c.type==='dynamic')){
+ for(const control of manifest.controls.filter(c=>c.type==='dynamic'&&c.control_id!=='media-inspect')){
    if(await page.locator(control.selector).count()===0) absent.push(control.control_id+':'+control.selector);
  }
+ // Source fixture above uses literary/public metadata, not a movie. A real
+ // media-inspect button only exists for Movie/Series source observations.
+ await page.route('**/api/v1/query/execute',async route=>{
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+     state:'complete',read_only:true,
+     results:[{title:'Fictional Movie Source',content_type:'movie',content_source:'tmdb',content_id:'12345',
+       info_hash:'1111111111111111111111111111111111111111',tracks:['direct'],matched_queries:['Fictional']}],
+     track_counts:{direct:1,concept:0},warnings:[],failures:[]
+   })});
+ });
+ await page.locator('#query').fill('Fictional Movie Source');
+ await page.locator('#submit').click();
+ await expect(page.locator('#status')).toHaveAttribute('data-ui-state','ready');
+ await expect(page.locator('.media-inspect')).toHaveCount(1);
  expect(absent,'All declared dynamic controls must be visible in their owning populated journey').toEqual([]);
 });
 
