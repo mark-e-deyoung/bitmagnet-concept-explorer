@@ -45,6 +45,8 @@ func TestCLIJSONInputLimitsMatchRouteContracts(t *testing.T) {
 		"sweep-plan":        16 << 10,
 		"sweep":             16 << 10,
 		"discovery-preview": 16 << 10,
+		"feedback-preview":  16 << 10,
+		"media-lookup":      16 << 10,
 	}
 	for operation, want := range operations {
 		limit, ok := operationInputLimit(operation)
