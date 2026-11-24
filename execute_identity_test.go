@@ -16,7 +16,9 @@ func TestBitmagnetV010NativeMediaIdentityProjection(t *testing.T) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		var body struct { Query string `json:"query"` }
+		var body struct {
+			Query string `json:"query"`
+		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Error(err)
 			return
@@ -35,7 +37,7 @@ func TestBitmagnetV010NativeMediaIdentityProjection(t *testing.T) {
 	}))
 	defer server.Close()
 	t.Setenv("BCE_BITMAGNET_GRAPHQL", server.URL+"/graphql")
-	got, err := execute(context.Background(), Request{Query:"Synthetic Original Movie"})
+	got, err := execute(context.Background(), Request{Query: "Synthetic Original Movie"})
 	if err != nil || got.State != "complete" || len(got.Results) != 1 {
 		t.Fatalf("native identity result invalid %#v / %v", got, err)
 	}
@@ -48,7 +50,7 @@ func TestBitmagnetV010NativeMediaIdentityProjection(t *testing.T) {
 		v.AdultMetadata == nil || *v.AdultMetadata {
 		t.Fatalf("corrupted existing observation fields %#v", v)
 	}
-	if got.ReadOnly != true || got.ExternalResults == nil && len(got.Failures)>0 {
+	if got.ReadOnly != true || got.ExternalResults == nil && len(got.Failures) > 0 {
 		t.Fatalf("identity read changed source authority %#v", got)
 	}
 }
@@ -56,32 +58,32 @@ func TestBitmagnetV010NativeMediaIdentityProjection(t *testing.T) {
 func TestMediaIdentityConflictsLatchUnknownWithoutArrivalOrder(t *testing.T) {
 	year2020, year2024 := 2020, 2024
 	base := Observation{
-		InfoHash:"1111111111111111111111111111111111111111",
-		Title:"Fictional Original", ContentType:"movie",
-		ContentSource:"tmdb", ContentID:"100", ReleaseYear:&year2020,
+		InfoHash: "1111111111111111111111111111111111111111",
+		Title:    "Fictional Original", ContentType: "movie",
+		ContentSource: "tmdb", ContentID: "100", ReleaseYear: &year2020,
 	}
 	other := Observation{
-		InfoHash:base.InfoHash,Title:base.Title,ContentType:"movie",
-		ContentSource:"tmdb",ContentID:"200",ReleaseYear:&year2024,
+		InfoHash: base.InfoHash, Title: base.Title, ContentType: "movie",
+		ContentSource: "tmdb", ContentID: "200", ReleaseYear: &year2024,
 	}
-	mergeObservationMetadata(&base,other)
-	if base.ContentSource!="tmdb" || base.ContentID!="" || base.ReleaseYear!=nil ||
-		!contains(base.ConflictingMetadata,"content_id") ||
-		!contains(base.ConflictingMetadata,"release_year"){
-		t.Fatalf("provider ID or year conflict wrongly resolved %#v",base)
+	mergeObservationMetadata(&base, other)
+	if base.ContentSource != "tmdb" || base.ContentID != "" || base.ReleaseYear != nil ||
+		!contains(base.ConflictingMetadata, "content_id") ||
+		!contains(base.ConflictingMetadata, "release_year") {
+		t.Fatalf("provider ID or year conflict wrongly resolved %#v", base)
 	}
-	mergeObservationMetadata(&base,Observation{
-		InfoHash:base.InfoHash,ContentSource:"tmdb",ContentID:"100",ReleaseYear:&year2020,
+	mergeObservationMetadata(&base, Observation{
+		InfoHash: base.InfoHash, ContentSource: "tmdb", ContentID: "100", ReleaseYear: &year2020,
 	})
-	if base.ContentID!="" || base.ReleaseYear!=nil {
+	if base.ContentID != "" || base.ReleaseYear != nil {
 		t.Fatal("later arrival unlatched identity conflict")
 	}
 	conflictingSource := Observation{
-		InfoHash:base.InfoHash,ContentSource:"imdb",ContentID:"tt1234567",
+		InfoHash: base.InfoHash, ContentSource: "imdb", ContentID: "tt1234567",
 	}
-	mergeObservationMetadata(&base,conflictingSource)
-	if base.ContentSource!="" || !contains(base.ConflictingMetadata,"content_source") {
-		t.Fatalf("cross-provider conflict not signaled: %#v",base)
+	mergeObservationMetadata(&base, conflictingSource)
+	if base.ContentSource != "" || !contains(base.ConflictingMetadata, "content_source") {
+		t.Fatalf("cross-provider conflict not signaled: %#v", base)
 	}
 }
 
@@ -94,13 +96,13 @@ func TestAbsentMediaIdentityDoesNotFabricateProviderID(t *testing.T) {
 		}]}}}}`))
 	}))
 	defer server.Close()
-	t.Setenv("BCE_BITMAGNET_GRAPHQL",server.URL+"/graphql")
-	got,err:=execute(context.Background(),Request{Query:"Synthetic"})
-	if err!=nil || got.State!="complete" || len(got.Results)!=1 {
-		t.Fatalf("failed unclassified result %#v / %v",got,err)
+	t.Setenv("BCE_BITMAGNET_GRAPHQL", server.URL+"/graphql")
+	got, err := execute(context.Background(), Request{Query: "Synthetic"})
+	if err != nil || got.State != "complete" || len(got.Results) != 1 {
+		t.Fatalf("failed unclassified result %#v / %v", got, err)
 	}
-	item:=got.Results[0]
-	if item.ContentSource!="" || item.ContentID!="" || item.ReleaseYear!=nil {
-		t.Fatalf("fabricated unsupported provider identity %#v",item)
+	item := got.Results[0]
+	if item.ContentSource != "" || item.ContentID != "" || item.ReleaseYear != nil {
+		t.Fatalf("fabricated unsupported provider identity %#v", item)
 	}
 }

@@ -72,7 +72,7 @@ type gqlResult struct {
 					ContentID     string `json:"contentId"`
 					Seeders       *int   `json:"seeders"`
 					Leechers      *int   `json:"leechers"`
-					Languages   []struct {
+					Languages     []struct {
 						ID   string `json:"id"`
 						Name string `json:"name"`
 					} `json:"languages"`
