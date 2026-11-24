@@ -173,3 +173,28 @@ test("compiled Go media lookup API and CLI agree on disabled external and unconf
   ]);
   expect(apiResult.outcomes.every(v => v.candidates.length === 0 && v.related.length === 0)).toBe(true);
 });
+
+
+test("human media and concept feedback controls call actual Go routes without source egress", async ({page}) => {
+  await page.goto("/", {waitUntil: "domcontentloaded"});
+  await page.locator("#query").fill("Animation");
+  await page.locator("#submit").click();
+  await expect(page.locator("#status")).toHaveAttribute("data-ui-state", "ready");
+  await expect(page.locator(".media-inspect")).toHaveCount(1);
+  await page.locator(".media-inspect").first().click();
+  await expect(page.locator("#lookup-title")).toHaveValue("Synthetic Integrated Animation Result");
+  await expect(page.locator("#lookup-consent")).not.toBeChecked();
+  await page.locator("#lookup-provider").selectOption("tmdb");
+  await page.locator("#lookup-submit").click();
+  await expect(page.locator("#lookup-status")).toHaveAttribute("data-ui-state","ready");
+  await expect(page.locator("#lookup-results")).toContainText("requires_explicit_external_consent");
+
+  await page.locator("#feedback-candidate").fill("fictional lexical form");
+  await page.locator("#feedback-language").fill("de");
+  await page.locator("#feedback-kind").selectOption("lexicalization_candidate");
+  await page.locator("#feedback-submit").click();
+  await expect(page.locator("#feedback-status")).toHaveAttribute("data-ui-state","ready");
+  await expect(page.locator("#feedback-status")).toContainText("not sent to or accepted by CPE");
+  await expect(page.locator("#feedback-output")).toContainText("not_accepted_not_transmitted");
+  await expect(page.locator("#feedback-output")).not.toContainText("1111111111111111111111111111111111111111");
+});
