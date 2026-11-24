@@ -299,6 +299,39 @@ code{font-family:ui-monospace,Consolas,monospace}
 <section class="panel" aria-labelledby="concept-title"><h2 id="concept-title">Concept-term matches</h2><p class="helper">Found through optional experimental expansions.</p><div id="concept">Run a search to see expanded-term matches.</div></section>
 <section class="panel" aria-labelledby="overlap-title"><h2 id="overlap-title">Shared matches</h2><p class="helper">Appeared in both independent retrieval tracks.</p><div id="overlap">Run a search to compare overlapping results.</div></section>
 </div></section>
+<section id="media-research" class="panel section-space" aria-labelledby="media-research-title">
+<h2 id="media-research-title">Inspect related media in local or external catalogs</h2>
+<p class="section-intro">Choose an observed film or series, or enter explicit source-native genre/keyword filters. Results are candidates, not proof you own a title or that it belongs to a CPE concept. No external lookup occurs without your consent.</p>
+<form id="media-research-form">
+<div class="facet-layout">
+<div><label for="lookup-title">Title (optional for provider-native genre search)</label><input id="lookup-title" maxlength="160" autocomplete="off"></div>
+<div><label for="lookup-kind">Work type</label><select id="lookup-kind"><option value="movie">Movie</option><option value="series">TV series</option></select></div>
+<div><label for="lookup-provider">Source</label><select id="lookup-provider"><option value="jellyfin">Local Jellyfin</option><option value="tmdb">TMDb (external)</option><option value="imdb">IMDb direct (licensed provider held)</option></select></div>
+<div><label for="lookup-year">Year (optional)</label><input id="lookup-year" type="number" min="1888" max="2100"></div>
+<div><label for="lookup-external-id">Source item ID, TMDb ID or IMDb tt-ID (optional)</label><input id="lookup-external-id" maxlength="64" autocomplete="off"></div>
+<div><label for="lookup-genres">Source-native genre/keyword IDs or genre labels (optional, comma separated)</label><input id="lookup-genres" maxlength="160" autocomplete="off" aria-describedby="lookup-genre-hint"><small id="lookup-genre-hint">TMDb: numeric genre IDs only; Jellyfin: local genre names. Genre search cannot be combined with title, year, item ID or related-title lookup.</small></div>
+</div>
+<p><label><input id="lookup-related" type="checkbox" style="width:auto"> Find related titles for my explicitly selected source item ID</label></p>
+<p><label><input id="lookup-consent" type="checkbox" style="width:auto"> I approve sending this selected query to TMDb when TMDb is selected; never transmit my entire Bitmagnet or Jellyfin corpus</label></p>
+<button id="lookup-submit" type="submit">Inspect source candidates (read-only)</button>
+</form>
+<p id="lookup-status" role="status" aria-live="polite">Not requested. Jellyfin is local; TMDb needs separate consent and a server-side token.</p>
+<div id="lookup-results" aria-label="Source-attributed media candidates and related titles"></div>
+</section>
+<section id="feedback-preview-ui" class="panel section-space" aria-labelledby="feedback-preview-heading">
+<h2 id="feedback-preview-heading">Review a possible CPE concept improvement</h2>
+<p>Use the current Bitmagnet search phrase to examine a candidate multilingual term, gap, drift or collision. Evidence is privacy-keyed locally; it is not submitted, persisted or accepted by CPE.</p>
+<form id="feedback-preview-form">
+<div class="facet-layout">
+<div><label for="feedback-candidate">Candidate concept term or observation label</label><input id="feedback-candidate" required maxlength="128" autocomplete="off"></div>
+<div><label for="feedback-language">Language (BCP-style code)</label><input id="feedback-language" required maxlength="20" value="en" autocomplete="off"></div>
+<div><label for="feedback-kind">Proposal hypothesis</label><select id="feedback-kind"><option value="lexicalization_candidate">Possible new lexicalization</option><option value="coverage_gap">Coverage gap</option><option value="source_taxonomy_drift">Source taxonomy drift</option><option value="hard_negative_or_collision">Hard negative or collision</option></select></div>
+</div>
+<button id="feedback-submit" type="submit">Preview local evidence proposal</button>
+</form>
+<p id="feedback-status" role="status" aria-live="polite">No proposal generated. A local HMAC key must be configured by the app administrator.</p>
+<pre id="feedback-output" aria-label="Unsubmitted CPE research proposal preview"></pre>
+</section>
 <section id="concepts" class="panel section-space"><span class="section-kicker">03 / Inspect concepts</span><h2>Concept map (pinned CPE projection preview)</h2><p id="graph-status" class="note">Checking configured concept projection…</p>
 <p><label><input type="checkbox" id="use-concept" style="width:auto"> Include the selected concept's pinned preview lexicalizations in the next query (explicit opt-in)</label></p><label for="concept-filter">Find a concept</label><input id="concept-filter" placeholder="Search concept labels and aliases">
 <ul class="viz-key" aria-label="Concept map legend"><li><span class="viz-dot selected" aria-hidden="true"></span>Selected preview concept</li><li><span class="viz-dot" aria-hidden="true"></span>Other preview concept</li></ul>
@@ -370,6 +403,24 @@ function displayItems(id,items){
     }catch(_){notice.textContent='Copy unavailable. Select the displayed infohash to copy manually.';button.textContent='Select text';}
    });
    row.append(button,notice);article.append(row);
+  }
+  if(x.content_type==='movie'||x.content_type==='tv_show'){
+   const action=document.createElement('button');action.type='button';action.className='media-inspect';
+   action.textContent='Inspect media sources';
+   action.setAttribute('aria-label','Inspect catalog matches for '+(x.title||'selected media'));
+   action.addEventListener('click',()=>{
+    $('lookup-title').value=x.title||'';
+    $('lookup-kind').value=x.content_type==='movie'?'movie':'series';
+    $('lookup-year').value=x.release_year||'';
+    const origin=String(x.content_source||'').toLowerCase();
+    $('lookup-provider').value=origin==='tmdb'||origin==='imdb'?'tmdb':'jellyfin';
+    $('lookup-external-id').value=origin==='tmdb'||origin==='imdb'?(x.content_id||''):'';
+    $('lookup-genres').value='';$('lookup-related').checked=false;$('lookup-consent').checked=false;
+    $('lookup-status').textContent='Source identity copied from this observation as a candidate only; review before querying. External consent remains off.';
+    $('media-research').scrollIntoView({block:'start'});
+    $('lookup-title').focus();
+   });
+   article.append(action);
   }
   node.append(article);
  }
@@ -630,5 +681,91 @@ document.querySelectorAll('.example-query').forEach(button=>{
  });
  apply(saved,false);
 })();
+
+let lookupToken=0,feedbackPreviewToken=0;
+$('media-research-form').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const token=++lookupToken,provider=$('lookup-provider').value,kind=$('lookup-kind').value;
+ const title=$('lookup-title').value.trim(),rawID=$('lookup-external-id').value.trim();
+ const year=$('lookup-year').value?Number($('lookup-year').value):0;
+ const related=$('lookup-related').checked,genres=$('lookup-genres').value.split(',').map(x=>x.trim()).filter(Boolean);
+ const status=$('lookup-status'),container=$('lookup-results');
+ status.textContent='Validating bounded source request…';status.setAttribute('data-ui-state','busy');
+ container.replaceChildren();
+ const payload={kind,providers:[provider],allow_external_lookup:$('lookup-consent').checked,include_related:related};
+ if(genres.length){
+  if(title||rawID||year||related){status.textContent='Source-native genre search must be separate from title, year, item ID and related search.';status.setAttribute('data-ui-state','blocked');return;}
+  if(provider==='tmdb'){
+   if(genres.some(x=>!/^[1-9][0-9]{0,10}$/.test(x))){status.textContent='TMDb genre IDs must be positive decimal numbers.';status.setAttribute('data-ui-state','blocked');return;}
+   payload.tmdb_genre_ids=genres.map(Number);
+  }else if(provider==='jellyfin')payload.jellyfin_genres=genres;
+  else{status.textContent='Direct IMDb genre search is not licensed or configured.';status.setAttribute('data-ui-state','blocked');return;}
+ }else{
+  if(title)payload.title=title;
+  if(year)payload.year=year;
+  if(rawID){
+   if(provider==='jellyfin')payload.jellyfin_item_id=rawID;
+   else if(rawID.startsWith('tt'))payload.imdb_id=rawID;
+   else payload.tmdb_id=rawID;
+  }
+ }
+ if(!payload.title&&!rawID&&!genres.length){status.textContent='Enter a title, source ID or native genre to search.';status.setAttribute('data-ui-state','blocked');return;}
+ $('lookup-submit').disabled=true;
+ try{
+  const response=await fetch('/api/v1/media/lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const result=await response.json();if(token!==lookupToken)return;
+  if(!response.ok)throw Error(result.error||('HTTP '+response.status));
+  for(const source of result.outcomes||[]){
+   const heading=document.createElement('h3');heading.textContent=source.source+': '+source.state;container.append(heading);
+   if(source.attribution){const attribution=document.createElement('p');attribution.textContent=source.attribution;container.append(attribution);}
+   const explanation=document.createElement('p');explanation.textContent=(source.warnings||[]).join(' · ')||'No additional provider warnings';container.append(explanation);
+   for(const category of ['candidates','related']){
+    const items=source[category]||[];
+    if(!items.length)continue;
+    const list=document.createElement('ul');
+    for(const item of items){
+     const li=document.createElement('li'),text=document.createElement('span');
+     text.textContent=(item.title||'Untitled')+' ('+(item.year||'year unknown')+') · '+item.source+' · '+item.match_basis+' · '+item.relationship;
+     li.append(text);
+     if(item.item_id && (item.source==='jellyfin'||item.source==='tmdb')){
+      const choose=document.createElement('button');choose.type='button';choose.textContent='Select source item for related lookup';
+      choose.addEventListener('click',()=>{
+       $('lookup-provider').value=item.source;$('lookup-kind').value=item.kind;
+       $('lookup-title').value=item.title||'';$('lookup-year').value=item.year||'';
+       $('lookup-external-id').value=item.item_id;
+       $('lookup-genres').value='';$('lookup-related').checked=true;$('lookup-consent').checked=false;
+       status.textContent='Selected provider ID, not identity-confirmed. Review then submit; TMDb consent is still off.';
+       $('lookup-submit').focus();
+      });
+      li.append(' ',choose);
+     }
+     list.append(li);
+    }
+    container.append(list);
+   }
+  }
+  status.textContent='Read-only provider response received; identities, recommendations and source genres remain provisional.';
+  status.setAttribute('data-ui-state','ready');
+ }catch(e){if(token===lookupToken){status.textContent='Source lookup unavailable: '+e.message+'; no absence inference.';status.setAttribute('data-ui-state','error');}}
+ finally{if(token===lookupToken)$('lookup-submit').disabled=false;}
+});
+$('feedback-preview-form').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const token=++feedbackPreviewToken,status=$('feedback-status'),output=$('feedback-output');
+ output.textContent='';
+ const query=$('query').value.trim();
+ if(!query){status.textContent='Run or enter a Bitmagnet query first; there is no corpus observation to attribute.';status.setAttribute('data-ui-state','blocked');return;}
+ status.textContent='Building local, nonpromotable evidence preview…';status.setAttribute('data-ui-state','busy');$('feedback-submit').disabled=true;
+ try{
+  const body={query:{query,include_web:false},proposal_kind:$('feedback-kind').value,candidate_label:$('feedback-candidate').value.trim(),language:$('feedback-language').value.trim()};
+  const response=await fetch('/api/v1/discovery/feedback/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await response.json();if(token!==feedbackPreviewToken)return;
+  if(!response.ok)throw Error(data.error||('HTTP '+response.status));
+  output.textContent=JSON.stringify(data,null,2);
+  status.textContent='Research state: '+data.state+' · source observations: '+data.observation_count+' · not sent to or accepted by CPE.';
+  status.setAttribute('data-ui-state','ready');
+ }catch(e){if(token===feedbackPreviewToken){status.textContent='Feedback preview unavailable: '+e.message+'; no CPE update or source absence inference.';status.setAttribute('data-ui-state','error');}}
+ finally{if(token===feedbackPreviewToken)$('feedback-submit').disabled=false;}
+});
 capabilities();loadCatalog();
 </script></body></html>
