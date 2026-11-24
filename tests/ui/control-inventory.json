@@ -3,7 +3,7 @@
   "authority": "mark-e-deyoung/bitmagnet-concept-explorer",
   "generated_at": "2026-10-31T20:30:00Z",
   "audit_reference": "bitmagnet-tools#18 comment 6546349724",
-  "total_controls": 45,
+  "total_controls": 60,
   "controls": [
     {
       "control_id": "skip-link",
@@ -823,6 +823,276 @@
       "testcase_ids": [
         "real-synthetic-journey",
         "advanced-search-payload-verification"
+      ]
+    },
+    {
+      "control_id": "lookup-title",
+      "category": "media",
+      "type": "static",
+      "tag": "input",
+      "selector": "#lookup-title",
+      "action": "fill",
+      "expected_semantic_result": "Selected work title, never sent to TMDb without explicit consent",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "lookup-kind",
+      "category": "media",
+      "type": "static",
+      "tag": "select",
+      "selector": "#lookup-kind",
+      "action": "select",
+      "expected_semantic_result": "Movie and series are kept distinct",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "lookup-provider",
+      "category": "media",
+      "type": "static",
+      "tag": "select",
+      "selector": "#lookup-provider",
+      "action": "select",
+      "expected_semantic_result": "Switch explicitly between local Jellyfin, consent-gated TMDb and unavailable direct IMDb",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "lookup-year",
+      "category": "media",
+      "type": "static",
+      "tag": "input",
+      "selector": "#lookup-year",
+      "action": "fill",
+      "expected_semantic_result": "Year is optional, used only as a candidate disambiguator",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "lookup-external-id",
+      "category": "media",
+      "type": "static",
+      "tag": "input",
+      "selector": "#lookup-external-id",
+      "action": "fill",
+      "expected_semantic_result": "Uses observed source ID, never guesses one from title",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "lookup-genres",
+      "category": "media",
+      "type": "static",
+      "tag": "input",
+      "selector": "#lookup-genres",
+      "action": "fill",
+      "expected_semantic_result": "Explicit source-native genre filter, no CPE concept promotion",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "lookup-related",
+      "category": "media",
+      "type": "static",
+      "tag": "input",
+      "selector": "#lookup-related",
+      "action": "check",
+      "expected_semantic_result": "Related works require a selected provider ID",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "lookup-consent",
+      "category": "media",
+      "type": "static",
+      "tag": "input",
+      "selector": "#lookup-consent",
+      "action": "check",
+      "expected_semantic_result": "External TMDb egress is opt-in and resets after selecting another record",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "lookup-submit",
+      "category": "media",
+      "type": "static",
+      "tag": "button",
+      "selector": "#lookup-submit",
+      "action": "click",
+      "expected_semantic_result": "Bounded read-only media API request and source-attributed results",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "feedback-candidate",
+      "category": "feedback",
+      "type": "static",
+      "tag": "input",
+      "selector": "#feedback-candidate",
+      "action": "fill",
+      "expected_semantic_result": "User-authored hypothesis is not CPE truth",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "feedback-language",
+      "category": "feedback",
+      "type": "static",
+      "tag": "input",
+      "selector": "#feedback-language",
+      "action": "fill",
+      "expected_semantic_result": "Explicit multilingual label for a proposal",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "feedback-kind",
+      "category": "feedback",
+      "type": "static",
+      "tag": "select",
+      "selector": "#feedback-kind",
+      "action": "select",
+      "expected_semantic_result": "Only supported research proposal kinds",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "feedback-submit",
+      "category": "feedback",
+      "type": "static",
+      "tag": "button",
+      "selector": "#feedback-submit",
+      "action": "click",
+      "expected_semantic_result": "Local source-bound feedback preview without CPE transmission",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "media-inspect",
+      "category": "media",
+      "type": "dynamic",
+      "tag": "button",
+      "selector": ".media-inspect",
+      "action": "click",
+      "expected_semantic_result": "From a Bitmagnet movie/series observation populate source form without external egress",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
+      ]
+    },
+    {
+      "control_id": "media-related-select",
+      "category": "media",
+      "type": "dynamic",
+      "tag": "button",
+      "selector": "#lookup-results button",
+      "action": "click",
+      "expected_semantic_result": "Choose a source ID for optional related lookup; external consent reset",
+      "required_browsers": [
+        "chromium-desktop",
+        "firefox-desktop",
+        "webkit-desktop",
+        "webkit-mobile"
+      ],
+      "testcase_ids": [
+        "media-feedback-review-and-external-consent"
       ]
     }
   ]
