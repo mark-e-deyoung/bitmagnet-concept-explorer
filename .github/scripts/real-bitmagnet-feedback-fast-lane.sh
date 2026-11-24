@@ -66,6 +66,39 @@ curl --noproxy '*' -fsS --max-time 45 -H 'Content-Type: application/json' \
 grep -q "5 items imported" "$OUT/import.txt"
 grep -q "import complete" "$OUT/import.txt"
 echo "REAL_FEEDBACK: five fictional records imported by real upstream /import"
+if [[ "${BCE_RDTE_AUTHENTIC_PUBLISHER:-0}" == "1" ]]; then
+  # The publisher-only collector is independently qualified at pinned #81
+  # first-source+frozen replay (GHA 45429886057 and 45430385981).
+  # No ISO/torrent payload or P2P access. Keep original public evidence
+  # outside OUT so the container/service cleanup cannot erase it.
+  RDTE_DIR="$RUNNER_TEMP/bce-real-publisher-feedback-evidence"
+  mkdir -p "$RDTE_DIR"
+  echo "REAL_PUBLISHER_CHAIN: collecting original pinned publisher metainfo"
+  GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly \
+    timeout --signal=TERM --kill-after=10s 360s \
+      go run ./cmd/rdte-torrent-collector -out "$RDTE_DIR" -minimum 5
+  jq -e '
+    .schema_version=="cpe-rdte-real-metainfo-v1" and
+    .authority_status=="research_source_observations_not_accepted_CPE" and
+    .no_payload_download==true and .no_swarm_or_dht==true and
+    (.entries | length)>=5 and
+    ([.entries[] | select(.source=="ubuntu:official")]|length)>=2 and
+    ([.entries[] | select(.source=="arch:official")]|length)==1 and
+    ([.entries[] | select(.source=="fedora:official")]|length)==1 and
+    ([.entries[] | select(.source=="debian:official-mirror")]|length)==1 and
+    all(.entries[]; .p2p_used==false and .payload_downloaded==false and
+      .rights_status=="source_claim_not_independently_qualified")
+  ' "$RDTE_DIR/manifest.json" >/dev/null
+  PUBLISHER_COUNT="$(jq -r '.entries|length' "$RDTE_DIR/manifest.json")"
+  DEBIAN_PUBLISHER_HASH="$(jq -r '[.entries[] | select(.source=="debian:official-mirror")][0].infohash' "$RDTE_DIR/manifest.json")"
+  test "$PUBLISHER_COUNT" -ge 5
+  test "$DEBIAN_PUBLISHER_HASH" != "null"
+  curl --noproxy '*' -fsS --max-time 45 -H 'Content-Type: application/json' \
+    --data-binary @"$RDTE_DIR/bitmagnet-import.ndjson" "$URL/import" -o "$OUT/publisher-import.txt"
+  grep -Fq "$PUBLISHER_COUNT items imported" "$OUT/publisher-import.txt"
+  grep -Fq "import complete" "$OUT/publisher-import.txt"
+  echo "REAL_PUBLISHER_CHAIN: original_publisher_records_imported=$PUBLISHER_COUNT"
+fi
 export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly CGO_ENABLED=0
 go build -trimpath -o "$OUT/bce" .
 BCE_AUTH_USER=fixture-auditor BCE_AUTH_PASSWORD=fixture-password-only-public \
