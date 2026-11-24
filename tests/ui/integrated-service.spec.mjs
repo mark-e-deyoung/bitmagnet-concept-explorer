@@ -108,3 +108,68 @@ test("real Go execute API and CLI retain equivalent observed results without web
   expect(apiResult.external_results || []).toHaveLength(0);
   expect(cliResult.external_results || []).toHaveLength(0);
 });
+
+
+test("compiled Go feedback preview API and CLI preserve identical bounded local evidence", async ({request, baseURL}) => {
+  const payload = {
+    query: {query: "Animation", include_web: false},
+    proposal_kind: "lexicalization_candidate",
+    candidate_label: "fictional lexical hypothesis",
+    language: "en"
+  };
+  const api = await request.post("/api/v1/discovery/feedback/preview", {data: payload});
+  expect(api.status(), await api.text()).toBe(200);
+  const apiResult = await api.json();
+  const cli = spawnSync(process.env.BCE_CLI_BIN,
+    ["-server", baseURL, "-operation", "feedback-preview", "-input", "-"], {
+      input: JSON.stringify(payload), encoding: "utf-8", timeout: 12000,
+      env: {...process.env, BCE_AUTH_USER: "", BCE_AUTH_PASSWORD: ""}
+    });
+  expect(cli.error).toBeUndefined();
+  expect(cli.status, cli.stderr).toBe(0);
+  const cliResult = JSON.parse(cli.stdout);
+  expect(cliResult).toEqual(apiResult);
+  expect(apiResult.state).toBe("local_review_export_only");
+  expect(apiResult.observation_count).toBe(1);
+  expect(apiResult.proposal.authority).toBe("not_accepted_not_transmitted");
+  expect(apiResult.proposal.distinct_ancestry_count).toBe(1);
+  expect(apiResult.proposal.evidence).toHaveLength(1);
+  expect(JSON.stringify(cliResult)).not.toContain("11111111111111111111");
+  expect(JSON.stringify(cliResult)).not.toContain("Synthetic Integrated Animation Result");
+  expect(JSON.stringify(cliResult)).not.toContain('"query":"Animation"');
+  const denied = {...payload, query: {query: "Animation", include_web: true}};
+  const deniedApi = await request.post("/api/v1/discovery/feedback/preview", {data: denied});
+  expect(deniedApi.status()).toBe(422);
+  const deniedCLI = spawnSync(process.env.BCE_CLI_BIN,
+    ["-server", baseURL, "-operation", "feedback-preview", "-input", "-"], {
+      input: JSON.stringify(denied), encoding: "utf-8", timeout: 12000,
+      env: {...process.env, BCE_AUTH_USER: "", BCE_AUTH_PASSWORD: ""}
+    });
+  expect(deniedCLI.status).toBe(4);
+  expect(JSON.parse(deniedCLI.stdout)).toEqual(await deniedApi.json());
+});
+
+test("compiled Go media lookup API and CLI agree on disabled external and unconfigured local providers", async ({request, baseURL}) => {
+  const payload = {
+    kind: "movie", title: "Fictional Film", providers: ["tmdb", "jellyfin", "imdb"],
+    include_related: false, allow_external_lookup: false
+  };
+  const api = await request.post("/api/v1/media/lookup", {data: payload});
+  expect(api.status(), await api.text()).toBe(200);
+  const apiResult = await api.json();
+  const cli = spawnSync(process.env.BCE_CLI_BIN,
+    ["-server", baseURL, "-operation", "media-lookup", "-input", "-"], {
+      input: JSON.stringify(payload), encoding: "utf-8", timeout: 12000,
+      env: {...process.env, BCE_AUTH_USER: "", BCE_AUTH_PASSWORD: ""}
+    });
+  expect(cli.error).toBeUndefined();
+  expect(cli.status, cli.stderr).toBe(0);
+  expect(JSON.parse(cli.stdout)).toEqual(apiResult);
+  expect(apiResult.read_only).toBe(true);
+  expect(apiResult.outcomes.map(v => v.state)).toEqual([
+    "requires_explicit_external_consent",
+    "unconfigured_local_library",
+    "licensed_source_not_configured"
+  ]);
+  expect(apiResult.outcomes.every(v => v.candidates.length === 0 && v.related.length === 0)).toBe(true);
+});
