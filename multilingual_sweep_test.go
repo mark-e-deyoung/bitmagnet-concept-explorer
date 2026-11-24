@@ -114,6 +114,7 @@ func TestSweepExecuteUsesOneLocalQueryPlanAndScopedExternalSearch(t *testing.T) 
 	defer searx.Close()
 	t.Setenv("BCE_BITMAGNET_GRAPHQL", bitmagnet.URL+"/graphql")
 	t.Setenv("BCE_SEARXNG_URL", searx.URL+"/search")
+	isolateSyntheticSearXNGPace(t, searx.URL+"/search")
 	t.Setenv("BCE_SEARXNG_SWEEP_ALLOWED", "true")
 	out, e := runSweep(context.Background(), SweepRequest{Query: "animation", ConceptIDs: []string{"media.animation"}, Languages: []string{"en", "th"},
 		IncludeSearxng: true, ExternalConsent: true, MaxBitmagnetQueries: 3, MaxSearxngQueries: 2})
@@ -145,6 +146,7 @@ func TestSearXNGProvider429StopsSweepAndSetsCooldown(t *testing.T) {
 	}))
 	defer s.Close()
 	t.Setenv("BCE_SEARXNG_URL", s.URL+"/search")
+	isolateSyntheticSearXNGPace(t, s.URL+"/search")
 	_, e := searchSearXNGScoped(context.Background(), "synthetic", "de")
 	if !errors.Is(e, errSearXNGBackoff) || !strings.Contains(e.Error(), "429") {
 		t.Fatalf("429 not respected: %v", e)
@@ -176,6 +178,7 @@ func TestSearXNGConservativeHourBudgetBlocksFourthRequest(t *testing.T) {
 	}))
 	defer s.Close()
 	t.Setenv("BCE_SEARXNG_URL", s.URL+"/search")
+	isolateSyntheticSearXNGPace(t, s.URL+"/search")
 	for i := 0; i < 3; i++ {
 		if _, e := searchSearXNGScoped(context.Background(), "fictional", "en"); e != nil {
 			t.Fatalf("within hourly budget %d: %v", i, e)

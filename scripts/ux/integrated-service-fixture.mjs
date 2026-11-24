@@ -62,6 +62,10 @@ const child = spawn(BIN, ["-listen", "127.0.0.1:4178"], {
     BCE_CPE_GRAPH_FILE: fixturePath,
     BCE_CPE_GRAPH_SHA256: hash,
     BCE_SEARXNG_URL: "",
+    BCE_DISCOVERY_HMAC_KEY: "synthetic-only-replay-key-0123456789012345",
+    BCE_TMDB_READ_TOKEN: "",
+    BCE_JELLYFIN_BASE_URL: "",
+    BCE_JELLYFIN_TOKEN: "",
     BCE_AUTH_USER: "",
     BCE_AUTH_PASSWORD: ""
   },
