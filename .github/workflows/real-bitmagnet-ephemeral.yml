@@ -3,15 +3,13 @@ name: Public real Bitmagnet ephemeral system rep
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    # Heavy real PostgreSQL+Bitmagnet+Gutenberg runtime costs minutes and network.
-    # Run on actual source/provider contracts, not unrelated docs/UX-only PRs.
+    # This 25-minute authentic publisher/Gutenberg lane is currently gated:
+    # a pinned v0.10.0 public run imported its first 5 rows and then hit
+    # an external HTTP 503 / hard cap. Do not re-launch it on every unrelated
+    # Go/CLI/UI PR. The shorter actual Bitmagnet feedback lane qualifies the
+    # product seam independently; this lane is for corpus fixture/harness
+    # changes or explicit operators, plus main's scheduled deep rep.
     paths:
-      - "*.go"
-      - "cmd/**"
-      - "internal/**"
-      - "web/**"
-      - "go.mod"
-      - "go.sum"
       - ".github/scripts/real-bitmagnet-ephemeral-rep.sh"
       - ".github/scripts/sample-public-gutenberg-catalog.py"
       - ".github/workflows/real-bitmagnet-ephemeral.yml"

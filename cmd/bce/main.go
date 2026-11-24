@@ -25,7 +25,7 @@ func main() {
 	service := flag.String("server", "http://127.0.0.1:3086", "Concept Explorer origin")
 	query := flag.String("query", "", "Literal query for plan/execute")
 	expansions := flag.String("expand", "", "Comma-separated exploratory terms")
-	operation := flag.String("operation", "capabilities", "capabilities, limits, concepts, concept, plan, execute, facets, observed-graph, cpe-preflight, infer, sweep-plan, sweep or discovery-preview")
+	operation := flag.String("operation", "capabilities", "capabilities, limits, concepts, concept, plan, execute, facets, observed-graph, cpe-preflight, infer, sweep-plan, sweep, discovery-preview, feedback-preview or media-lookup")
 	languages := flag.String("languages", "", "Comma-separated observed language IDs")
 	media := flag.String("media", "", "Native Bitmagnet media type")
 	minSeeders := flag.Int("min-seeders", -1, "Minimum observed seeders (-1 unset)")
@@ -37,7 +37,7 @@ func main() {
 	conceptID := flag.String("concept-id", "", "Exact concept ID for inspect operation")
 	selectedConcepts := flag.String("concept-ids", "", "Comma-separated exact IDs from pinned provisional graph, opt-in")
 	facetGroups := flag.String("facet-groups", "contentType,language,genre", "Comma-separated native groups for -operation facets (1-4)")
-	inputJSON := flag.String("input", "-", "JSON input file or - for stdin for observed-graph, cpe-preflight, infer, sweep-plan, sweep and discovery-preview")
+	inputJSON := flag.String("input", "-", "JSON input file or - for stdin for observed-graph, cpe-preflight, infer, sweep-plan, sweep, discovery-preview, feedback-preview and media-lookup")
 	flag.Parse()
 	serviceURL, urlErr := validateServiceOrigin(*service)
 	if urlErr != nil {
@@ -70,7 +70,7 @@ func main() {
 			os.Exit(2)
 		}
 		req, err = http.NewRequest("GET", serviceOrigin+"/api/v1/concepts/"+*conceptID, nil)
-	case "observed-graph", "cpe-preflight", "infer", "sweep-plan", "sweep", "discovery-preview":
+	case "observed-graph", "cpe-preflight", "infer", "sweep-plan", "sweep", "discovery-preview", "feedback-preview", "media-lookup":
 		var body []byte
 		var r io.Reader = os.Stdin
 		if *inputJSON != "-" {
@@ -87,7 +87,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(2)
 		}
-		route := map[string]string{"observed-graph": "/api/v1/query/observed-graph", "cpe-preflight": "/api/v1/cpe/adapter-plan/preflight", "infer": "/api/v1/inference/propose", "sweep-plan": "/api/v1/sweeps/plan", "sweep": "/api/v1/sweeps/execute", "discovery-preview": "/api/v1/sweeps/discovery/preview"}[*operation]
+		route := map[string]string{"observed-graph": "/api/v1/query/observed-graph", "cpe-preflight": "/api/v1/cpe/adapter-plan/preflight", "infer": "/api/v1/inference/propose", "sweep-plan": "/api/v1/sweeps/plan", "sweep": "/api/v1/sweeps/execute", "discovery-preview": "/api/v1/sweeps/discovery/preview", "feedback-preview": "/api/v1/discovery/feedback/preview", "media-lookup": "/api/v1/media/lookup"}[*operation]
 		req, err = http.NewRequest("POST", serviceOrigin+route, bytes.NewReader(body))
 		if err == nil {
 			req.Header.Set("Content-Type", "application/json")
@@ -202,7 +202,14 @@ func isLoopbackHost(host string) bool {
 }
 
 func operationInputLimit(operation string) (int64, bool) {
-	return contracts.CLIInputLimit(operation)
+	switch operation {
+	case "feedback-preview":
+		return contracts.CLIInputLimit("discovery-preview")
+	case "media-lookup":
+		return contracts.CLIInputLimit("sweep")
+	default:
+		return contracts.CLIInputLimit(operation)
+	}
 }
 
 func readOperationInput(r io.Reader, operation string) ([]byte, error) {
