@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
@@ -310,7 +311,41 @@ func collectDebian(out string, entries *[]map[string]any, events *[]string) {
 		}
 		return
 	}
-	*events = append(*events, "debian: no mirror met prior original SHA256+infohash+HTTPS admission")
+	*events = append(*events, "debian: 13.7 original pinned release unavailable; remain fail-closed")
+	// Independent first-source acquisition only: 13.8 was announced 21 Nov.
+	// Two mirrors of the SAME publisher are not independent semantic witnesses;
+	// identical bytes do not yet constitute a previously frozen source pin.
+	// Keep this as an explicitly UNPINNED CANDIDATE, not official-mirror accepted.
+	const candidate = "debian-13.8.0-amd64-netinst.iso.torrent"
+	firstURL := "https://ftp.jaist.ac.jp/debian-cd/current/amd64/bt-cd/" + candidate
+	secondURL := "https://mirrors.xmission.com/debian-cd/current/amd64/bt-cd/" + candidate
+	a, ea := fetch(firstURL, 2<<20)
+	if ea != nil {
+		*events = append(*events, "debian-13.8 first-source HTTPS rejected: "+ea.Error())
+		return
+	}
+	b, eb := fetch(secondURL, 2<<20)
+	if eb != nil {
+		*events = append(*events, "debian-13.8 second-source HTTPS rejected: "+eb.Error())
+		return
+	}
+	if !bytes.Equal(a, b) {
+		*events = append(*events, "debian-13.8 mirror bytes disagree; both records withheld")
+		return
+	}
+	hash, name, size, err := decodeMetainfo(a)
+	if err != nil || name != "debian-13.8.0-amd64-netinst.iso" || size <= 0 {
+		*events = append(*events, "debian-13.8 matching mirror bytes do not satisfy exact release/name/v1 bencode oracle")
+		return
+	}
+	sum := sha256.Sum256(a)
+	*events = append(*events, "debian-13.8 dual-mirror first-source research observation only: sha256="+hex.EncodeToString(sum[:])+" infohash="+hash+" ; next run must independently freeze original identity")
+	err = admitBytes(out, entries, "debian:dual-mirror-unpinned", candidate,
+		"two HTTPS mirrors agree original bytes; upstream rights and immutable source authority not independently admitted",
+		firstURL, "software", a)
+	if err != nil {
+		*events = append(*events, "debian-13.8 unpinned research source rejected: "+err.Error())
+	}
 }
 
 // collectArch admits one exact-version official Arch Linux torrent metainfo item.
