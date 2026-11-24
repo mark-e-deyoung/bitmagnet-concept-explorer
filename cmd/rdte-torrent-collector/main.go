@@ -274,78 +274,59 @@ func verifyPinnedMetainfo(raw []byte, expectedFileSHA256, expectedInfoHash strin
 	return nil
 }
 
-// collectDebian uses exactly pinned version-specific archived .torrent metadata.
-// Debian announced 13.8.0 on 2026-11-21, so current/ is moving and the 13.7
-// path may 404; use the independently indexed 13.7.0 versioned JAIST
-// university mirror first, and a second independently listed XMission mirror
-// only with the SAME independently admitted original SHA256+infohash pins.
-// A mirror response is an unqualified source observation until exact byte
-// equality is verified. No "latest" substitution or download of ISO payload.
+// collectDebian independently replays the exact 13.8 original metainfo bytes
+// first observed through TWO allowed HTTPS release mirrors at
+// GHA 45429886057, artifact 14938852593 on 2026-11-24. The first-source
+// record was explicitly UNPINNED and NOT ADMITTED. It was only then frozen
+// below for this new independent run; 13.7 paths had begun returning HTTP
+// 404 after Debian's 2026-11-21 release of 13.8.
+// Do not use 13.8 as a substitute for the old 13.7 SHA or accept unpinned
+// mirror bytes. Both mirrored original files must match the prior full-file
+// SHA256 and original bencoded info SHA1 AND each other.
 func collectDebian(out string, entries *[]map[string]any, events *[]string) {
-	const record = "debian-13.7.0-amd64-netinst.iso.torrent"
-	const sha = "690700ed8de8d0987fcf8c136507471b1588b996696ca34f9cf972ee09b849e0"
-	const hash = "7acf8fb590b2060dd9c3146ef770169d593433b0"
+	const record = "debian-13.8.0-amd64-netinst.iso.torrent"
+	const sha = "d05f1635c5009507d87b0594b2d97fb1913ae8fd6c9ae8cbebb54476683ec235"
+	const hash = "e75a1a6b922815d64cfa9b8904208d3a85143495"
 	sources := []struct {
 		name string
 		url  string
 	}{
-		{"jaist:versioned-13.7", "https://ftp.jaist.ac.jp/debian-cd/13.7.0/amd64/bt-cd/" + record},
-		{"xmission:current-13.7-if-preserved", "https://mirrors.xmission.com/debian-cd/current/amd64/bt-cd/" + record},
+		{"jaist:publisher-mirror", "https://ftp.jaist.ac.jp/debian-cd/current/amd64/bt-cd/" + record},
+		{"xmission:publisher-mirror", "https://mirrors.xmission.com/debian-cd/current/amd64/bt-cd/" + record},
 	}
+	var original []byte
 	for _, source := range sources {
 		raw, err := fetch(source.url, 2<<20)
 		if err != nil {
-			*events = append(*events, "debian mirror fetch rejected "+source.name+": "+err.Error())
-			continue
+			*events = append(*events, "debian 13.8 HTTPS mirror fetch rejected "+source.name+": "+err.Error())
+			return
 		}
-		if err = verifyPinnedMetainfo(raw, sha, hash); err != nil {
-			*events = append(*events, "debian original exact-file and infohash rejected "+source.name+": "+err.Error())
-			continue
+		if err := verifyPinnedMetainfo(raw, sha, hash); err != nil {
+			*events = append(*events, "debian 13.8 prior independently frozen source identity rejected "+source.name+": "+err.Error())
+			return
 		}
-		err = admitBytes(out, entries, "debian:official-mirror", record,
-			"official Debian release mirror; exact original metainfo pinned, rights not independently adjudicated",
-			source.url, "software", raw)
-		if err != nil {
-			*events = append(*events, "debian source admission rejected "+source.name+": "+err.Error())
-			continue
+		_, name, size, err := decodeMetainfo(raw)
+		if err != nil || name != "debian-13.8.0-amd64-netinst.iso" || size <= 0 {
+			*events = append(*events, "debian 13.8 original bencode name/version/size mismatch "+source.name)
+			return
 		}
+		if original != nil && !bytes.Equal(original, raw) {
+			*events = append(*events, "debian 13.8 source mirrors disagree on original bytes despite prior pin")
+			return
+		}
+		original = raw
+	}
+	if len(original) == 0 {
+		*events = append(*events, "debian 13.8 original metainfo missing")
 		return
 	}
-	*events = append(*events, "debian: 13.7 original pinned release unavailable; remain fail-closed")
-	// Independent first-source acquisition only: 13.8 was announced 21 Nov.
-	// Two mirrors of the SAME publisher are not independent semantic witnesses;
-	// identical bytes do not yet constitute a previously frozen source pin.
-	// Keep this as an explicitly UNPINNED CANDIDATE, not official-mirror accepted.
-	const candidate = "debian-13.8.0-amd64-netinst.iso.torrent"
-	firstURL := "https://ftp.jaist.ac.jp/debian-cd/current/amd64/bt-cd/" + candidate
-	secondURL := "https://mirrors.xmission.com/debian-cd/current/amd64/bt-cd/" + candidate
-	a, ea := fetch(firstURL, 2<<20)
-	if ea != nil {
-		*events = append(*events, "debian-13.8 first-source HTTPS rejected: "+ea.Error())
+	if err := admitBytes(out, entries, "debian:official-mirror", record,
+		"Debian 13.8 original metainfo, two HTTPS mirrors replay prior full SHA256+v1 infohash; rights not independently adjudicated",
+		sources[0].url, "software", original); err != nil {
+		*events = append(*events, "debian 13.8 source admission failed: "+err.Error())
 		return
 	}
-	b, eb := fetch(secondURL, 2<<20)
-	if eb != nil {
-		*events = append(*events, "debian-13.8 second-source HTTPS rejected: "+eb.Error())
-		return
-	}
-	if !bytes.Equal(a, b) {
-		*events = append(*events, "debian-13.8 mirror bytes disagree; both records withheld")
-		return
-	}
-	candidateHash, name, size, err := decodeMetainfo(a)
-	if err != nil || name != "debian-13.8.0-amd64-netinst.iso" || size <= 0 {
-		*events = append(*events, "debian-13.8 matching mirror bytes do not satisfy exact release/name/v1 bencode oracle")
-		return
-	}
-	sum := sha256.Sum256(a)
-	*events = append(*events, "debian-13.8 dual-mirror first-source research observation only: sha256="+hex.EncodeToString(sum[:])+" infohash="+candidateHash+" ; next run must independently freeze original identity")
-	err = admitBytes(out, entries, "debian:dual-mirror-unpinned", candidate,
-		"two HTTPS mirrors agree original bytes; upstream rights and immutable source authority not independently admitted",
-		firstURL, "software", a)
-	if err != nil {
-		*events = append(*events, "debian-13.8 unpinned research source rejected: "+err.Error())
-	}
+	*events = append(*events, "debian 13.8 original pinned metainfo exact-byte dual-mirror replay PASS; CPE rights/semantic authority not accepted")
 }
 
 // collectArch admits one exact-version official Arch Linux torrent metainfo item.
