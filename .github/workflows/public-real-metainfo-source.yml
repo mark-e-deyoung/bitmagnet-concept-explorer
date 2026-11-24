@@ -86,7 +86,7 @@ jobs:
         with:
           name: original-publisher-metainfo-${{ github.run_id }}
           path: |
-            /home/runner/work/_temp/bce-original-public-metainfo/manifest.json
-            /home/runner/work/_temp/bce-original-public-metainfo/metainfo/
+            ${{ runner.temp }}/bce-original-public-metainfo/manifest.json
+            ${{ runner.temp }}/bce-original-public-metainfo/metainfo/
           if-no-files-found: ignore
           retention-days: 14
