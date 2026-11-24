@@ -1,0 +1,29 @@
+name: Temporary native Go formatter for structured Bitmagnet identity RDTE
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "execute.go"
+      - "execute_identity_test.go"
+      - ".github/workflows/_identity_gofmt_rdte.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  gofmt-stdout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Emit native formatter output for public Go source only
+        run: |
+          for f in execute.go execute_identity_test.go; do
+            printf 'FMT_BEGIN:%s\n' "$f"
+            gofmt "$f" | base64 -w0
+            printf '\nFMT_END:%s\n' "$f"
+          done
