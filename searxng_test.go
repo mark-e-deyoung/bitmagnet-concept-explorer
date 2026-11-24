@@ -19,6 +19,7 @@ func TestSearXNGExplicitBoundedQuery(t *testing.T) {
 	}))
 	defer server.Close()
 	t.Setenv("BCE_SEARXNG_URL", server.URL+"/search")
+	isolateSyntheticSearXNGPace(t, server.URL+"/search")
 	hits, e := searchSearXNG(context.Background(), "fictional")
 	if e != nil || len(hits) != 1 || hits[0].Source != "searxng" || hits[0].Engines[0] != "fixture" {
 		t.Fatalf("unexpected result %#v %v", hits, e)
@@ -34,6 +35,7 @@ func TestSearXNGDeniedOrUnavailable(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(403) }))
 	defer server.Close()
 	t.Setenv("BCE_SEARXNG_URL", server.URL+"/search")
+	isolateSyntheticSearXNGPace(t, server.URL+"/search")
 	if _, e := searchSearXNG(context.Background(), "fictional"); e == nil || !strings.Contains(e.Error(), "403") {
 		t.Fatalf("expected JSON disabled failure, got %v", e)
 	}
@@ -50,6 +52,7 @@ func TestSearXNGExecutionSeparation(t *testing.T) {
 	defer external.Close()
 	t.Setenv("BCE_BITMAGNET_GRAPHQL", upstream.URL+"/graphql")
 	t.Setenv("BCE_SEARXNG_URL", external.URL+"/search")
+	isolateSyntheticSearXNGPace(t, external.URL+"/search")
 	result, e := execute(context.Background(), Request{Query: "fictional", IncludeWeb: true})
 	if e != nil || result.State != "complete" || len(result.Results) != 1 || len(result.ExternalResults) != 1 {
 		returnBad(t, result, e)
