@@ -14,7 +14,17 @@ test("real Go UI retrieves synthetic Bitmagnet data without semantic promotion",
   // The human relationship view intentionally shows the selected focus neighborhood,
   // not every node in the complete catalog. The root fixture has three outgoing edges.
   await expect(page.locator("#concept-list button")).toHaveCount(4);
+  await expect(page.locator("#concept-matches button")).toHaveCount(7);
   await page.locator("#query").fill("Animation");
+  await page.locator("#concept-filter").fill("book");
+  await expect(page.locator("#concept-matches button")).toHaveCount(2);
+  await expect(page.locator("#query")).toHaveValue("Animation");
+  const matchingApi=await (await request.get("/api/v1/concepts?q=book")).json();
+  const matchingUI=await page.locator("#concept-matches button").evaluateAll(nodes=>nodes.map(node=>node.dataset.conceptId));
+  expect(matchingUI).toEqual(matchingApi.concepts.map(node=>node.id));
+  await page.locator("#concept-filter").fill("หนังสือ");
+  await expect(page.locator("#concept-matches button")).toHaveCount(1);
+  await expect(page.locator("#query")).toHaveValue("Animation");
   await page.locator("#submit").click();
   await expect(page.locator("#status")).toHaveAttribute("data-ui-state", "ready");
   await expect(page.locator("#status")).toContainText("Unique observed: 1");
@@ -172,4 +182,56 @@ test("compiled Go media lookup API and CLI agree on disabled external and unconf
     "licensed_source_not_configured"
   ]);
   expect(apiResult.outcomes.every(v => v.candidates.length === 0 && v.related.length === 0)).toBe(true);
+});
+
+
+test("human media and concept feedback controls call actual Go routes without source egress", async ({page}) => {
+  await page.goto("/", {waitUntil: "domcontentloaded"});
+  await page.locator("#query").fill("Animation");
+  await page.locator("#submit").click();
+  await expect(page.locator("#status")).toHaveAttribute("data-ui-state", "ready");
+  await expect(page.locator(".media-inspect")).toHaveCount(1);
+  await page.locator(".media-inspect").first().click();
+  await expect(page.locator("#lookup-title")).toHaveValue("Synthetic Integrated Animation Result");
+  await expect(page.locator("#lookup-consent")).not.toBeChecked();
+  await page.locator("#lookup-provider").selectOption("tmdb");
+  await page.locator("#lookup-submit").click();
+  await expect(page.locator("#lookup-status")).toHaveAttribute("data-ui-state","ready");
+  await expect(page.locator("#lookup-results")).toContainText("requires_explicit_external_consent");
+
+  await page.locator("#feedback-candidate").fill("fictional lexical form");
+  await page.locator("#feedback-language").fill("de");
+  await page.locator("#feedback-kind").selectOption("lexicalization_candidate");
+  await page.locator("#feedback-submit").click();
+  await expect(page.locator("#feedback-status")).toHaveAttribute("data-ui-state","ready");
+  await expect(page.locator("#feedback-status")).toContainText("not sent to or accepted by CPE");
+  await expect(page.locator("#feedback-output")).toContainText("not_accepted_not_transmitted");
+  await expect(page.locator("#feedback-output")).not.toContainText("1111111111111111111111111111111111111111");
+});
+
+test("compiled Go metadata comparison and CLI agree without external calls", async ({request, baseURL}) => {
+  const payload = {
+    reference: {title:"Fictional Example",kind:"movie",year:2025,catalog_ids:{imdb:"tt1234567"}},
+    observations: [
+      {source:"searxng",state:"observed",record:{title:"Fictional Example"}},
+      {source:"reference_catalog",state:"observed",record:{title:"Fictional Example",year:2024,catalog_ids:{imdb:"tt1234567"}}},
+      {source:"publisher",state:"refused",record:{}}
+    ]
+  };
+  const api = await request.post("/api/v1/metadata/compare",{data:payload});
+  expect(api.status(),await api.text()).toBe(200);
+  const result=await api.json();
+  const cli=spawnSync(process.env.BCE_CLI_BIN,["-server",baseURL,"-operation","metadata-compare","-input","-"],{
+    input:JSON.stringify(payload),encoding:"utf-8",timeout:12000,
+    env:{...process.env,BCE_AUTH_USER:"",BCE_AUTH_PASSWORD:""}
+  });
+  expect(cli.error).toBeUndefined();
+  expect(cli.status,cli.stderr).toBe(0);
+  expect(JSON.parse(cli.stdout)).toEqual(result);
+  expect(result.read_only).toBe(true);
+  expect(result.external_requests).toBe(0);
+  expect(result.independent_witnesses).toBe(0);
+  expect(result.outcomes.map(x=>x.identity)).toEqual(["title_candidate_unconfirmed","conflicting_claims_review_required","source_incomplete_non_diagnostic"]);
+  expect(cli.stdout).not.toContain("Fictional Example");
+  expect(cli.stdout).not.toContain("tt1234567");
 });

@@ -15,7 +15,13 @@ URL="http://127.0.0.1:3333"
 BCE="http://127.0.0.1:3086"
 AUTH="fixture-auditor:fixture-password-only-public"
 POSTGRES_IMAGE="postgres@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab"
-BITMAGNET_IMAGE="ghcr.io/bitmagnet-io/bitmagnet@sha256:cf2c16fac5b51f1c18e630b4710175d35d7e44b83012cfd05a2b43712feec05e"
+# Keep historical v0.10.0 default; only admit two reviewed upstream image identities.
+BITMAGNET_VERSION="${BCE_RDTE_BITMAGNET_VERSION:-v0.10.0}"
+case "$BITMAGNET_VERSION" in
+  v0.10.0) BITMAGNET_IMAGE="ghcr.io/bitmagnet-io/bitmagnet@sha256:cf2c16fac5b51f1c18e630b4710175d35d7e44b83012cfd05a2b43712feec05e" ;;
+  v0.10.1) BITMAGNET_IMAGE="ghcr.io/bitmagnet-io/bitmagnet@sha256:d86acc2e42f1ed610d7700bb3228ef5617ce79d57234d00a4e13c55124795ad1" ;;
+  *) echo "Unsupported Bitmagnet qualification version" >&2; exit 2 ;;
+esac
 export NO_PROXY="127.0.0.1,localhost" no_proxy="127.0.0.1,localhost"
 cleanup() {
   local rc=$?
@@ -56,16 +62,49 @@ ready=0
 for i in $(seq 1 55); do
   if curl --noproxy '*' -fsS --max-time 3 -H 'Content-Type: application/json' \
     --data '{"query":"query { version }"}' "$URL/graphql" -o "$OUT/version.json" 2>/dev/null \
-    && jq -e '.data.version=="v0.10.0"' "$OUT/version.json" >/dev/null; then ready=1;break;fi
+    && jq -e --arg expected "$BITMAGNET_VERSION" '.data.version==$expected' "$OUT/version.json" >/dev/null; then ready=1;break;fi
   sleep 2
 done
-test "$ready" = 1 || { echo "Pinned Bitmagnet v0.10.0 not ready" >&2;exit 1; }
-echo "REAL_FEEDBACK: Bitmagnet v0.10.0 GraphQL ready"
+test "$ready" = 1 || { echo "Pinned Bitmagnet $BITMAGNET_VERSION not ready" >&2;exit 1; }
+echo "REAL_FEEDBACK: Bitmagnet $BITMAGNET_VERSION GraphQL ready; pinned image=$BITMAGNET_IMAGE"
 curl --noproxy '*' -fsS --max-time 45 -H 'Content-Type: application/json' \
   --data-binary @fixtures/public-bitmagnet-rep.ndjson "$URL/import" -o "$OUT/import.txt"
 grep -q "5 items imported" "$OUT/import.txt"
 grep -q "import complete" "$OUT/import.txt"
 echo "REAL_FEEDBACK: five fictional records imported by real upstream /import"
+if [[ "${BCE_RDTE_AUTHENTIC_PUBLISHER:-0}" == "1" ]]; then
+  # The publisher-only collector is independently qualified at pinned #81
+  # first-source+frozen replay (GHA 45429886057 and 45430385981).
+  # No ISO/torrent payload or P2P access. Keep original public evidence
+  # outside OUT so the container/service cleanup cannot erase it.
+  RDTE_DIR="$RUNNER_TEMP/bce-real-publisher-feedback-evidence"
+  mkdir -p "$RDTE_DIR"
+  echo "REAL_PUBLISHER_CHAIN: collecting original pinned publisher metainfo"
+  GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly \
+    timeout --signal=TERM --kill-after=10s 360s \
+      go run ./cmd/rdte-torrent-collector -out "$RDTE_DIR" -minimum 5
+  jq -e '
+    .schema_version=="cpe-rdte-real-metainfo-v1" and
+    .authority_status=="research_source_observations_not_accepted_CPE" and
+    .no_payload_download==true and .no_swarm_or_dht==true and
+    (.entries | length)>=5 and
+    ([.entries[] | select(.source=="ubuntu:official")]|length)>=2 and
+    ([.entries[] | select(.source=="arch:official")]|length)==1 and
+    ([.entries[] | select(.source=="fedora:official")]|length)==1 and
+    ([.entries[] | select(.source=="debian:official-mirror")]|length)==1 and
+    all(.entries[]; .p2p_used==false and .payload_downloaded==false and
+      .rights_status=="source_claim_not_independently_qualified")
+  ' "$RDTE_DIR/manifest.json" >/dev/null
+  PUBLISHER_COUNT="$(jq -r '.entries|length' "$RDTE_DIR/manifest.json")"
+  DEBIAN_PUBLISHER_HASH="$(jq -r '[.entries[] | select(.source=="debian:official-mirror")][0].infohash' "$RDTE_DIR/manifest.json")"
+  test "$PUBLISHER_COUNT" -ge 5
+  test "$DEBIAN_PUBLISHER_HASH" != "null"
+  curl --noproxy '*' -fsS --max-time 45 -H 'Content-Type: application/json' \
+    --data-binary @"$RDTE_DIR/bitmagnet-import.ndjson" "$URL/import" -o "$OUT/publisher-import.txt"
+  grep -Fq "$PUBLISHER_COUNT items imported" "$OUT/publisher-import.txt"
+  grep -Fq "import complete" "$OUT/publisher-import.txt"
+  echo "REAL_PUBLISHER_CHAIN: original_publisher_records_imported=$PUBLISHER_COUNT"
+fi
 export GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOFLAGS=-mod=readonly CGO_ENABLED=0
 go build -trimpath -o "$OUT/bce" .
 BCE_AUTH_USER=fixture-auditor BCE_AUTH_PASSWORD=fixture-password-only-public \
@@ -139,4 +178,66 @@ curl --noproxy '*' -fsS --max-time 8 -u "$AUTH" \
   --data-binary @"$OUT/tmdb-no-consent.json" "$BCE/api/v1/media/lookup" -o "$OUT/media.json"
 jq -e '.outcomes[0].state=="requires_explicit_external_consent"' "$OUT/media.json" >/dev/null
 echo "REAL_FEEDBACK_NO_EXTERNAL_PROVIDER_CALL_PASS"
-echo "REAL_FEEDBACK_FAST_LANE_PASS: no authentic publisher torrent, private local corpus, CPE adjudication, or native TrueNAS F4 claimed"
+if [[ "${BCE_RDTE_AUTHENTIC_PUBLISHER:-0}" == "1" ]]; then
+  # Real Bitmagnet FTS is asynchronous. Query a verified publisher infohash,
+  # not an invented fixture string, through the ACTUAL compiled Explorer.
+  cat >"$OUT/debian-original-query.json" <<'JSON'
+{"query":"debian","include_web":false}
+JSON
+  found=0
+  for i in $(seq 1 75); do
+    curl --noproxy '*' -sS --max-time 10 -u "$AUTH" \
+      -H 'Content-Type: application/json' \
+      --data-binary @"$OUT/debian-original-query.json" \
+      "$BCE/api/v1/query/execute" -o "$OUT/publisher-execute.json" || true
+    if jq -e --arg hash "$DEBIAN_PUBLISHER_HASH" '
+      .state=="complete" and .read_only==true and
+      any(.results[]; .info_hash==$hash and (.tracks|index("direct")!=null))
+    ' "$OUT/publisher-execute.json" >/dev/null 2>&1; then found=1;break;fi
+    sleep 2
+  done
+  if [[ "$found" != 1 ]]; then
+    echo "::error::Authentic Debian original publisher infohash absent from pinned Bitmagnet FTS via compiled BCE"
+    jq '{state,track_counts,failures,coverage}' "$OUT/publisher-execute.json" || true
+    exit 1
+  fi
+  echo "REAL_PUBLISHER_CHAIN: original Debian infohash returned via Bitmagnet GraphQL->BCE FTS"
+
+  # Agent/automation CLI calls same authenticated Go API with exact source ID.
+  go build -trimpath -o "$OUT/bce-cli" ./cmd/bce
+  BCE_AUTH_USER=fixture-auditor BCE_AUTH_PASSWORD=fixture-password-only-public \
+    "$OUT/bce-cli" -server "$BCE" -operation execute -query debian >"$OUT/publisher-cli.json"
+  jq -e --arg hash "$DEBIAN_PUBLISHER_HASH" '
+    .state=="complete" and .read_only==true and
+    any(.results[]; .info_hash==$hash and (.tracks|index("direct")!=null))
+  ' "$OUT/publisher-cli.json" >/dev/null
+  echo "REAL_PUBLISHER_CHAIN: automation CLI returned same original publisher identity"
+
+  # Feedback HMACs local source IDs. Bitmagnet evidence shares one source
+  # ancestry and CPE remains unmodified, nonnormative and untransmitted.
+  cat >"$OUT/publisher-feedback-input.json" <<'JSON'
+{"query":{"query":"debian","include_web":false},"proposal_kind":"lexicalization_candidate","candidate_label":"public-publisher-observation-review","language":"en"}
+JSON
+  curl --noproxy '*' -fsS --max-time 12 -u "$AUTH" \
+    -H 'Content-Type: application/json' \
+    --data-binary @"$OUT/publisher-feedback-input.json" \
+    "$BCE/api/v1/discovery/feedback/preview" -o "$OUT/publisher-feedback.json"
+  jq -e '
+    .schema_version=="bce-feedback-preview-v1" and
+    .state=="local_review_export_only" and .observation_count>=1 and
+    .proposal.schema_version=="cpe-discovery-proposal-research-v1" and
+    .proposal.distinct_ancestry_count==1 and
+    .proposal.authority=="not_accepted_not_transmitted" and
+    .proposal.state=="local-review-export-only" and
+    all(.proposal.evidence[]; .source=="bitmagnet" and
+       (.evidence_ref|test("^sha256:[0-9a-f]{64}$")) and
+       (.ancestry_ref|test("^sha256:[0-9a-f]{64}$")))
+  ' "$OUT/publisher-feedback.json" >/dev/null
+  if grep -Fq "$DEBIAN_PUBLISHER_HASH" "$OUT/publisher-feedback.json";then
+    echo "::error::Original publisher infohash escaped into privacy-keyed CPE feedback draft"
+    exit 1
+  fi
+  echo "REAL_PUBLISHER_CHAIN_PASS: 5 pinned original publishers imported, FTS/agent CLI verified, local HMAC research only"
+else
+  echo "REAL_FEEDBACK_FAST_LANE_PASS: fictional data only; no authentic publisher torrent, private local corpus, CPE adjudication, or native TrueNAS F4 claimed"
+fi

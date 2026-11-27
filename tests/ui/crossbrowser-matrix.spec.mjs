@@ -58,8 +58,9 @@ test('theme, reduced motion and multilingual script content retain semantic pari
  const selected=page.locator('#concept-list button').first();
  await selected.click();
  await expect(selected).toHaveAttribute('aria-pressed','true');
- await expect(page.locator('#terms')).toHaveValue(/kreatives Werk/);
- await expect(page.locator('#terms')).toHaveValue(/งานสร้างสรรค์/);
+ await expect(page.locator('#concept-detail')).toContainText('kreatives Werk');
+ await expect(page.locator('#concept-detail')).toContainText('งานสร้างสรรค์');
+ await expect(page.locator('#terms')).toHaveValue('');
  await expect(page.getByRole('textbox',{name:'Search phrase',exact:true})).toHaveValue('Creative work');
  await reflow(page,'system media+language');
 });
@@ -199,10 +200,23 @@ test('advanced search options serialize exact request payload and reject unpushe
 
 test('concept filter input, inclusion checkbox opt-in, and keyboard node selection [concept-filter-and-selection-optin]',async({page})=>{
  await open(page);
- // Concept filter matches 'Edition'
+ // Catalog matching is distinct from selecting and querying.
+ await page.locator('#query').fill('operator query');
+ await page.locator('#concept-filter').fill('public:');
+ await expect(page.locator('#concept-matches button')).toHaveCount(2);
+ await page.locator('#concept-filter').fill('synthetic');
+ await expect(page.locator('#concept-matches button')).toHaveCount(2);
+ await page.locator('#concept-filter').fill('版');
+ await expect(page.locator('#concept-matches button')).toHaveCount(1);
+ await expect(page.locator('#query')).toHaveValue('operator query');
+ await page.locator('#concept-filter').fill('missing-nonsense');
+ await expect(page.locator('#concept-matches button')).toHaveCount(0);
+ await expect(page.locator('#concept-match-status')).toContainText('not proof of absence');
  await page.locator('#concept-filter').fill('edition');
+ await page.locator('#concept-matches button').click();
  await expect(page.locator('#concept-detail')).toContainText('Selected provisional concept: Edition');
  await expect(page.locator('#query')).toHaveValue('Edition');
+ await expect(page.locator('#terms')).toHaveValue('');
 
  // Include concept lexicalizations opt-in
  await page.locator('#use-concept').check();
@@ -315,9 +329,118 @@ test('inventory DOM admission: selectors must resolve in their actual UI state [
  await page.locator('#observed-list button').first().click();
  await page.locator('#native-facet-button').click();
  await expect(page.locator('#native-facet-data details.facet-group')).toHaveCount(3);
+ await page.route('**/api/v1/media/lookup', async route=>{
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+     read_only:true,outcomes:[{source:'jellyfin',state:'candidates_need_identity_confirmation',
+       candidates:[{item_id:'aaaaaaaaaaaa',source:'jellyfin',kind:'movie',title:'Fictional Local Film',year:2024,match_basis:'title_search_candidate_unconfirmed',relationship:'candidate'}],
+       related:[],warnings:[]}]
+   })});
+ });
+ await page.locator('#lookup-title').fill('Fictional Local Film');
+ await page.locator('#lookup-submit').click();
+ await expect(page.locator('#lookup-results button')).toHaveCount(1);
  const absent=[];
- for(const control of manifest.controls.filter(c=>c.type==='dynamic')){
+ for(const control of manifest.controls.filter(c=>c.type==='dynamic'&&c.control_id!=='media-inspect')){
    if(await page.locator(control.selector).count()===0) absent.push(control.control_id+':'+control.selector);
  }
+ // Source fixture above uses literary/public metadata, not a movie. A real
+ // media-inspect button only exists for Movie/Series source observations.
+ await page.route('**/api/v1/query/execute',async route=>{
+   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+     state:'complete',read_only:true,
+     results:[{title:'Fictional Movie Source',content_type:'movie',content_source:'tmdb',content_id:'12345',
+       info_hash:'1111111111111111111111111111111111111111',tracks:['direct'],matched_queries:['Fictional']}],
+     track_counts:{direct:1,concept:0},warnings:[],failures:[]
+   })});
+ });
+ await page.locator('#query').fill('Fictional Movie Source');
+ await page.locator('#submit').click();
+ await expect(page.locator('#status')).toHaveAttribute('data-ui-state','ready');
+ await expect(page.locator('.media-inspect')).toHaveCount(1);
  expect(absent,'All declared dynamic controls must be visible in their owning populated journey').toEqual([]);
+});
+
+
+test('media source lookup, native genre filters and local CPE feedback are explicit and review-only [media-feedback-review-and-external-consent]',async({page})=>{
+ await open(page);
+ await page.route('**/api/v1/query/execute',async route=>{
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   state:'complete',read_only:true,
+   results:[{title:'Fictional Animation Feature',content_type:'movie',content_source:'tmdb',content_id:'12345',release_year:2024,
+     info_hash:'1111111111111111111111111111111111111111',tracks:['direct'],matched_queries:['Fictional']}],
+   track_counts:{direct:1,concept:0},failures:[],warnings:[]
+  })});
+ });
+ await page.locator('#query').fill('Fictional');
+ await page.locator('#submit').click();
+ await expect(page.locator('#status')).toHaveAttribute('data-ui-state','ready');
+ const select=page.locator('.media-inspect').first();
+ await expect(select).toBeVisible();
+ await select.click();
+ await expect(page.locator('#lookup-title')).toHaveValue('Fictional Animation Feature');
+ await expect(page.locator('#lookup-provider')).toHaveValue('tmdb');
+ await expect(page.locator('#lookup-external-id')).toHaveValue('12345');
+ await expect(page.locator('#lookup-year')).toHaveValue('2024');
+ await expect(page.locator('#lookup-consent')).not.toBeChecked();
+
+ const requests=[];
+ await page.route('**/api/v1/media/lookup',async route=>{
+  requests.push(route.request().postDataJSON());
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   read_only:true,outcomes:[{source:'tmdb',state:'candidates_need_identity_confirmation',
+    candidates:[{item_id:'12345',title:'Fictional Animation Feature',year:2024,kind:'movie',
+      source:'tmdb',match_basis:'supplied_tmdb_id_detail_unconfirmed',relationship:'candidate'}],
+    related:[],warnings:[],attribution:'This product uses the TMDB API but is not endorsed or certified by TMDB.'}]
+  })});
+ });
+ await page.locator('#lookup-submit').click();
+ await expect(page.locator('#lookup-status')).toHaveAttribute('data-ui-state','ready');
+ expect(requests[0].allow_external_lookup).toBe(false);
+ expect(requests[0].tmdb_id).toBe('12345');
+ await expect(page.locator('#lookup-results')).toContainText('not endorsed or certified');
+ await expect(page.locator('#lookup-results button')).toHaveCount(1);
+ await page.locator('#lookup-results button').first().click();
+ await expect(page.locator('#lookup-related')).toBeChecked();
+ await expect(page.locator('#lookup-consent')).not.toBeChecked();
+ await page.locator('#lookup-consent').check();
+ await page.locator('#lookup-submit').click();
+ expect(requests[1].allow_external_lookup).toBe(true);
+ expect(requests[1].include_related).toBe(true);
+
+ await page.locator('#lookup-provider').selectOption('jellyfin');
+ await page.locator('#lookup-title').fill('');
+ await page.locator('#lookup-external-id').fill('');
+ await page.locator('#lookup-year').fill('');
+ await page.locator('#lookup-related').uncheck();
+ await page.locator('#lookup-consent').uncheck();
+ await page.locator('#lookup-genres').fill('Animation, Science Fiction');
+ await page.locator('#lookup-submit').click();
+ expect(requests[2].providers).toEqual(['jellyfin']);
+ expect(requests[2].jellyfin_genres).toEqual(['Animation','Science Fiction']);
+ expect(requests[2].title).toBeUndefined();
+ await page.locator('#lookup-title').fill('Conflicting title');
+ await page.locator('#lookup-submit').click();
+ await expect(page.locator('#lookup-status')).toHaveAttribute('data-ui-state','blocked');
+ expect(requests).toHaveLength(3);
+
+ let proposed=null;
+ await page.route('**/api/v1/discovery/feedback/preview',async route=>{
+  proposed=route.request().postDataJSON();
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   schema_version:'bce-feedback-preview-v1',state:'local_review_export_only',
+   observation_count:1,proposal:{schema_version:'cpe-discovery-proposal-research-v1',
+      authority:'not_accepted_not_transmitted',candidate_label:'fictional candidate',
+      proposal_id:'bce-sweep-v1-synthetic-test'}
+  })});
+ });
+ await page.locator('#feedback-candidate').fill('fictional candidate');
+ await page.locator('#feedback-language').fill('de');
+ await page.locator('#feedback-kind').selectOption('coverage_gap');
+ await page.locator('#feedback-submit').click();
+ await expect(page.locator('#feedback-status')).toContainText('not sent to or accepted by CPE');
+ expect(proposed.query.query).toBe('Fictional');
+ expect(proposed.query.include_web).toBe(false);
+ expect(proposed.language).toBe('de');
+ expect(proposed.proposal_kind).toBe('coverage_gap');
+ await expect(page.locator('#feedback-output')).toContainText('not_accepted_not_transmitted');
 });

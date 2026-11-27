@@ -1,4 +1,4 @@
-name: Public integrated Go service, browser and agent CLI qualification
+name: Public actual Go service, Chromium and agent CLI parity
 
 on:
   pull_request:
@@ -27,7 +27,7 @@ concurrency:
 jobs:
   actual-server-browser-cli:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -50,16 +50,21 @@ jobs:
           git rev-parse HEAD
           go build -trimpath -o /tmp/bce-integrated-service .
           go build -trimpath -o /tmp/bce-integrated-cli ./cmd/bce
-      - name: Install reviewed browser dependencies
+      - name: Install pinned npm closure without OS package-manager mutation
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Download only pinned Chromium Playwright engine with bounded timeout
         run: |
-          npm ci --ignore-scripts --no-audit --no-fund
-          npx playwright install --with-deps chromium firefox webkit
-      - name: Exercise actual Go server across Chromium/Firefox/WebKit desktop and mobile, accessibility and CLI parity
+          timeout --signal=TERM --kill-after=10s 180s npx playwright install chromium
+          test -x "$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')"
+      # The separate full UX workflow qualifies all three browser engines and mobile.
+      # This workflow independently proves ACTUAL compiled Go service↔UI↔CLI
+      # API semantics on Chromium, without apt stalling before tests execute.
+      - name: Exercise actual Go UI and agent CLI/API parity on pinned Chromium
         env:
           CI: "1"
           BCE_SERVICE_BIN: /tmp/bce-integrated-service
           BCE_CLI_BIN: /tmp/bce-integrated-cli
-        run: npx playwright test --config playwright.integrated-service.config.mjs
+        run: timeout --signal=TERM --kill-after=10s 450s npx playwright test --config playwright.integrated-service.config.mjs --project=chromium-desktop
       - name: Retain integrated browser and first-failure evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
