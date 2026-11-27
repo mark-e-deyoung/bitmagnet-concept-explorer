@@ -58,8 +58,9 @@ test('theme, reduced motion and multilingual script content retain semantic pari
  const selected=page.locator('#concept-list button').first();
  await selected.click();
  await expect(selected).toHaveAttribute('aria-pressed','true');
- await expect(page.locator('#terms')).toHaveValue(/kreatives Werk/);
- await expect(page.locator('#terms')).toHaveValue(/งานสร้างสรรค์/);
+ await expect(page.locator('#concept-detail')).toContainText('kreatives Werk');
+ await expect(page.locator('#concept-detail')).toContainText('งานสร้างสรรค์');
+ await expect(page.locator('#terms')).toHaveValue('');
  await expect(page.getByRole('textbox',{name:'Search phrase',exact:true})).toHaveValue('Creative work');
  await reflow(page,'system media+language');
 });
@@ -199,10 +200,23 @@ test('advanced search options serialize exact request payload and reject unpushe
 
 test('concept filter input, inclusion checkbox opt-in, and keyboard node selection [concept-filter-and-selection-optin]',async({page})=>{
  await open(page);
- // Concept filter matches 'Edition'
+ // Catalog matching is distinct from selecting and querying.
+ await page.locator('#query').fill('operator query');
+ await page.locator('#concept-filter').fill('public:');
+ await expect(page.locator('#concept-matches button')).toHaveCount(2);
+ await page.locator('#concept-filter').fill('synthetic');
+ await expect(page.locator('#concept-matches button')).toHaveCount(2);
+ await page.locator('#concept-filter').fill('版');
+ await expect(page.locator('#concept-matches button')).toHaveCount(1);
+ await expect(page.locator('#query')).toHaveValue('operator query');
+ await page.locator('#concept-filter').fill('missing-nonsense');
+ await expect(page.locator('#concept-matches button')).toHaveCount(0);
+ await expect(page.locator('#concept-match-status')).toContainText('not proof of absence');
  await page.locator('#concept-filter').fill('edition');
+ await page.locator('#concept-matches button').click();
  await expect(page.locator('#concept-detail')).toContainText('Selected provisional concept: Edition');
  await expect(page.locator('#query')).toHaveValue('Edition');
+ await expect(page.locator('#terms')).toHaveValue('');
 
  // Include concept lexicalizations opt-in
  await page.locator('#use-concept').check();
