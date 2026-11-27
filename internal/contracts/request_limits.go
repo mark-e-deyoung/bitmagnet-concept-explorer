@@ -11,6 +11,7 @@ const (
 	LegacyDiscoveryJSONBytes int64 = 8 << 10
 	SweepJSONBytes           int64 = 16 << 10
 	SweepDiscoveryJSONBytes  int64 = 16 << 10
+	MetadataCompareJSONBytes int64 = 16 << 10
 )
 
 // CLIInputLimit returns the exact body budget for CLI operations that read JSON.
@@ -26,6 +27,8 @@ func CLIInputLimit(operation string) (int64, bool) {
 		return SweepJSONBytes, true
 	case "discovery-preview":
 		return SweepDiscoveryJSONBytes, true
+	case "metadata-compare":
+		return MetadataCompareJSONBytes, true
 	default:
 		return 0, false
 	}

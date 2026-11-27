@@ -1,0 +1,36 @@
+{
+  "reference": {
+    "title": "Fictional Demonstration Work",
+    "kind": "movie",
+    "year": 2025,
+    "catalog_ids": {
+      "imdb": "tt1234567"
+    }
+  },
+  "observations": [
+    {
+      "source": "searxng",
+      "state": "observed",
+      "record": {
+        "title": "Fictional Demonstration Work"
+      }
+    },
+    {
+      "source": "reference_catalog",
+      "state": "observed",
+      "record": {
+        "title": "Fictional Demonstration Work",
+        "kind": "movie",
+        "year": 2024,
+        "catalog_ids": {
+          "imdb": "tt1234567"
+        }
+      }
+    },
+    {
+      "source": "publisher",
+      "state": "unavailable",
+      "record": {}
+    }
+  ]
+}

@@ -26,6 +26,7 @@ func TestRegisteredPostRoutesEnforceSharedBodyBudgets(t *testing.T) {
 		{"POST /api/v1/sweeps/plan", contracts.SweepJSONBytes},
 		{"POST /api/v1/sweeps/execute", contracts.SweepJSONBytes},
 		{"POST /api/v1/sweeps/discovery/preview", contracts.SweepDiscoveryJSONBytes},
+		{"POST /api/v1/metadata/compare", contracts.MetadataCompareJSONBytes},
 	}
 	app := handler()
 	for _, tc := range testCases {

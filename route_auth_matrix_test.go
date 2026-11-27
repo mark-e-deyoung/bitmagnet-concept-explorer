@@ -32,6 +32,7 @@ func TestAuthenticationCoversRegisteredRouteMatrix(t *testing.T) {
 		{http.MethodPost, "/api/v1/sweeps/plan"},
 		{http.MethodPost, "/api/v1/sweeps/execute"},
 		{http.MethodPost, "/api/v1/sweeps/discovery/preview"},
+		{http.MethodPost, "/api/v1/metadata/compare"},
 	}
 	for _, route := range routes {
 		t.Run(route.method+" "+route.path, func(t *testing.T) {

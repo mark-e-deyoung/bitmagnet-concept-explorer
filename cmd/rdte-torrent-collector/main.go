@@ -259,19 +259,44 @@ func admitBytes(out string, entries *[]map[string]any, source, record, rights, l
 // verifyPinnedMetainfo rejects mirror substitution or a silently moved source revision.
 // A content hash over the ENTIRE original .torrent is independently pinned to a
 // prior genuine publisher observation, while the infohash verifies raw info bytes.
-func verifyPinnedMetainfo(raw []byte, expectedFileSHA256, expectedInfoHash string) error {
-	sum := sha256.Sum256(raw)
-	if hex.EncodeToString(sum[:]) != expectedFileSHA256 {
-		return errors.New("metainfo SHA256 differs from exact previously admitted source bytes")
+// classifyPinnedMetainfo distinguishes byte replay from an alternate wrapper.
+// It only assesses existing bounded v1 bytes against previously recorded pins.
+// It does not authenticate the publisher, verify rights, or recover missing
+// metadata. A same-infohash wrapper is NEVER accepted as the pinned original.
+func classifyPinnedMetainfo(raw []byte, expectedFileSHA256, expectedInfoHash string) (string, error) {
+	filePin, fileErr := hex.DecodeString(expectedFileSHA256)
+	infoPin, infoErr := hex.DecodeString(expectedInfoHash)
+	if fileErr != nil || infoErr != nil || len(filePin) != sha256.Size || len(infoPin) != sha1.Size ||
+		expectedFileSHA256 != strings.ToLower(expectedFileSHA256) || expectedInfoHash != strings.ToLower(expectedInfoHash) {
+		return "unresolved", errors.New("invalid prior metainfo identity pins")
 	}
 	hash, _, _, err := decodeMetainfo(raw)
 	if err != nil {
-		return err
+		return "unresolved", err
 	}
 	if hash != expectedInfoHash {
+		return "different_infohash", nil
+	}
+	sum := sha256.Sum256(raw)
+	if hex.EncodeToString(sum[:]) != expectedFileSHA256 {
+		return "same_infohash_different_wrapper", nil
+	}
+	return "exact_pinned_bytes", nil
+}
+
+func verifyPinnedMetainfo(raw []byte, expectedFileSHA256, expectedInfoHash string) error {
+	state, err := classifyPinnedMetainfo(raw, expectedFileSHA256, expectedInfoHash)
+	if err != nil {
+		return err
+	}
+	switch state {
+	case "exact_pinned_bytes":
+		return nil
+	case "same_infohash_different_wrapper":
+		return errors.New("metainfo SHA256 differs from exact previously admitted source bytes")
+	default:
 		return errors.New("original raw infohash differs from pinned publisher identity")
 	}
-	return nil
 }
 
 // collectDebian independently replays the exact 13.8 original metainfo bytes
