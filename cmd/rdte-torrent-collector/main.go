@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
@@ -194,7 +195,7 @@ func validateMetainfoRedirect(req *http.Request, via []*http.Request) error {
 		return errors.New("redirect budget")
 	}
 	host := req.URL.Hostname()
-	if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || host == "debian.nic.cz" || host == "archlinux.org" || host == "torrent.fedoraproject.org" || strings.HasSuffix(host, ".archive.org") {
+	if host == "archive.org" || host == "releases.ubuntu.com" || host == "mirrors.edge.kernel.org" || host == "debian.nic.cz" || host == "ftp.jaist.ac.jp" || host == "mirrors.xmission.com" || host == "archlinux.org" || host == "torrent.fedoraproject.org" || strings.HasSuffix(host, ".archive.org") {
 		return nil
 	}
 	return errors.New("off-origin redirect")
@@ -204,7 +205,7 @@ func fetch(rawurl string, max int) ([]byte, error) {
 	if e != nil || u.Scheme != "https" {
 		return nil, errors.New("HTTPS mandatory")
 	}
-	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "mirrors.edge.kernel.org" && u.Hostname() != "debian.nic.cz" && u.Hostname() != "archlinux.org" && u.Hostname() != "torrent.fedoraproject.org" {
+	if u.Hostname() != "archive.org" && u.Hostname() != "releases.ubuntu.com" && u.Hostname() != "mirrors.edge.kernel.org" && u.Hostname() != "debian.nic.cz" && u.Hostname() != "ftp.jaist.ac.jp" && u.Hostname() != "mirrors.xmission.com" && u.Hostname() != "archlinux.org" && u.Hostname() != "torrent.fedoraproject.org" {
 		return nil, errors.New("unapproved source")
 	}
 	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: validateMetainfoRedirect}
@@ -273,35 +274,59 @@ func verifyPinnedMetainfo(raw []byte, expectedFileSHA256, expectedInfoHash strin
 	return nil
 }
 
-// collectDebian is deliberately small: two independently documented HTTPS mirrors,
-// each called at most once with fetch's strict 30-second deadline and redirect fence.
-// Failed sources remain separately observable; zero fake/alternate record admission.
+// collectDebian independently replays the exact 13.8 original metainfo bytes
+// first observed through TWO allowed HTTPS release mirrors at
+// GHA 45429886057, artifact 14938852593 on 2026-11-24. The first-source
+// record was explicitly UNPINNED and NOT ADMITTED. It was only then frozen
+// below for this new independent run; 13.7 paths had begun returning HTTP
+// 404 after Debian's 2026-11-21 release of 13.8.
+// Do not use 13.8 as a substitute for the old 13.7 SHA or accept unpinned
+// mirror bytes. Both mirrored original files must match the prior full-file
+// SHA256 and original bencoded info SHA1 AND each other.
 func collectDebian(out string, entries *[]map[string]any, events *[]string) {
-	const record = "debian-13.7.0-amd64-netinst.iso.torrent"
-	const sha = "690700ed8de8d0987fcf8c136507471b1588b996696ca34f9cf972ee09b849e0"
-	const hash = "7acf8fb590b2060dd9c3146ef770169d593433b0"
-	const base = "/debian-cd/current/amd64/bt-cd/"
-	mirrors := []string{"https://debian.nic.cz", "https://mirrors.edge.kernel.org"}
-	for _, origin := range mirrors {
-		link := origin + base + record
-		raw, err := fetch(link, 2<<20)
+	const record = "debian-13.8.0-amd64-netinst.iso.torrent"
+	const sha = "d05f1635c5009507d87b0594b2d97fb1913ae8fd6c9ae8cbebb54476683ec235"
+	const hash = "e75a1a6b922815d64cfa9b8904208d3a85143495"
+	sources := []struct {
+		name string
+		url  string
+	}{
+		{"jaist:publisher-mirror", "https://ftp.jaist.ac.jp/debian-cd/current/amd64/bt-cd/" + record},
+		{"xmission:publisher-mirror", "https://mirrors.xmission.com/debian-cd/current/amd64/bt-cd/" + record},
+	}
+	var original []byte
+	for _, source := range sources {
+		raw, err := fetch(source.url, 2<<20)
 		if err != nil {
-			*events = append(*events, "debian mirror fetch rejected "+origin+": "+err.Error())
-			continue
+			*events = append(*events, "debian 13.8 HTTPS mirror fetch rejected "+source.name+": "+err.Error())
+			return
 		}
-		if err = verifyPinnedMetainfo(raw, sha, hash); err != nil {
-			*events = append(*events, "debian mirror identity rejected "+origin+": "+err.Error())
-			continue
+		if err := verifyPinnedMetainfo(raw, sha, hash); err != nil {
+			*events = append(*events, "debian 13.8 prior independently frozen source identity rejected "+source.name+": "+err.Error())
+			return
 		}
-		err = admitBytes(out, entries, "debian:official-mirror", record,
-			"official Debian distribution; metainfo rights not independently adjudicated", link, "software", raw)
-		if err != nil {
-			*events = append(*events, "debian source admission rejected "+origin+": "+err.Error())
-			continue
+		_, name, size, err := decodeMetainfo(raw)
+		if err != nil || name != "debian-13.8.0-amd64-netinst.iso" || size <= 0 {
+			*events = append(*events, "debian 13.8 original bencode name/version/size mismatch "+source.name)
+			return
 		}
+		if original != nil && !bytes.Equal(original, raw) {
+			*events = append(*events, "debian 13.8 source mirrors disagree on original bytes despite prior pin")
+			return
+		}
+		original = raw
+	}
+	if len(original) == 0 {
+		*events = append(*events, "debian 13.8 original metainfo missing")
 		return
 	}
-	*events = append(*events, "debian: no mirror met prior SHA256+infohash+HTTPS admission")
+	if err := admitBytes(out, entries, "debian:official-mirror", record,
+		"Debian 13.8 original metainfo, two HTTPS mirrors replay prior full SHA256+v1 infohash; rights not independently adjudicated",
+		sources[0].url, "software", original); err != nil {
+		*events = append(*events, "debian 13.8 source admission failed: "+err.Error())
+		return
+	}
+	*events = append(*events, "debian 13.8 original pinned metainfo exact-byte dual-mirror replay PASS; CPE rights/semantic authority not accepted")
 }
 
 // collectArch admits one exact-version official Arch Linux torrent metainfo item.
