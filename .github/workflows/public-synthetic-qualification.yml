@@ -75,6 +75,25 @@ jobs:
       - name: Offline Go race qualification
         run: go test -count=1 -race ./...
 
+  windows-cli-portability:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.27.1"
+          cache: false
+      - name: Confirm exact source and runner
+        run: |
+          go version
+          git rev-parse HEAD
+      - name: Exercise native Windows CLI and loopback outcome contract
+        run: go test -count=1 -run '^TestSweepCLIEmitsSameJSONOutcome$' .
+
   cross-build:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
