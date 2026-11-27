@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -20,12 +21,13 @@ import (
 )
 
 type FeedbackPreviewRequest struct {
-	Query          Request `json:"query"`
-	ProposalKind   string  `json:"proposal_kind"`
-	CandidateLabel string  `json:"candidate_label"`
-	Language       string  `json:"language"`
-	ConceptID      string  `json:"concept_id,omitempty"`
-	Projection     string  `json:"projection_digest,omitempty"`
+	Query          Request       `json:"query"`
+	Sweep          *SweepRequest `json:"sweep,omitempty"`
+	ProposalKind   string        `json:"proposal_kind"`
+	CandidateLabel string        `json:"candidate_label"`
+	Language       string        `json:"language"`
+	ConceptID      string        `json:"concept_id,omitempty"`
+	Projection     string        `json:"projection_digest,omitempty"`
 }
 
 type FeedbackPreviewResponse struct {
@@ -142,7 +144,17 @@ func registerFeedbackPreview(mux *http.ServeMux) {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 		defer cancel()
-		out, err := buildFeedbackPreview(ctx, input, key)
+		var out FeedbackPreviewResponse
+		var err error
+		if input.Sweep != nil {
+			if !reflect.DeepEqual(input.Query, Request{}) {
+				writeJSON(w, 422, map[string]string{"error": "specify exactly one bounded query or multilingual sweep"})
+				return
+			}
+			out, err = buildFeedbackSweepPreview(ctx, input, key)
+		} else {
+			out, err = buildFeedbackPreview(ctx, input, key)
+		}
 		if err != nil {
 			writeJSON(w, 422, map[string]string{"error": err.Error()})
 			return

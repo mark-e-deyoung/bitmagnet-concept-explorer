@@ -50,6 +50,8 @@ jobs:
         with:
           go-version: "1.27.1"
           cache: false
+      - name: Validate bounded original-source acquisition harness
+        run: bash -n .github/scripts/real-bitmagnet-ephemeral-rep.sh
       - name: Real upstream Bitmagnet and Explorer live isolated integration
         shell: bash
         run: bash .github/scripts/real-bitmagnet-ephemeral-rep.sh
@@ -58,7 +60,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: real-public-torrent-metadata-${{ github.run_id }}
-          path: ${{ runner.temp }}/bce-real-bitmagnet-rep/rdte-real-metainfo/
+          path: |
+            ${{ runner.temp }}/bce-real-bitmagnet-rep/rdte-real-metainfo/
+            ${{ runner.temp }}/bce-real-bitmagnet-rep/public-catalog-transport-receipt.json
           if-no-files-found: ignore
           retention-days: 14
           compression-level: 6

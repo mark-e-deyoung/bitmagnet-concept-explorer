@@ -1,0 +1,61 @@
+name: Public authentic publisher metainfo to real Bitmagnet and CPE feedback
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/scripts/real-bitmagnet-feedback-fast-lane.sh"
+      - ".github/workflows/public-real-publisher-feedback-chain.yml"
+      - "cmd/rdte-torrent-collector/**"
+      - "feedback_preview.go"
+      - "execute.go"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bce-original-publisher-livechain-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-publisher-source-to-hmac:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 11
+    env:
+      GOTOOLCHAIN: local
+      GOPROXY: "off"
+      GOSUMDB: "off"
+      GOFLAGS: "-mod=readonly"
+      BCE_RDTE_AUTHENTIC_PUBLISHER: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: "1.27.1"
+          cache: false
+      - name: Exact head, shell syntax and zero-privilege parser tests
+        env:
+          BCE_EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$BCE_EXPECTED_SOURCE_SHA"
+          bash -n .github/scripts/real-bitmagnet-feedback-fast-lane.sh
+          go test -count=1 ./cmd/rdte-torrent-collector
+      - name: Genuine original metainfo to real Bitmagnet FTS, Go CLI and CPE local feedback
+        env:
+          BCE_EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash .github/scripts/real-bitmagnet-feedback-fast-lane.sh
+      - name: Retain original publisher file-bytes and replay manifest (public, no payload)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: original-publisher-real-bitmagnet-hmac-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/bce-real-publisher-feedback-evidence/manifest.json
+            ${{ runner.temp }}/bce-real-publisher-feedback-evidence/metainfo/
+          if-no-files-found: ignore
+          retention-days: 14

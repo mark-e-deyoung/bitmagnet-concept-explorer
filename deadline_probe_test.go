@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -295,19 +296,24 @@ func TestSweepCLIEmitsSameJSONOutcome(t *testing.T) {
 	searXNGPace.Unlock()
 	t.Setenv("BCE_SEARXNG_URL", search.URL+"/search")
 	t.Setenv("BCE_SEARXNG_SWEEP_ALLOWED", "true")
-	listener, err := net.Listen("tcp", "127.0.0.1:3086")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	srv := &http.Server{Handler: authenticated(handler(), "", ""), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: sweepHTTPWriteTimeout, IdleTimeout: 30 * time.Second}
 	go func() { _ = srv.Serve(listener) }()
 	defer srv.Close()
-	bin := filepath.Join(t.TempDir(), "bce")
+	origin := "http://" + listener.Addr().String()
+	name := "bce"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	bin := filepath.Join(t.TempDir(), name)
 	build := exec.Command("go", "build", "-o", bin, "./cmd/bce")
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build CLI: %v: %s", err, out)
 	}
-	cmd := exec.Command(bin, "-operation", "sweep", "-server", "http://127.0.0.1:3086", "-input", "-")
+	cmd := exec.Command(bin, "-operation", "sweep", "-server", origin, "-input", "-")
 	cmd.Stdin = strings.NewReader(`{"query":"animation","concept_ids":["media.animation"],"languages":["en","de","th"],"include_searxng":true,"external_consent":true,"max_searxng_queries":3}`)
 	cmd.Env = append(os.Environ(), "BCE_AUTH_USER=", "BCE_AUTH_PASSWORD=")
 	start := time.Now()
@@ -324,7 +330,7 @@ func TestSweepCLIEmitsSameJSONOutcome(t *testing.T) {
 	// The next CLI request receives an explicit partial JSON result because the
 	// endpoint's process-local quota has been exhausted; no automatic retry or
 	// extra provider request is allowed.
-	cmd = exec.Command(bin, "-operation", "sweep", "-server", "http://127.0.0.1:3086", "-input", "-")
+	cmd = exec.Command(bin, "-operation", "sweep", "-server", origin, "-input", "-")
 	cmd.Stdin = strings.NewReader(`{"query":"animation","concept_ids":["media.animation"],"languages":["en","de","th"],"include_searxng":true,"external_consent":true,"max_searxng_queries":3}`)
 	cmd.Env = append(os.Environ(), "BCE_AUTH_USER=", "BCE_AUTH_PASSWORD=")
 	out, err = cmd.CombinedOutput()

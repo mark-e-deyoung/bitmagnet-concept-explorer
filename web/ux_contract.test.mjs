@@ -58,6 +58,10 @@ assert.match(script,/localStorage\.getItem\('bce-ui-theme'\)/);
 assert.match(script,/localStorage\.setItem\('bce-ui-theme'/);
 assert.match(script,/if\(value==='system'\)document\.documentElement\.removeAttribute\('data-theme'\)/);
 assert.match(script,/document\.querySelectorAll\('input\[name="bce-theme"\]'\)/);
+assert.match(beforeScript,/id="concept-match-status" role="status"/);
+assert.match(beforeScript,/id="concept-matches"[^>]+aria-label="Matching concepts"/);
+assert.match(script,/concept-filter'\)\.addEventListener\('input',renderConceptMatches\)/);
+assert.doesNotMatch(script,/\$\('terms'\)\.value=\(n\.lexicalizations/,'pinned lexemes are not unverified manual terms');
 new vm.Script(script,{filename:'web/index.html inline application script'});
 
 const contrast=(a,b)=>{

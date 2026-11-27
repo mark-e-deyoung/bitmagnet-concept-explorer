@@ -38,6 +38,67 @@ cleanup() {
 }
 trap 'cleanup $?' EXIT
 
+# Strict authentic-source preflight: do not allocate the real stack until
+# the required official catalog is available. The independent short feedback
+# and publisher-chain workflows qualify product behavior separately.
+# Load a *real public metadata source* instead of inventing hundreds of fake
+# book names. Project Gutenberg expressly publishes bulk machine-readable
+# catalogs for automation. This is ONE bulk download, NOT web page scraping.
+# The real Bitmagnet importer receives catalog-derived titles/authors, but each
+# infohash and size is deliberately fabricated as an isolated test identifier.
+CATALOG_URL="https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv.gz"
+CATALOG_MIRROR="https://dev.gutenberg.org/cache/epub/feeds/pg_catalog.csv.gz"
+# Two fixed official source origins, each attempted once. The previous 25m
+# public GHA run emitted HTTP 503 here, then remained inside curl until the
+# job was cancelled; curl's own --max-time is NOT our outer wall-clock gate.
+# Treat an unavailable publisher as UNKNOWN/FAILED, not empty catalog or
+# synthetic substitute. Do not silently use third-party mirrors/scraping.
+CATALOG_PART="$OUT/pg_catalog.csv.gz.part"
+CATALOG_EVIDENCE="$OUT/public-catalog-transport-receipt.json"
+catalog_origin=""
+download_official_catalog() {
+  local origin="$1" label="$2"
+  local code=""
+  rm -f "$CATALOG_PART"
+  echo "PUBLIC-GUTENBERG-CATALOG: starting bounded official $label origin"
+  # Outer deadline protects GHA minutes if a proxy/curl internals hang while
+  # HTTPS is returning errors. No retry or unbounded redirect recursion.
+  if timeout --signal=TERM --kill-after=5s 50s \
+    curl --fail --show-error --silent --location --max-redirs 3 \
+      --retry 0 --connect-timeout 8 --max-time 40 \
+      --speed-limit 512 --speed-time 10 --max-filesize 15000000 \
+      --output "$CATALOG_PART" "$origin"; then
+    if [[ -s "$CATALOG_PART" ]] && gzip -t "$CATALOG_PART" 2>/dev/null; then
+      mv "$CATALOG_PART" "$OUT/pg_catalog.csv.gz"
+      catalog_origin="$origin"
+      echo "PUBLIC-GUTENBERG-CATALOG: verified gzip from official $label"
+      return 0
+    fi
+    echo "::warning::Official $label returned missing/invalid gzip; not an admissible source"
+  else
+    code="$?"
+    echo "::warning::Official $label catalog transport unavailable or deadline reached: exit=$code"
+  fi
+  rm -f "$CATALOG_PART"
+  return 1
+}
+if download_official_catalog "$CATALOG_URL" "primary" ||
+   download_official_catalog "$CATALOG_MIRROR" "development-mirror"; then
+  python3 - "$CATALOG_EVIDENCE" "$catalog_origin" <<'PY'
+import json, sys
+from pathlib import Path
+Path(sys.argv[1]).write_text(
+  json.dumps({"schema_version":"bce-gutenberg-catalog-origin-v1",
+              "source_kind":"official_bulk_metadata",
+              "source_url":sys.argv[2],
+              "origin_qualified":"gzip-only","cpe_accepted":False,
+              "swarm_used":False},sort_keys=True)+"\n",encoding="utf-8")
+PY
+else
+  printf '%s\n' '{"schema_version":"bce-gutenberg-catalog-origin-v1","state":"official_sources_unavailable","cpe_accepted":false,"source_records_admitted":0,"payload_downloaded":false}' >"$CATALOG_EVIDENCE"
+  echo "::error::Neither official Gutenberg bulk metadata origin delivered valid gzip within 2 x 50s deadlines; no catalog or downstream CPE corpus acceptance"
+  exit 1
+fi
 echo "REAL-BITMAGNET: source=$(git rev-parse HEAD)"
 go version
 docker version --format 'Docker server {{.Server.Version}}'
@@ -107,24 +168,6 @@ cat "$OUT/import.txt"
 if ! grep -q '5 items imported' "$OUT/import.txt" || ! grep -q 'import complete' "$OUT/import.txt"; then
   echo "::error::Real Bitmagnet importer did not acknowledge all public test metadata"
   exit 1
-fi
-
-# Load a *real public metadata source* instead of inventing hundreds of fake
-# book names. Project Gutenberg expressly publishes bulk machine-readable
-# catalogs for automation. This is ONE bulk download, NOT web page scraping.
-# The real Bitmagnet importer receives catalog-derived titles/authors, but each
-# infohash and size is deliberately fabricated as an isolated test identifier.
-CATALOG_URL="https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv.gz"
-CATALOG_MIRROR="https://dev.gutenberg.org/cache/epub/feeds/pg_catalog.csv.gz"
-if curl -fsSL --retry 1 --connect-timeout 12 --max-time 180 --max-filesize 15000000 \
-  "$CATALOG_URL" -o "$OUT/pg_catalog.csv.gz"; then
-  echo "PUBLIC-GUTENBERG-CATALOG: official bulk metadata acquired from $CATALOG_URL"
-else
-  echo "::warning::Official Gutenberg bulk catalog origin unavailable; trying one official dev mirror"
-  rm -f "$OUT/pg_catalog.csv.gz"
-  curl -fsSL --retry 1 --connect-timeout 12 --max-time 180 --max-filesize 15000000 \
-    "$CATALOG_MIRROR" -o "$OUT/pg_catalog.csv.gz"
-  echo "PUBLIC-GUTENBERG-CATALOG: official bulk metadata acquired from $CATALOG_MIRROR"
 fi
 
 python3 .github/scripts/sample-public-gutenberg-catalog.py \
