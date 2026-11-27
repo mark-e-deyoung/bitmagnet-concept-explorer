@@ -15,7 +15,13 @@ URL="http://127.0.0.1:3333"
 BCE="http://127.0.0.1:3086"
 AUTH="fixture-auditor:fixture-password-only-public"
 POSTGRES_IMAGE="postgres@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab"
-BITMAGNET_IMAGE="ghcr.io/bitmagnet-io/bitmagnet@sha256:cf2c16fac5b51f1c18e630b4710175d35d7e44b83012cfd05a2b43712feec05e"
+# Keep historical v0.10.0 default; only admit two reviewed upstream image identities.
+BITMAGNET_VERSION="${BCE_RDTE_BITMAGNET_VERSION:-v0.10.0}"
+case "$BITMAGNET_VERSION" in
+  v0.10.0) BITMAGNET_IMAGE="ghcr.io/bitmagnet-io/bitmagnet@sha256:cf2c16fac5b51f1c18e630b4710175d35d7e44b83012cfd05a2b43712feec05e" ;;
+  v0.10.1) BITMAGNET_IMAGE="ghcr.io/bitmagnet-io/bitmagnet@sha256:d86acc2e42f1ed610d7700bb3228ef5617ce79d57234d00a4e13c55124795ad1" ;;
+  *) echo "Unsupported Bitmagnet qualification version" >&2; exit 2 ;;
+esac
 export NO_PROXY="127.0.0.1,localhost" no_proxy="127.0.0.1,localhost"
 cleanup() {
   local rc=$?
@@ -56,11 +62,11 @@ ready=0
 for i in $(seq 1 55); do
   if curl --noproxy '*' -fsS --max-time 3 -H 'Content-Type: application/json' \
     --data '{"query":"query { version }"}' "$URL/graphql" -o "$OUT/version.json" 2>/dev/null \
-    && jq -e '.data.version=="v0.10.0"' "$OUT/version.json" >/dev/null; then ready=1;break;fi
+    && jq -e --arg expected "$BITMAGNET_VERSION" '.data.version==$expected' "$OUT/version.json" >/dev/null; then ready=1;break;fi
   sleep 2
 done
-test "$ready" = 1 || { echo "Pinned Bitmagnet v0.10.0 not ready" >&2;exit 1; }
-echo "REAL_FEEDBACK: Bitmagnet v0.10.0 GraphQL ready"
+test "$ready" = 1 || { echo "Pinned Bitmagnet $BITMAGNET_VERSION not ready" >&2;exit 1; }
+echo "REAL_FEEDBACK: Bitmagnet $BITMAGNET_VERSION GraphQL ready; pinned image=$BITMAGNET_IMAGE"
 curl --noproxy '*' -fsS --max-time 45 -H 'Content-Type: application/json' \
   --data-binary @fixtures/public-bitmagnet-rep.ndjson "$URL/import" -o "$OUT/import.txt"
 grep -q "5 items imported" "$OUT/import.txt"
