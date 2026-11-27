@@ -208,3 +208,30 @@ test("human media and concept feedback controls call actual Go routes without so
   await expect(page.locator("#feedback-output")).toContainText("not_accepted_not_transmitted");
   await expect(page.locator("#feedback-output")).not.toContainText("1111111111111111111111111111111111111111");
 });
+
+test("compiled Go metadata comparison and CLI agree without external calls", async ({request, baseURL}) => {
+  const payload = {
+    reference: {title:"Fictional Example",kind:"movie",year:2025,catalog_ids:{imdb:"tt1234567"}},
+    observations: [
+      {source:"searxng",state:"observed",record:{title:"Fictional Example"}},
+      {source:"reference_catalog",state:"observed",record:{title:"Fictional Example",year:2024,catalog_ids:{imdb:"tt1234567"}}},
+      {source:"publisher",state:"refused",record:{}}
+    ]
+  };
+  const api = await request.post("/api/v1/metadata/compare",{data:payload});
+  expect(api.status(),await api.text()).toBe(200);
+  const result=await api.json();
+  const cli=spawnSync(process.env.BCE_CLI_BIN,["-server",baseURL,"-operation","metadata-compare","-input","-"],{
+    input:JSON.stringify(payload),encoding:"utf-8",timeout:12000,
+    env:{...process.env,BCE_AUTH_USER:"",BCE_AUTH_PASSWORD:""}
+  });
+  expect(cli.error).toBeUndefined();
+  expect(cli.status,cli.stderr).toBe(0);
+  expect(JSON.parse(cli.stdout)).toEqual(result);
+  expect(result.read_only).toBe(true);
+  expect(result.external_requests).toBe(0);
+  expect(result.independent_witnesses).toBe(0);
+  expect(result.outcomes.map(x=>x.identity)).toEqual(["title_candidate_unconfirmed","conflicting_claims_review_required","source_incomplete_non_diagnostic"]);
+  expect(cli.stdout).not.toContain("Fictional Example");
+  expect(cli.stdout).not.toContain("tt1234567");
+});
