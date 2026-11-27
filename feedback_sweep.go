@@ -27,8 +27,7 @@ func buildFeedbackSweepPreview(ctx context.Context, input FeedbackPreviewRequest
 	if err != nil {
 		return FeedbackPreviewResponse{}, err
 	}
-	if input.Projection != "" && plan.ProjectionDigest != "" &&
-		input.Projection != plan.ProjectionDigest {
+	if input.Projection != "" && input.Projection != plan.ProjectionDigest {
 		return FeedbackPreviewResponse{}, errors.New("sweep projection digest differs from selected source")
 	}
 	result, err := runSweep(ctx, *input.Sweep)
