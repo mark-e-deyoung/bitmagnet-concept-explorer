@@ -67,3 +67,42 @@ func TestVerifyPinnedMetainfo(t *testing.T) {
 		t.Fatal("truncated metainfo unexpectedly accepted")
 	}
 }
+
+func TestPinnedMetainfoDistinguishesWrapperFromInfoIdentity(t *testing.T) {
+	// Synthetic, offline bytes. No publisher or file access is required.
+	info := "d6:lengthi10e4:name4:test12:piece lengthi16384e6:pieces20:abcdefghijklmnopqrste"
+	original := []byte("d7:comment8:original4:info" + info + "e")
+	variant := []byte("d7:comment7:variant4:info" + info + "e")
+	different := []byte("d7:comment8:original4:infod6:lengthi11e4:name4:test12:piece lengthi16384e6:pieces20:abcdefghijklmnopqrstee")
+	v2 := []byte("d4:infod6:lengthi10e12:meta versioni2e4:name4:test6:pieces20:abcdefghijklmnopqrstee")
+	hash, _, _, err := decodeMetainfo(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(original)
+	pin := hex.EncodeToString(sum[:])
+	for _, tc := range []struct {
+		name string
+		raw  []byte
+		want string
+	}{
+		{"original", original, "exact_pinned_bytes"},
+		{"wrapper", variant, "same_infohash_different_wrapper"},
+		{"other info", different, "different_infohash"},
+		{"truncated", original[:len(original)-1], "unresolved"},
+		{"unsupported v2 or hybrid", v2, "unresolved"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := classifyPinnedMetainfo(tc.raw, pin, hash)
+			if got != tc.want || (err != nil) != (tc.want == "unresolved") {
+				t.Fatalf("classification %s err=%v want %s", got, err, tc.want)
+			}
+			if (verifyPinnedMetainfo(tc.raw, pin, hash) == nil) != (tc.want == "exact_pinned_bytes") {
+				t.Fatal("strict original publisher replay gate weakened")
+			}
+		})
+	}
+	if state, err := classifyPinnedMetainfo(original, "", hash); err == nil || state != "unresolved" {
+		t.Fatal("missing prior full-file digest admitted")
+	}
+}
