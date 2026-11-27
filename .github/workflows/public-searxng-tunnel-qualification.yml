@@ -1,0 +1,27 @@
+name: Public SearXNG disposable transport qualification
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/public-searxng-tunnel-qualification.yml'
+      - '.github/scripts/searxng-tunnel-qualification.sh'
+      - '.github/scripts/searxng-fixture-gateway.py'
+permissions:
+  contents: read
+concurrency:
+  group: searxng-disposable-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  transport-and-search:
+    if: github.head_ref == 'rdte/searxng-tunnel-qualification-20261127' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Fixed public multilingual API and authenticated tunnel probes
+        env:
+          EXPECTED_SOURCE: ${{ github.event.pull_request.head.sha }}
+        run: bash .github/scripts/searxng-tunnel-qualification.sh
