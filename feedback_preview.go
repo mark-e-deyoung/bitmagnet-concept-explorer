@@ -21,13 +21,13 @@ import (
 )
 
 type FeedbackPreviewRequest struct {
-	Query          Request `json:"query"`
+	Query          Request       `json:"query"`
 	Sweep          *SweepRequest `json:"sweep,omitempty"`
-	ProposalKind   string  `json:"proposal_kind"`
-	CandidateLabel string  `json:"candidate_label"`
-	Language       string  `json:"language"`
-	ConceptID      string  `json:"concept_id,omitempty"`
-	Projection     string  `json:"projection_digest,omitempty"`
+	ProposalKind   string        `json:"proposal_kind"`
+	CandidateLabel string        `json:"candidate_label"`
+	Language       string        `json:"language"`
+	ConceptID      string        `json:"concept_id,omitempty"`
+	Projection     string        `json:"projection_digest,omitempty"`
 }
 
 type FeedbackPreviewResponse struct {
