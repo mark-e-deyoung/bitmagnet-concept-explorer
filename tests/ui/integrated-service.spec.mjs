@@ -14,7 +14,17 @@ test("real Go UI retrieves synthetic Bitmagnet data without semantic promotion",
   // The human relationship view intentionally shows the selected focus neighborhood,
   // not every node in the complete catalog. The root fixture has three outgoing edges.
   await expect(page.locator("#concept-list button")).toHaveCount(4);
+  await expect(page.locator("#concept-matches button")).toHaveCount(7);
   await page.locator("#query").fill("Animation");
+  await page.locator("#concept-filter").fill("book");
+  await expect(page.locator("#concept-matches button")).toHaveCount(2);
+  await expect(page.locator("#query")).toHaveValue("Animation");
+  const matchingApi=await (await request.get("/api/v1/concepts?q=book")).json();
+  const matchingUI=await page.locator("#concept-matches button").evaluateAll(nodes=>nodes.map(node=>node.dataset.conceptId));
+  expect(matchingUI).toEqual(matchingApi.concepts.map(node=>node.id));
+  await page.locator("#concept-filter").fill("หนังสือ");
+  await expect(page.locator("#concept-matches button")).toHaveCount(1);
+  await expect(page.locator("#query")).toHaveValue("Animation");
   await page.locator("#submit").click();
   await expect(page.locator("#status")).toHaveAttribute("data-ui-state", "ready");
   await expect(page.locator("#status")).toContainText("Unique observed: 1");

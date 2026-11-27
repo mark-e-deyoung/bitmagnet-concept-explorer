@@ -146,6 +146,9 @@ legend{padding:0 .3rem;font-weight:700}
 .graph-node{cursor:pointer}.graph-node:focus{outline:3px solid var(--focus)}
 .concept-buttons{display:flex;flex-wrap:wrap;gap:.45rem}
 .concept-buttons button{min-height:44px;padding:.45rem .75rem;font-size:.88rem}
+#concept-matches{max-height:20rem;overflow:auto;padding:.35rem;align-content:flex-start}
+#concept-matches button{max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:left}
+#concept-detail{overflow-wrap:anywhere}
 .concept-buttons button[aria-pressed=true]{outline:3px solid var(--focus);outline-offset:1px}
 .evidence-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.2rem}
 .evidence-grid>.panel{margin-top:0}
@@ -335,7 +338,7 @@ code{font-family:ui-monospace,Consolas,monospace}
 <div role="region" aria-label="Unsubmitted CPE research proposal preview"><pre id="feedback-output"></pre></div>
 </section>
 <section id="concepts" class="panel section-space"><span class="section-kicker">03 / Inspect concepts</span><h2>Concept map (pinned CPE projection preview)</h2><p id="graph-status" class="note">Checking configured concept projection…</p>
-<p><label><input type="checkbox" id="use-concept" style="width:auto"> Include the selected concept's pinned preview lexicalizations in the next query (explicit opt-in)</label></p><label for="concept-filter">Find a concept</label><input id="concept-filter" placeholder="Search concept labels and aliases">
+<p><label><input type="checkbox" id="use-concept" style="width:auto"> Include the selected concept's pinned preview lexicalizations in the next query (explicit opt-in)</label></p><label for="concept-filter">Find a concept</label><input id="concept-filter" maxlength="256" placeholder="Search labels, IDs, definitions and aliases" aria-describedby="concept-match-status"><p id="concept-match-status" role="status" aria-live="polite">Checking pinned catalog…</p><div id="concept-matches" class="concept-buttons" role="group" aria-label="Matching concepts"></div><p class="helper">Select a match to inspect its relationships and prepare a search phrase. Typing in this filter does not change your Bitmagnet query. To include pinned lexicalizations, opt in above.</p>
 <ul class="viz-key" aria-label="Concept map legend"><li><span class="viz-dot selected" aria-hidden="true"></span>Selected preview concept</li><li><span class="viz-dot" aria-hidden="true"></span>Other preview concept</li></ul>
 <p class="viz-help">When available, navigate the diagram with Tab and Enter. At narrow widths, scroll sideways or use the accessible concept buttons below. Preview relationships are not accepted CPE facts.</p>
 <div class="viz-scroller" tabindex="0" role="region" aria-label="Scrollable provisional concept diagram"><svg id="concept-graph" class="graph" viewBox="0 0 700 350" role="group" aria-label="Interactive provisional concept relationships"></svg></div>
@@ -573,12 +576,17 @@ $('native-facet-button').addEventListener('click',loadNativeFacets);
 function svgElem(tag,attrs){const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
 function chooseConcept(id,focusOrigin){
  if(!conceptCatalog)return;
- focusConcept=conceptCatalog.concepts.find(n=>n.id===id)||null;if(!focusConcept)return;
+ const selected=conceptCatalog.concepts.find(n=>n.id===id);if(!selected)return;
+ if(focusConcept?.id!==id)$('use-concept').checked=false;
+ focusConcept=selected;
  const n=focusConcept;
- $('concept-detail').textContent='Selected provisional concept: '+n.label+' — '+(n.definition||'No description')+' · '+n.id+' · relations: '+(n.relations||[]).map(r=>r.predicate+' → '+r.target_id).join(', ')+' · Search input has been prepared but no query was executed.';
- $('query').value=n.label;
- $('terms').value=(n.lexicalizations||[]).filter(x=>x.term&&x.term!==n.label).slice(0,31).map(x=>x.term).join('\n');
- renderConceptMap();
+ const aliases=(n.lexicalizations||[]).map(x=>x.language+': '+x.term).join(' · ');
+ const relations=(n.relations||[]).map(r=>r.predicate+' → '+(conceptCatalog.concepts.find(c=>c.id===r.target_id)?.label||r.target_id)+' ('+r.target_id+')').join(', ');
+ $('concept-detail').textContent='Selected provisional concept: '+n.label+' — '+(n.definition||'No description')+' · '+n.id+' · Lexicalizations: '+(aliases||'None in this projection')+' · Relations: '+(relations||'None outgoing in this projection')+' · Search phrase can be prepared; no query was executed.';
+ if(focusOrigin!=='initial'||!$('query').value.trim())$('query').value=n.label;
+ // Pinned lexicalizations enter only through concept_ids after explicit opt-in.
+ // Never turn them into unverified manual expansions or overwrite operator terms.
+ renderConceptMap();renderConceptMatches();
  // Rendering replaces SVG groups and selector buttons. Restore the exact
  // keyboard/pointer selection target so another Tab/Enter can continue the
  // same workflow; catalog/filter programmatic updates do not steal focus.
@@ -588,6 +596,23 @@ function chooseConcept(id,focusOrigin){
  }else if(focusOrigin==='list'){
   Array.from($('concept-list').querySelectorAll('button'))
    .find(el=>el.dataset.conceptId===id)?.focus();
+ }else if(focusOrigin==='match'){
+  Array.from($('concept-matches').querySelectorAll('button'))
+   .find(el=>el.dataset.conceptId===id)?.focus();
+ }
+}
+function renderConceptMatches(){
+ const list=$('concept-matches'),status=$('concept-match-status');
+ list.replaceChildren();
+ if(!conceptCatalog){status.textContent='Pinned concept catalog unavailable.';return;}
+ const q=$('concept-filter').value.trim().toLowerCase();
+ const all=conceptCatalog.concepts;
+ const matches=all.filter(n=>!q||[n.id,n.label,n.definition||'',...(n.lexicalizations||[]).map(x=>x.term)].some(value=>value.toLowerCase().includes(q)));
+ status.textContent=matches.length+' of '+all.length+' concepts in this pinned preview'+(matches.length?'':'; no matches in this projection, not proof of absence from CPE')+'.';
+ for(const n of matches){
+  const btn=document.createElement('button');btn.type='button';btn.textContent=n.label+' ('+n.id+')';btn.dataset.conceptId=n.id;
+  btn.setAttribute('aria-pressed',String(n.id===focusConcept?.id));
+  btn.addEventListener('click',()=>chooseConcept(n.id,'match'));list.append(btn);
  }
 }
 function renderConceptMap(){
@@ -598,6 +623,7 @@ function renderConceptMap(){
  for(const e of focusConcept.relations||[])related.add(e.target_id);
  for(const n of all){if((n.relations||[]).some(e=>e.target_id===focusConcept.id))related.add(n.id)}
  const nodes=all.filter(n=>related.has(n.id)).slice(0,17),position=new Map();
+ if(!nodes.some(n=>n.id===focusConcept.id))nodes[nodes.length-1]=focusConcept;
  const others=nodes.filter(n=>n.id!==focusConcept.id);
  position.set(focusConcept.id,{x:350,y:175});
  others.forEach((n,i)=>{const a=2*Math.PI*i/Math.max(1,others.length)-Math.PI/2;position.set(n.id,{x:350+250*Math.cos(a),y:175+125*Math.sin(a)})});
@@ -615,15 +641,10 @@ async function loadCatalog(){
  try{const r=await fetch('/api/v1/concepts');const data=await r.json();if(!r.ok)throw Error(data.error||'projection unavailable');
  conceptCatalog=data;
  $('graph-status').textContent='Preview only · Snapshot: '+data.snapshot_id+' · Digest: '+data.digest.slice(0,22)+'… · Not verified CPE authority';
- const first=data.concepts[0];if(first)chooseConcept(first.id);else $('graph-status').textContent+=' · No concepts';
- }catch(e){ $('graph-status').textContent='No pinned concept graph available: '+e.message; }
+ const first=data.concepts[0];if(first)chooseConcept(first.id,'initial');else{$('graph-status').textContent+=' · No concepts';renderConceptMatches();}
+ }catch(e){ conceptCatalog=null;focusConcept=null;$('graph-status').textContent='No pinned concept graph available: '+e.message;renderConceptMatches(); }
 }
-$('concept-filter').addEventListener('input',()=>{
- if(!conceptCatalog)return;
- const q=$('concept-filter').value.toLocaleLowerCase();
- const match=conceptCatalog.concepts.find(n=>n.label.toLocaleLowerCase().includes(q)||(n.lexicalizations||[]).some(x=>x.term.toLocaleLowerCase().includes(q)));
- if(match)chooseConcept(match.id);
-});
+$('concept-filter').addEventListener('input',renderConceptMatches);
 function buildSweepRequest(){
  const langs=$('sweep-languages').value.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
  return {query:$('query').value.trim(),concept_ids:($('use-concept').checked&&focusConcept)?[focusConcept.id]:[],
