@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -103,16 +104,32 @@ func TestSweepRoutesContendAndCancellationReleasesSharedAdmission(t *testing.T) 
 			var calls atomic.Int32
 			started := make(chan struct{})
 			cancelled := make(chan struct{})
+			shutdown := make(chan struct{})
 			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Reading the POST body to EOF lets the HTTP/1 server observe
+				// client disconnects while this handler waits for cancellation.
+				if _, err := io.Copy(io.Discard, r.Body); err != nil {
+					_ = r.Body.Close()
+					http.Error(w, "synthetic request body unavailable", http.StatusBadRequest)
+					return
+				}
+				_ = r.Body.Close()
 				if calls.Add(1) == 1 {
 					close(started)
-					<-r.Context().Done()
-					close(cancelled)
+					select {
+					case <-r.Context().Done():
+						close(cancelled)
+					case <-shutdown:
+						// Cleanup must not count as observed caller cancellation.
+					}
 					return
 				}
 				_, _ = w.Write([]byte(`{"data":{"torrentContent":{"search":{"hasNextPage":false,"items":[]}}}}`))
 			}))
-			defer upstream.Close()
+			defer func() {
+				close(shutdown)
+				upstream.Close()
+			}()
 			t.Setenv("BCE_BITMAGNET_GRAPHQL", upstream.URL+"/graphql")
 			h := sharedSweepTestHandler(t)
 			ctx, cancel := context.WithCancel(context.Background())

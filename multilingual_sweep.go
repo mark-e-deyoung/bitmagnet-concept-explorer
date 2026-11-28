@@ -31,7 +31,7 @@ const (
 	// the 15s ReadTimeout plus the 55s sweep budget and response serialization.
 	sweepHTTPWriteTimeout = 75 * time.Second
 	sweepClientTimeout    = deadline.ClientTimeout
-	maxConcurrentSweeps  = 1
+	maxConcurrentSweeps   = 1
 )
 
 // At most one whole sweep may occupy the local backends at once. This is

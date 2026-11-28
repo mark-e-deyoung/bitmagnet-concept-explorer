@@ -75,10 +75,10 @@ async function search(page) {
   await expect(page.locator('#status')).toContainText('Unique observed: 1');
 }
 
-async function tabTo(page, selector, limit = 90) {
+async function tabTo(page, selector, key = 'Tab', limit = 90) {
   for (let step = 0; step < limit; step++) {
     if (await page.locator(selector).evaluate(el => el === document.activeElement)) return;
-    await page.keyboard.press('Tab');
+    await page.keyboard.press(key);
   }
   throw new Error('Keyboard Tab did not reach ' + selector);
 }
@@ -90,28 +90,39 @@ async function expectReflow(page, label) {
 
 async function expectUsableFocus(locator) {
   await expect(locator).toBeFocused();
+  const id = await locator.getAttribute('id');
   await expect.poll(() => locator.evaluate(el => {
     const r = el.getBoundingClientRect(), style = getComputedStyle(el);
-    const x = Math.max(0, Math.min(innerWidth - 1, r.left + r.width / 2));
-    const y = Math.max(0, Math.min(innerHeight - 1, r.top + r.height / 2));
+    // Native focus scrolling may leave part of the control below the viewport.
+    // Check its visible intersection and real hit target, not full containment.
+    const left = Math.max(0, r.left), right = Math.min(innerWidth, r.right);
+    const top = Math.max(0, r.top), bottom = Math.min(innerHeight, r.bottom);
+    if (right <= left || bottom <= top) return false;
+    const x = (left + right) / 2, y = (top + bottom) / 2;
     const atPoint = document.elementFromPoint(x, y);
-    return r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight &&
-      (atPoint === el || el.contains(atPoint)) && style.outlineStyle !== 'none' &&
+    return (atPoint === el || el.contains(atPoint)) && style.outlineStyle !== 'none' &&
       parseFloat(style.outlineWidth) >= 2;
-  }), {message: 'Focused control and focus indicator remain visible and unobscured'}).toBe(true);
+  }), {message: (id || 'Selected control') + ': focused control has an unobscured visible intersection and focus indication'}).toBe(true);
 }
 
-test('keyboard search exposes progress and result semantics without stealing focus [accessible-search-task]', async ({page}) => {
+test('keyboard search exposes progress and result semantics without stealing focus [accessible-search-task]', async ({page, browserName}, info) => {
   let release;
   const pending = new Promise(resolve => { release = resolve; });
   const {calls, errors, unknown} = await open(page, {
     '/api/v1/query/execute': async route => { await pending; return json(route, queryResult); },
   });
-  await page.keyboard.press('Tab');
+  // Safari's default macOS preference uses Tab for fields and Option+Tab for
+  // links. Exercise that native key path rather than substituting DOM focus.
+  // https://support.apple.com/guide/safari/keyboard-shortcuts-and-gestures-cpsh003/mac
+  const traversal = process.platform === 'darwin' && browserName === 'webkit' ? 'Alt+Tab' : 'Tab';
+  info.annotations.push({type: 'keyboard-traversal', description: traversal === 'Alt+Tab'
+    ? 'Native macOS WebKit: Safari Option+Tab convention; OS keyboard preference not changed.'
+    : 'Tab navigation in the configured browser.'});
+  await page.keyboard.press(traversal);
   await expect(page.locator('.skip-link')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#main-content')).toBeFocused();
-  await tabTo(page, '#query');
+  await tabTo(page, '#query', traversal);
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.type('synthetic film');
   await page.keyboard.press('Enter');
@@ -465,9 +476,12 @@ test('200 percent text enlargement keeps task controls usable [accessible-text-e
   // Simulate a larger browser root-font preference. This proves relative
   // authored sizing, not that a native browser settings panel was exercised.
   const preference = await page.addStyleTag({content: ':root{font-size:125%!important}'});
-  const after = await page.locator('body').evaluate(el => parseFloat(getComputedStyle(el).fontSize));
-  expect(after / before).toBeCloseTo(1.25, 2);
+  await expect.poll(async () =>
+    await page.locator('body').evaluate(el => parseFloat(getComputedStyle(el).fontSize)) / before,
+  {message: 'Body follows the terminal 125% root-font preference'}).toBeCloseTo(1.25, 2);
   await preference.evaluate(el => el.remove());
+  await expect.poll(() => page.locator('body').evaluate(el => parseFloat(getComputedStyle(el).fontSize)),
+    {message: 'Baseline font size is restored before the independent 200% stress test'}).toBeCloseTo(before, 2);
   // A text-enlargement stress test, not a claim that browser/OS zoom was run.
   // Read all baseline sizes before changing any inheritance relationship.
   await page.evaluate(() => {
@@ -493,8 +507,10 @@ test('reduced motion retains immediate feedback and keyboard focus [accessible-r
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
   expect(await page.locator('html').evaluate(el => getComputedStyle(el).scrollBehavior)).toBe('auto');
   const node = page.locator('#concept-graph .graph-node').last();
-  const duration = await node.locator('.graph-node-shape').evaluate(el => getComputedStyle(el).transitionDuration);
-  expect(duration.split(',').every(value => parseFloat(value) <= .01)).toBe(true);
+  const durations = await page.locator('body, #query, #concept-graph .graph-node-shape')
+    .evaluateAll(elements => elements.map(el => getComputedStyle(el).transitionDuration));
+  expect(durations.every(duration => duration.split(',').every(value => parseFloat(value) === 0)),
+    'Reduced motion must not add even short default all-property transitions').toBe(true);
   await node.focus();
   await page.keyboard.press('Enter');
   await expect(node).toBeFocused();
@@ -508,7 +524,11 @@ test('light and dark control boundaries retain nontext contrast [accessible-cont
   await open(page);
   for (const theme of ['Light', 'Dark']) {
     await page.getByRole('radio', {name: theme + ' theme'}).check();
-    const colors = await page.locator('#query, #lookup-title, #lookup-provider, #feedback-candidate, #submit, #sweep-local-budget').evaluateAll(elements => {
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme.toLowerCase());
+    // Let the applied theme reach a rendered frame before reading its colors;
+    // retain the same 3:1 threshold and identify any native control exception.
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const colors = await page.locator('#query, #lookup-title, #lookup-provider, #feedback-candidate, #submit, #sweep-local-budget').evaluateAll((elements, themeName) => {
       const rgba = value => {
         const match = value.match(/^rgba?\((.+)\)$/);
         if (!match) throw new Error('Unsupported computed color in contrast assertion: ' + value);
@@ -521,20 +541,26 @@ test('light and dark control boundaries retain nontext contrast [accessible-cont
       }).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
       return elements.map(el => {
         const style = getComputedStyle(el), border = rgba(style.borderTopColor);
-        let adjacent = el.parentElement, background;
+        let adjacent = el.parentElement, background, backgroundColor;
+        const ancestors = [];
         while (adjacent) {
-          const candidate = rgba(getComputedStyle(adjacent).backgroundColor);
-          if (candidate.alpha === 1) { background = candidate; break; }
+          const candidateColor = getComputedStyle(adjacent).backgroundColor;
+          const candidate = rgba(candidateColor);
+          ancestors.push((adjacent.id || adjacent.tagName) + ': ' + candidateColor);
+          if (candidate.alpha === 1) { background = candidate; backgroundColor = candidateColor; break; }
           adjacent = adjacent.parentElement;
         }
-        if (!background || border.alpha !== 1) throw new Error('Opaque control boundary/background required for contrast assertion');
+        if (!background || border.alpha !== 1) throw new Error(themeName + ' #' + el.id +
+          ': expected opaque boundary/background; border=' + style.borderTopColor + '; ancestors=' + ancestors.join(' / '));
         const a = luminance(border.rgb), b = luminance(background.rgb);
         return {id: el.id, ratio: (Math.max(a, b) + .05) / (Math.min(a, b) + .05),
-          width: parseFloat(style.borderTopWidth), borderStyle: style.borderTopStyle};
+          width: parseFloat(style.borderTopWidth), borderStyle: style.borderTopStyle,
+          borderColor: style.borderTopColor, backgroundColor};
       });
-    });
+    }, theme);
     for (const color of colors) {
-      expect(color.ratio, theme + ' #' + color.id + ' actual boundary against adjacent background').toBeGreaterThanOrEqual(3);
+      expect(color.ratio, theme + ' #' + color.id + ' actual boundary ' + color.borderColor +
+        ' against adjacent ' + color.backgroundColor).toBeGreaterThanOrEqual(3);
       expect(color.width).toBeGreaterThan(0);
       expect(color.borderStyle).not.toBe('none');
     }

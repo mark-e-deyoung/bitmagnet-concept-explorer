@@ -40,6 +40,13 @@ Do not intercept browser, OS, or AT shortcuts. [S1][S8][S9][S10]
 | Android Chrome | Reflow, usable touch targets, descriptive controls, alternatives to precise gestures | Chrome on a named Android device/emulator with TalkBack and, where claimed, Switch Access; an Android-sized Chromium viewport is not Android AT evidence |
 | Linux desktop browser | Standard browser controls and keyboard/display preferences | An actual Orca/browser/desktop pairing before claiming that pairing is supported |
 
+On macOS, Safari's default Tab behavior advances among fields; Option+Tab also
+includes links. Safari and macOS keyboard settings can alter those conventions.
+The native macOS WebKit entry test uses Option+Tab and records that choice rather
+than replacing keyboard navigation with programmatic focus. Other engines use
+Tab. This demonstrates the configured browser path, not VoiceOver navigation.
+[S12]
+
 The current public workflows contain Linux browser engines, Edge on Linux,
 mobile-sized browser profiles, macOS WebKit, and an iOS Simulator capture.
 Inspect workflow files and exact-head receipts for what actually ran. In
@@ -138,6 +145,11 @@ contained navigation, Escape behavior where appropriate, and focus return.
 - Keep focused controls visible. Sticky content must not cover a field or its
   focus indicator after scrolling, validation, zoom, or text enlargement. Prefer
   allowing the header to scroll when its wrapped size makes this unreliable. [S7]
+  Automated focus checks verify an unobscured visible intersection and focus
+  indication, then exercise input/recovery. They do not require the entire
+  control to be within the viewport: native focus scrolling can leave part
+  below the viewport without author-created content covering it. Full visibility
+  remains a usability preference for native evaluation.
 - Respect system light/dark appearance by default and allow an optional local
   override. User-selected forced colors must retain text, borders, focus and
   selected-state distinctions. Never rely solely on colored state borders.
@@ -230,3 +242,4 @@ to this browser application. Guidance reviewed 2026-11-28.
 - **S9:** [Microsoft: Designing inclusive software for Windows](https://learn.microsoft.com/en-us/windows/apps/design/accessibility/designing-inclusive-software).
 - **S10:** [Android: Principles for improving app accessibility](https://developer.android.com/guide/topics/ui/accessibility/principles).
 - **S11:** [WCAG 2.2: Target Size (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html).
+- **S12:** [Apple: Keyboard shortcuts and gestures in Safari on Mac](https://support.apple.com/guide/safari/keyboard-shortcuts-and-gestures-cpsh003/mac).
