@@ -528,7 +528,19 @@ test('light and dark control boundaries retain nontext contrast [accessible-cont
     // Let the applied theme reach a rendered frame before reading its colors;
     // retain the same 3:1 threshold and identify any native control exception.
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    const colors = await page.locator('#query, #lookup-title, #lookup-provider, #feedback-candidate, #submit, #sweep-local-budget').evaluateAll((elements, themeName) => {
+    const controls = page.locator('#query, #lookup-title, #lookup-provider, #feedback-candidate, #submit, #sweep-local-budget');
+    for (let index = 0; index < await controls.count(); index++) {
+      const control = controls.nth(index);
+      // Measure a rendered, on-screen control; a batch of off-screen styles
+      // does not establish the visible boundary being qualified.
+      await control.scrollIntoViewIfNeeded();
+      await expect(control).toBeVisible();
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      expect(await control.evaluate(el => {
+        const r = el.getBoundingClientRect();
+        return r.top < innerHeight && r.bottom > 0 && r.left < innerWidth && r.right > 0;
+      }), 'The contrast sample must intersect the rendered viewport').toBe(true);
+      const color = await control.evaluate((el, themeName) => {
       const rgba = value => {
         const match = value.match(/^rgba?\((.+)\)$/);
         if (!match) throw new Error('Unsupported computed color in contrast assertion: ' + value);
@@ -539,7 +551,6 @@ test('light and dark control boundaries retain nontext contrast [accessible-cont
         const c = channel / 255;
         return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;
       }).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
-      return elements.map(el => {
         const style = getComputedStyle(el), border = rgba(style.borderTopColor);
         let adjacent = el.parentElement, background, backgroundColor;
         const ancestors = [];
@@ -551,14 +562,13 @@ test('light and dark control boundaries retain nontext contrast [accessible-cont
           adjacent = adjacent.parentElement;
         }
         if (!background || border.alpha !== 1) throw new Error(themeName + ' #' + el.id +
-          ': expected opaque boundary/background; border=' + style.borderTopColor + '; ancestors=' + ancestors.join(' / '));
+          ': expected opaque boundary/background; border=' + style.borderTopColor + '; ancestors=' + ancestors.join(' / ') +
+          '; rect=' + JSON.stringify(el.getBoundingClientRect().toJSON()));
         const a = luminance(border.rgb), b = luminance(background.rgb);
         return {id: el.id, ratio: (Math.max(a, b) + .05) / (Math.min(a, b) + .05),
           width: parseFloat(style.borderTopWidth), borderStyle: style.borderTopStyle,
           borderColor: style.borderTopColor, backgroundColor};
-      });
-    }, theme);
-    for (const color of colors) {
+      }, theme);
       expect(color.ratio, theme + ' #' + color.id + ' actual boundary ' + color.borderColor +
         ' against adjacent ' + color.backgroundColor).toBeGreaterThanOrEqual(3);
       expect(color.width).toBeGreaterThan(0);
