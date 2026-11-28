@@ -92,13 +92,15 @@ xcrun simctl io "$DEVICE_UUID" screenshot "$SCREENSHOT_PATH"
 
 if [ -s "$SCREENSHOT_PATH" ]; then
   SIZE=$(wc -c < "$SCREENSHOT_PATH" | tr -d ' ')
-  echo "==> SUCCESS: iOS Simulator Mobile Safari screenshot captured ($SIZE bytes at $SCREENSHOT_PATH)"
+echo "==> CAPTURED: iOS Simulator Mobile Safari screenshot ($SIZE bytes at $SCREENSHOT_PATH)"
 else
   echo "==> ERROR: Screenshot was not generated or is empty"
   exit 1
 fi
 
-# Write verification receipt
+# A successful navigation request and nonempty framebuffer establish only that
+# the capture steps ran. No browser task or VoiceOver assertions run here.
+# Keep this receipt distinct from native interaction / AT qualification.
 cat <<EOF > build/ios-simulator/receipt.json
 {
   "device_uuid": "$DEVICE_UUID",
@@ -109,8 +111,12 @@ cat <<EOF > build/ios-simulator/receipt.json
   "screenshot_file": "ios-safari-concept-explorer.png",
   "screenshot_bytes": $SIZE,
   "openurl_attempts": $OPENURL_ATTEMPTS,
-  "status": "QUALIFIED"
+  "status": "CAPTURED",
+  "qualification_scope": "simulator_navigation_request_and_framebuffer_only",
+  "task_assertions": "not_run",
+  "assistive_technology_assertions": "not_run",
+  "content_verified": false
 }
 EOF
 
-echo "==> iOS Simulator qualification completed successfully."
+echo "==> iOS Simulator capture completed; task and assistive-technology qualification remain unrun."

@@ -29,7 +29,7 @@ func sweepLimits() SweepLimits {
 		ClientTimeoutSeconds:         int(sweepClientTimeout / time.Second),
 		RemainingSearxngJSONRequests: 3, SearxngSweepAdmitted: privateSearxngSweepAllowed(),
 		EgressPolicy: "one-shot opt-in; operator-attested private SearXNG; provider refusal stops source; no automatic retry or CAPTCHA bypass",
-		Coverage:     "limits are local to this process only; not an instance-wide or upstream-provider guarantee; no recurring sweeps without shared admission",
+		Coverage:     "whole-sweep admission and deadline are shared by sweep execute and sweep feedback preview; limits are local to this process only, not an instance-wide or upstream-provider guarantee; no recurring sweeps without shared admission",
 	}
 	ep, e := searXNGEndpoint()
 	if e != nil {

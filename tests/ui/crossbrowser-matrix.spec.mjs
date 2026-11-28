@@ -252,12 +252,12 @@ test('infohash clipboard copy success, fallback permission handling, and soverei
  const copyBtn=page.locator('.hash-copy').first();
  await expect(copyBtn).toBeVisible();
 
- // Trigger clipboard copy interaction: handles both headless container fallback
- // ('Select text') and writeText resolution ('Copied') across varying browser OS grants.
+ // Keep the visible action label stable for speech input; announce success or
+ // permission failure through the status, including the visible fallback.
  await copyBtn.click();
- await expect(copyBtn).toHaveText(/Copied|Select text/);
+ await expect(copyBtn).toHaveText('Copy');
 
- const copyNotice = page.locator('.hash-row .sr-only[role="status"]').first();
+ const copyNotice = page.locator('.hash-row [role="status"]').first();
  await expect(copyNotice).toContainText(/Infohash copied|Copy unavailable/);
 
  // Sovereign hypothesis opt-in button
@@ -394,8 +394,14 @@ test('media source lookup, native genre filters and local CPE feedback are expli
   })});
  });
  await page.locator('#lookup-submit').click();
+ await expect(page.locator('#lookup-status')).toHaveAttribute('data-ui-state','blocked');
+ await expect(page.locator('#lookup-consent')).toBeFocused();
+ await expect(page.locator('#lookup-consent')).toHaveAttribute('aria-invalid','true');
+ expect(requests).toHaveLength(0);
+ await page.locator('#lookup-consent').check();
+ await page.locator('#lookup-submit').click();
  await expect(page.locator('#lookup-status')).toHaveAttribute('data-ui-state','ready');
- expect(requests[0].allow_external_lookup).toBe(false);
+ expect(requests[0].allow_external_lookup).toBe(true);
  expect(requests[0].tmdb_id).toBe('12345');
  await expect(page.locator('#lookup-results')).toContainText('not endorsed or certified');
  await expect(page.locator('#lookup-results button')).toHaveCount(1);
@@ -442,5 +448,7 @@ test('media source lookup, native genre filters and local CPE feedback are expli
  expect(proposed.query.include_web).toBe(false);
  expect(proposed.language).toBe('de');
  expect(proposed.proposal_kind).toBe('coverage_gap');
+ await page.locator('#feedback-preview-ui details > summary').click();
+ await expect(page.locator('#feedback-preview-ui details')).toHaveAttribute('open','');
  await expect(page.locator('#feedback-output')).toContainText('not_accepted_not_transmitted');
 });

@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -32,7 +33,7 @@ func buildFeedbackSweepPreview(ctx context.Context, input FeedbackPreviewRequest
 	}
 	result, err := runSweep(ctx, *input.Sweep)
 	if err != nil {
-		return FeedbackPreviewResponse{}, errors.New("bounded sweep did not execute")
+		return FeedbackPreviewResponse{}, fmt.Errorf("bounded sweep did not execute: %w", err)
 	}
 	out := FeedbackPreviewResponse{
 		SchemaVersion: "bce-feedback-preview-v1",

@@ -3,9 +3,15 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -94,5 +100,58 @@ func TestCLIRejectsOversizedHTTP200ResponseWithoutReturningPrefix(t *testing.T) 
 	output, err = readServiceResponse(strings.NewReader(string(valid)))
 	if err != nil || !json.Valid(output) {
 		t.Fatalf("small valid JSON response rejected: bytes=%q err=%v", output, err)
+	}
+}
+
+func TestCLIReportsHTTPFailuresAndPreservesPartialOutcomesWithoutRetry(t *testing.T) {
+	name := "bce"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	bin := filepath.Join(t.TempDir(), name)
+	if out, err := exec.Command("go", "build", "-o", bin, ".").CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v: %s", err, out)
+	}
+	var redirectedCalls atomic.Int32
+	redirected := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		redirectedCalls.Add(1)
+		_, _ = w.Write([]byte(`{"state":"complete"}`))
+	}))
+	defer redirected.Close()
+	for _, tc := range []struct {
+		name   string
+		status int
+		body   string
+		exit   int
+	}{
+		{"partial_is_a_delivered_outcome", http.StatusOK, `{"state":"partial","failures":["synthetic refusal"]}`, 0},
+		{"busy_is_an_http_failure", http.StatusServiceUnavailable, `{"code":"sweep_busy","state":"not_started","error":"no work started"}`, 4},
+		{"unfollowed_redirect_is_a_failure", http.StatusTemporaryRedirect, `{"error":"endpoint moved"}`, 4},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls.Add(1)
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Location", redirected.URL)
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer server.Close()
+			cmd := exec.Command(bin, "-server", server.URL, "-operation", "capabilities")
+			cmd.Env = append(os.Environ(), "BCE_AUTH_USER=", "BCE_AUTH_PASSWORD=")
+			out, err := cmd.Output()
+			exit := 0
+			if err != nil {
+				var processError *exec.ExitError
+				if !errors.As(err, &processError) {
+					t.Fatalf("CLI could not run: %v", err)
+				}
+				exit = processError.ExitCode()
+			}
+			if exit != tc.exit || strings.TrimSpace(string(out)) != tc.body || calls.Load() != 1 || redirectedCalls.Load() != 0 {
+				t.Fatalf("incorrect machine outcome: exit=%d want=%d requests=%d redirects=%d output=%s", exit, tc.exit, calls.Load(), redirectedCalls.Load(), out)
+			}
+		})
 	}
 }

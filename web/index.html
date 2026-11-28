@@ -8,7 +8,7 @@
 :root {
   color-scheme: light;
   --bg:#f3f6f5; --surface:#fffefa; --raised:#edf5f3; --ink:#183039;
-  --subtle:#4e6670; --line:#bfd0d1; --strong:#145d69;
+  --subtle:#4e6670; --line:#bfd0d1; --control-border:#70848b; --strong:#145d69;
   --action:#176875; --action-text:#fff; --focus:#b35c30;
   --copper:#b46437; --gold:#e8c397; --code:#e8efee;
   --shadow:0 14px 35px rgba(15,51,59,.07);
@@ -18,7 +18,7 @@
 @media (prefers-color-scheme:dark) {
   :root:not([data-theme="light"]) {
     color-scheme:dark; --bg:#091820; --surface:#122a34; --raised:#17353d;
-    --ink:#edf7f6; --subtle:#bed3d5; --line:#486873; --strong:#8cddd9;
+    --ink:#edf7f6; --subtle:#bed3d5; --line:#486873; --control-border:#789ba3; --strong:#8cddd9;
     --action:#86d5d3; --action-text:#08191f; --focus:#f4b473;
     --copper:#d69b69; --gold:#624b39; --code:#1a3640;
     --shadow:0 14px 35px rgba(0,0,0,.22); --theme-bar:#23414a;
@@ -26,14 +26,14 @@
 }
 :root[data-theme="dark"] {
   color-scheme:dark; --bg:#091820; --surface:#122a34; --raised:#17353d;
-  --ink:#edf7f6; --subtle:#bed3d5; --line:#486873; --strong:#8cddd9;
+  --ink:#edf7f6; --subtle:#bed3d5; --line:#486873; --control-border:#789ba3; --strong:#8cddd9;
   --action:#86d5d3; --action-text:#08191f; --focus:#f4b473;
   --copper:#d69b69; --gold:#624b39; --code:#1a3640;
   --shadow:0 14px 35px rgba(0,0,0,.22); --theme-bar:#23414a;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;scroll-padding-top:6.4rem}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+html{scroll-behavior:smooth;scroll-padding-top:1rem}
+body{margin:0;background:var(--bg);color:var(--ink);font:1rem/1.55 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 a{color:var(--strong);text-underline-offset:.18em;text-decoration-thickness:.08em}
 a:hover{text-decoration-thickness:.13em}
 button,input,textarea,select{font:inherit}
@@ -62,7 +62,7 @@ h3{font-size:1.06rem}
   padding:.65rem 1rem;background:var(--surface);border:2px solid var(--focus);
   border-radius:8px;font-weight:750}.skip-link:focus{transform:translateY(0)}
 .site-header{background:var(--surface);border-bottom:1px solid var(--line)}
-@media(min-width:881px){.site-header{position:sticky;top:0;z-index:50}}
+/* A wrapping or enlarged header must never cover the current keyboard focus. */
 .site-nav{display:flex;gap:1rem;justify-content:space-between;align-items:center;flex-wrap:wrap;padding-block:.7rem}
 .product-brand{display:flex;align-items:center;gap:.7rem;text-decoration:none;color:var(--ink);font-weight:760;font-size:1.08rem;min-height:44px}
 .product-mark{width:40px;height:40px;background:var(--strong);color:var(--surface);
@@ -118,7 +118,7 @@ details.advanced[open]{padding-bottom:.8rem}
 details.advanced fieldset{background:var(--surface)}
 fieldset{border:1px solid var(--line);border-radius:10px;margin:1rem 0;padding:.85rem}
 legend{padding:0 .3rem;font-weight:700}
-.facet-layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.3rem 1rem}
+.facet-layout{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:.3rem 1rem}
 .facet-layout>div{min-width:0}
 .checkbox-line{font-weight:500;display:flex;gap:.55rem;align-items:flex-start}
 .checkbox-line input{margin-top:.38rem;flex:0 0 auto;accent-color:var(--strong)}
@@ -171,7 +171,7 @@ code{font-family:ui-monospace,Consolas,monospace}
  .trust-strip span+span:before{display:none}.trust-strip{gap:.3rem .75rem}
  .section-card,.panel{padding:16px}
 }
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation-duration:.01ms!important;transition-duration:0s!important}}
 @media(forced-colors:active){.primary-action,.panel,.section-card,.theme-picker label{border:1px solid CanvasText}
  .theme-picker label:has(input:checked){outline:3px solid Highlight}
 }
@@ -244,8 +244,28 @@ code{font-family:ui-monospace,Consolas,monospace}
  .graph-link{stroke:CanvasText}
  .viz-dot{forced-color-adjust:auto}
 }
-#feedback-kind{min-height:40px}
-#feedback-submit{min-height:40px;margin-top:12px}
+#feedback-submit{margin-top:12px}
+/* Native controls retain platform semantics, scaling and contrast preferences. */
+[hidden]{display:none!important}
+button,summary,label:has(input[type="checkbox"]),.examples button,.hash-copy{min-height:44px}
+button,input:not([type="checkbox"]):not([type="radio"]),textarea,select,.search-form .search-primary input,.examples button{border-color:var(--control-border)}
+label:has(input[type="checkbox"]){display:flex;align-items:center;gap:.6rem;cursor:pointer}
+input[type="checkbox"]{flex:none;width:1.25rem;height:1.25rem;accent-color:var(--action)}
+input[aria-invalid="true"],select[aria-invalid="true"],textarea[aria-invalid="true"]{border:2px solid var(--state-error)}
+section,form,fieldset,pre{min-width:0}
+button,label,legend,h1,h2,h3,.note,.status-banner{overflow-wrap:anywhere}
+[dir="auto"]{unicode-bidi:plaintext}
+.request-summary{margin:.5rem 0;color:var(--subtle)}
+.request-actions{display:flex;flex-wrap:wrap;gap:.65rem;align-items:center}
+.hero{padding-block:1.2rem .8rem}
+h1{font-size:clamp(1.8rem,3vw,2.5rem)}
+.hero-signal{height:115px}
+@media(pointer:coarse){button,summary,input:not([type="checkbox"]):not([type="radio"]),select,
+ .theme-picker label,.primary-nav a,label:has(input[type="checkbox"]),.examples button,.hash-copy{min-height:48px}}
+@media(forced-colors:active){
+ input[aria-invalid="true"],select[aria-invalid="true"],textarea[aria-invalid="true"]{border-color:CanvasText;border-style:double}
+ button:disabled{color:GrayText;opacity:1}
+}
 </style></head><body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <header class="site-header">
@@ -268,7 +288,7 @@ code{font-family:ui-monospace,Consolas,monospace}
 <section class="hero" id="top" aria-labelledby="page-title">
   <div><div class="eyebrow">Explore · compare · inspect</div>
     <h1 id="page-title">Find what's in the index.</h1>
-    <p class="lead">Search Bitmagnet metadata directly, compare optional concept terms, and inspect why records appeared. Every result stays an observation—not a content recommendation or accepted policy fact.</p>
+    <p class="lead">Search indexed titles and metadata, compare optional concept terms, and inspect why records appeared. Results describe source observations; they do not establish content suitability or accepted CPE facts.</p>
     <div class="trust-strip"><span>Read-only queries</span><span>Explicit source boundaries</span><span>Evidence before inference</span></div>
   </div>
   <div class="hero-signal" aria-hidden="true"><span class="route"></span><span class="route"></span><span class="route"></span><span class="junction"></span></div>
@@ -279,11 +299,11 @@ code{font-family:ui-monospace,Consolas,monospace}
   <p class="status-banner" id="mode" role="status">Checking service capabilities…</p>
 <form class="search-form" id="q">
   <div class="search-primary"><label for="query">Search phrase</label>
-    <input id="query" required maxlength="512" autocomplete="off" aria-describedby="search-hint" placeholder="e.g. A Princess of Mars">
+    <input id="query" required maxlength="512" autocomplete="off" dir="auto" aria-describedby="search-hint" placeholder="e.g. A Princess of Mars">
     <small id="search-hint">Searches indexed titles and metadata; no torrent payload is downloaded.</small><div class="examples" aria-label="Example search phrases"><span>Try a phrase:</span> <button type="button" class="example-query" data-query="Fedora">Fedora</button> <button type="button" class="example-query" data-query="A Princess of Mars">A Princess of Mars</button> <button type="button" class="example-query" data-query="Ubuntu">Ubuntu</button></div>
   </div>
   <details class="advanced" id="advanced-settings"><summary>Refine search · languages, concepts and filters</summary>
-<label for="terms">Exploratory concept expansions, one per line</label><textarea id="terms" rows="4" placeholder="Alternative phrases or multilingual terms"></textarea>
+<label for="terms">Exploratory concept expansions, one per line</label><textarea id="terms" rows="4" dir="auto" placeholder="Alternative phrases or multilingual terms"></textarea>
 <fieldset><legend>Filter and organize returned metadata</legend>
 <div class="facet-layout">
 <div><label for="languages">Languages (comma separated IDs)</label><input id="languages" placeholder="en, de, th"></div>
@@ -296,9 +316,10 @@ code{font-family:ui-monospace,Consolas,monospace}
 <p><label><input type="checkbox" id="web" style="width:auto"> Include SearXNG web search (explicit opt-in; only query text is sent)</label></p>
 <p><small>Filters, sorts and groups apply to a bounded page, not the entire corpus. Source adult flags are not age ratings, SFW verdicts, or CPE policy decisions. Genre, aesthetic, ROM status and audience suitability require qualified mappings/evidence.</small></p></fieldset>
 </details>
-<div class="search-actions"><button class="primary-action" type="submit" id="submit">Plan query</button><small>Concept mappings are provisional and never change Bitmagnet data.</small></div></form></section>
-<section class="section-space" id="results" aria-labelledby="results-heading"><span class="section-kicker">02 / Compare evidence</span><h2 id="results-heading">Search results</h2><p class="section-intro">Compare direct matches, experimental concept-term matches, and records returned by both tracks. Empty output or a failed source is not proof of absence.</p>
-<p class="status-banner" id="status" role="status" aria-live="polite">Results are metadata observations, not concept validation or content recommendations.</p>
+<div class="search-actions"><button class="primary-action" type="submit" id="submit">Plan query</button><button type="button" id="query-cancel" disabled>Cancel search</button><small>Concept mappings are provisional and never change Bitmagnet data.</small></div><p id="consent-status" role="status" aria-live="polite" aria-atomic="true" class="request-summary"></p></form>
+<p class="status-banner" id="status" role="status" aria-live="polite" aria-atomic="true">Results are metadata observations, not concept validation or content recommendations.</p></section>
+<section class="section-space" id="results" aria-labelledby="results-heading" aria-busy="false"><span class="section-kicker">02 / Compare evidence</span><h2 id="results-heading" tabindex="-1">Search results</h2><p class="section-intro">Compare direct matches, experimental concept-term matches, and records returned by both tracks. Empty output or a failed source is not proof of absence.</p>
+<p id="result-scope" class="request-summary" dir="auto"></p>
 <div class="cols">
 <section class="panel" aria-labelledby="direct-title"><h2 id="direct-title">Direct matches</h2><p class="helper">Found using your literal search phrase.</p><div id="direct">Run a search to see direct metadata matches.</div></section>
 <section class="panel" aria-labelledby="concept-title"><h2 id="concept-title">Concept-term matches</h2><p class="helper">Found through optional experimental expansions.</p><div id="concept">Run a search to see expanded-term matches.</div></section>
@@ -309,7 +330,7 @@ code{font-family:ui-monospace,Consolas,monospace}
 <p class="section-intro">Choose an observed film or series, or enter explicit source-native genre/keyword filters. Results are candidates, not proof you own a title or that it belongs to a CPE concept. No external lookup occurs without your consent.</p>
 <form id="media-research-form">
 <div class="facet-layout">
-<div><label for="lookup-title">Title (optional for provider-native genre search)</label><input id="lookup-title" maxlength="160" autocomplete="off"></div>
+<div><label for="lookup-title">Title (optional for provider-native genre search)</label><input id="lookup-title" maxlength="160" autocomplete="off" dir="auto"></div>
 <div><label for="lookup-kind">Work type</label><select id="lookup-kind"><option value="movie">Movie</option><option value="series">TV series</option></select></div>
 <div><label for="lookup-provider">Source</label><select id="lookup-provider"><option value="jellyfin">Local Jellyfin</option><option value="tmdb">TMDb (external)</option><option value="imdb">IMDb direct (licensed provider held)</option></select></div>
 <div><label for="lookup-year">Year (optional)</label><input id="lookup-year" type="number" min="1888" max="2100"></div>
@@ -318,31 +339,32 @@ code{font-family:ui-monospace,Consolas,monospace}
 </div>
 <p><label><input id="lookup-related" type="checkbox" style="width:auto"> Find related titles for my explicitly selected source item ID</label></p>
 <p><label><input id="lookup-consent" type="checkbox" style="width:auto"> I approve sending this selected query to TMDb when TMDb is selected; never transmit my entire Bitmagnet or Jellyfin corpus</label></p>
-<button id="lookup-submit" type="submit">Inspect source candidates (read-only)</button>
+<div class="request-actions"><button id="lookup-submit" type="submit">Inspect source candidates (read-only)</button><button id="lookup-cancel" type="button" disabled>Cancel source lookup</button></div>
 </form>
-<p id="lookup-status" role="status" aria-live="polite">Not requested. Jellyfin is local; TMDb needs separate consent and a server-side token.</p>
-<div id="lookup-results" role="region" aria-label="Source-attributed media candidates and related titles"></div>
+<p id="lookup-status" role="status" aria-live="polite" aria-atomic="true">Not requested. Jellyfin is local; TMDb needs separate consent and a server-side token.</p>
+<p id="lookup-scope" class="request-summary" dir="auto"></p>
+<div id="lookup-results" role="region" aria-label="Source-attributed media candidates and related titles" aria-busy="false"></div>
 </section>
 <section id="feedback-preview-ui" class="panel section-space" aria-labelledby="feedback-preview-heading">
 <h2 id="feedback-preview-heading">Review a possible CPE concept improvement</h2>
-<p>Use the current Bitmagnet search phrase to examine a candidate multilingual term, gap, drift or collision. Evidence is privacy-keyed locally; it is not submitted, persisted or accepted by CPE.</p>
+<p>Preview evidence for the current search phrase, selected concept, manual expansions and metadata filters. This runs a fresh local search with the same scope; external search stays off. Evidence is privacy-keyed locally and is not submitted, persisted or accepted by CPE.</p>
 <form id="feedback-preview-form">
 <div class="facet-layout">
-<div><label for="feedback-candidate">Candidate concept term or observation label</label><input id="feedback-candidate" required maxlength="128" autocomplete="off"></div>
+<div><label for="feedback-candidate">Candidate concept term or observation label</label><input id="feedback-candidate" required maxlength="128" autocomplete="off" dir="auto"></div>
 <div><label for="feedback-language">Language (BCP-style code)</label><input id="feedback-language" required maxlength="20" value="en" autocomplete="off"></div>
 <div><label for="feedback-kind">Proposal hypothesis</label><select id="feedback-kind"><option value="lexicalization_candidate">Possible new lexicalization</option><option value="coverage_gap">Coverage gap</option><option value="source_taxonomy_drift">Source taxonomy drift</option><option value="hard_negative_or_collision">Hard negative or collision</option></select></div>
 </div>
-<button id="feedback-submit" type="submit">Preview local evidence proposal</button>
+<div class="request-actions"><button id="feedback-submit" type="submit">Preview local evidence proposal</button><button id="feedback-cancel" type="button" disabled>Cancel feedback preview</button></div>
 </form>
-<p id="feedback-status" role="status" aria-live="polite">No proposal generated. A local HMAC key must be configured by the app administrator.</p>
-<div role="region" aria-label="Unsubmitted CPE research proposal preview"><pre id="feedback-output"></pre></div>
+<p id="feedback-status" role="status" aria-live="polite" aria-atomic="true">No proposal generated. A local HMAC key must be configured by the app administrator.</p>
+<div role="region" aria-label="Unsubmitted CPE research proposal preview"><p id="feedback-summary" class="request-summary"></p><details class="advanced"><summary>Show structured proposal and evidence</summary><pre id="feedback-output"></pre></details></div>
 </section>
 <section id="concepts" class="panel section-space"><span class="section-kicker">03 / Inspect concepts</span><h2>Concept map (pinned CPE projection preview)</h2><p id="graph-status" class="note">Checking configured concept projection…</p>
 <p><label><input type="checkbox" id="use-concept" style="width:auto"> Include the selected concept's pinned preview lexicalizations in the next query (explicit opt-in)</label></p><label for="concept-filter">Find a concept</label><input id="concept-filter" maxlength="256" placeholder="Search labels, IDs, definitions and aliases" aria-describedby="concept-match-status"><p id="concept-match-status" role="status" aria-live="polite">Checking pinned catalog…</p><div id="concept-matches" class="concept-buttons" role="group" aria-label="Matching concepts"></div><p class="helper">Select a match to inspect its relationships and prepare a search phrase. Typing in this filter does not change your Bitmagnet query. To include pinned lexicalizations, opt in above.</p>
 <ul class="viz-key" aria-label="Concept map legend"><li><span class="viz-dot selected" aria-hidden="true"></span>Selected preview concept</li><li><span class="viz-dot" aria-hidden="true"></span>Other preview concept</li></ul>
 <p class="viz-help">When available, navigate the diagram with Tab and Enter. At narrow widths, scroll sideways or use the accessible concept buttons below. Preview relationships are not accepted CPE facts.</p>
 <div class="viz-scroller" tabindex="0" role="region" aria-label="Scrollable provisional concept diagram"><svg id="concept-graph" class="graph" viewBox="0 0 700 350" role="group" aria-label="Interactive provisional concept relationships"></svg></div>
-<p id="concept-detail" aria-live="polite"></p><div id="concept-list" class="concept-buttons" role="group" aria-label="Accessible concept selector"></div></section>
+<p id="concept-selection-status" role="status" aria-live="polite" aria-atomic="true"></p><div id="concept-detail"></div><div id="concept-list" class="concept-buttons" role="group" aria-label="Accessible concept selector"></div></section>
 <section id="observations" class="panel section-space" aria-labelledby="observed-title"><span class="section-kicker">04 / Investigate evidence</span><h2 id="observed-title">Concepts observed in the returned Bitmagnet metadata</h2>
 <p class="note">These are title-lexical evidence candidates from this query's bounded results, not the CPE ontology's related concepts or validated semantic classifications.</p>
 <p id="observed-status" aria-live="polite">Run a search to derive a separate observed graph.</p>
@@ -350,7 +372,7 @@ code{font-family:ui-monospace,Consolas,monospace}
 <p class="viz-help">Observed nodes are title-lexical candidates, not semantic classifications. Inspect using the graph or native evidence-selection buttons.</p>
 <div class="viz-scroller" tabindex="0" role="region" aria-label="Scrollable observed evidence diagram"><svg id="observed-graph" class="graph" viewBox="0 0 700 340" role="group" aria-label="Interactive observed title-lexical evidence"></svg></div>
 <div id="observed-list" class="concept-buttons" role="group" aria-label="Concept evidence selectors"></div>
-<div id="observed-items" aria-live="polite"></div></section>
+<div id="observed-items"></div></section>
 <section id="facets" class="panel" aria-labelledby="native-facet-title"><h2 id="native-facet-title">Native Bitmagnet corpus metadata facets</h2>
 <p>Optional native database aggregation. Counts can be estimates; these are not accepted CPE concepts.</p>
 <button type="button" id="native-facet-button">Load native corpus-side counts</button><p id="native-facet-status" aria-live="polite">Not requested.</p><div id="native-facet-data"></div></section>
@@ -362,8 +384,8 @@ code{font-family:ui-monospace,Consolas,monospace}
 <label for="sweep-external-budget">Maximum SearXNG queries (1–3)</label><input id="sweep-external-budget" type="number" min="1" max="3" value="3">
 <p><label><input type="checkbox" id="sweep-web" style="width:auto"> Enable private SearXNG multilingual sweep</label></p>
 <p><label><input type="checkbox" id="sweep-consent" style="width:auto"> I explicitly authorize sending these selected query terms to the configured private SearXNG, whose engines may forward them to third-party providers</label></p>
-<p><button type="button" id="sweep-plan">Preview sweep plan</button> <button type="button" id="sweep-run">Execute bounded sweep</button> <button type="button" id="sweep-limits">View source budget</button></p>
-<p id="sweep-status" aria-live="polite">No sweep executed; external search is off by default.</p>
+<p class="request-actions"><button type="button" id="sweep-plan">Preview sweep plan</button> <button type="button" id="sweep-run">Execute bounded sweep</button> <button type="button" id="sweep-cancel" disabled>Cancel sweep</button> <button type="button" id="sweep-limits">View source budget</button></p>
+<p id="sweep-status" role="status" aria-live="polite" aria-atomic="true">No sweep executed; external search is off by default.</p>
 <pre id="sweep-details"></pre></section>
 <section class="panel section-space" id="external-evidence"><h2>Separate SearXNG observations</h2><p class="section-intro">External results remain separate from indexed Bitmagnet evidence and require explicit opt-in.</p><div id="external">Not requested.</div></section>
 <section class="panel" id="technical-evidence"><h2>Request diagnostics</h2><details class="advanced"><summary>Show raw evidence, groups, coverage and failures</summary><pre id="details"></pre></details></section>
@@ -372,12 +394,52 @@ code{font-family:ui-monospace,Consolas,monospace}
 <script>
 const $=id=>document.getElementById(id);
 let canExecute=false,canInfer=false,queryToken=0,facetToken=0,sweepToken=0,limitsToken=0,sweepDisplayToken=0;
+let activeQueryController=null,activeSweepController=null;
+function setStatus(id,message,state='idle'){
+ const node=$(id);node.textContent=message;node.setAttribute('data-ui-state',state);
+}
+function clearFieldError(field){
+ const error=field.dataset.errorStatus;
+ if(!error)return;
+ field.removeAttribute('aria-invalid');
+ const hints=(field.getAttribute('aria-describedby')||'').split(/\s+/).filter(x=>x&&x!==error);
+ if(hints.length)field.setAttribute('aria-describedby',hints.join(' '));else field.removeAttribute('aria-describedby');
+ delete field.dataset.errorStatus;
+}
+function clearFormErrors(id){
+ $(id).querySelectorAll('[aria-invalid="true"]').forEach(clearFieldError);
+}
+function validateField(id,statusID,message){
+ const field=$(id);clearFieldError(field);
+ setStatus(statusID,message,'blocked');
+ field.setAttribute('aria-invalid','true');field.dataset.errorStatus=statusID;
+ const hints=new Set((field.getAttribute('aria-describedby')||'').split(/\s+/).filter(Boolean));hints.add(statusID);
+ field.setAttribute('aria-describedby',[...hints].join(' '));
+ const disclosure=field.closest('details');if(disclosure)disclosure.open=true;
+ field.focus();return false;
+}
+function resetExternalConsent(message='Search scope changed. External search is off; opt in again for this request.'){
+ const consentWasOn=$('web').checked||$('sweep-web').checked||$('sweep-consent').checked;
+ $('web').checked=false;$('sweep-web').checked=false;$('sweep-consent').checked=false;
+ if(consentWasOn)setStatus('consent-status',message);
+}
+function finishQuery(){
+ $('submit').disabled=false;$('results').setAttribute('aria-busy','false');
+ if(document.activeElement===$('query-cancel'))$('submit').focus();
+ $('query-cancel').disabled=true;activeQueryController=null;
+}
+function cancelQuery(){
+ if(!activeQueryController)return;
+ queryToken++;activeQueryController.abort();
+ clearQueryEvidence('Search canceled. No absence conclusion can be drawn.');
+ setStatus('status','Search canceled. Your inputs are preserved; run the search when ready.');finishQuery();
+}
 function displayItems(id,items){
  const node=$(id);node.replaceChildren();
  if(items.length===0){node.textContent='No observed results in this bounded query.';return;}
  for(const x of items){
   const article=document.createElement('article');article.className='item';
-  const title=document.createElement('strong');title.textContent=x.title||'(untitled)';article.append(title);
+  const title=document.createElement('strong');title.dir='auto';title.textContent=x.title||'(untitled)';article.append(title);
   const details=document.createElement('dl');details.className='metadata-list';
   function datum(name,value){
    const pair=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');
@@ -404,16 +466,17 @@ function displayItems(id,items){
     try{
      if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function')throw Error('Clipboard unavailable');
      await navigator.clipboard.writeText(hash);
-     notice.textContent='Infohash copied';button.textContent='Copied';
-    }catch(_){notice.textContent='Copy unavailable. Select the displayed infohash to copy manually.';button.textContent='Select text';}
+     notice.textContent='Infohash copied';
+    }catch(_){notice.className='muted';notice.textContent='Copy unavailable. Select the displayed infohash to copy manually.';}
    });
    row.append(button,notice);article.append(row);
   }
   if(x.content_type==='movie'||x.content_type==='tv_show'){
    const action=document.createElement('button');action.type='button';action.className='media-inspect';
    action.textContent='Inspect media sources';
-   action.setAttribute('aria-label','Inspect catalog matches for '+(x.title||'selected media'));
+   action.setAttribute('aria-label','Inspect media sources for '+(x.title||'selected media'));
    action.addEventListener('click',()=>{
+    cancelLookup();clearFormErrors('media-research-form');
     $('lookup-title').value=x.title||'';
     $('lookup-kind').value=x.content_type==='movie'?'movie':'series';
     $('lookup-year').value=x.release_year||'';
@@ -430,10 +493,25 @@ function displayItems(id,items){
   node.append(article);
  }
 }
+function cancelSweep(message='Sweep canceled. Your inputs are preserved; start a new sweep when ready.'){
+ sweepToken++;sweepDisplayToken++;
+ if(activeSweepController)activeSweepController.abort();activeSweepController=null;
+ $('sweep-run').disabled=false;$('sweep-plan').disabled=false;
+ if(document.activeElement===$('sweep-cancel'))$('sweep-run').focus();
+ $('sweep-cancel').disabled=true;$('sweep-details').setAttribute('aria-busy','false');
+ setStatus('sweep-status',message);
+}
+function buildQueryRequest(){
+ const expansions=$('terms').value.split('\n').map(s=>s.trim()).filter(Boolean).map(term=>({term,provenance:'manual-unverified'}));
+ const filters={languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[],adult_metadata:$('adult').value};
+ if($('minseeders').value!=='')filters.min_seeders=Number($('minseeders').value);
+ if($('minleechers').value!=='')filters.min_leechers=Number($('minleechers').value);
+ return {query:$('query').value.trim(),expansions,filters,sort:$('sort').value,group_by:$('group').value,include_web:$('web').checked,concept_ids:$('use-concept').checked&&focusConcept?[focusConcept.id]:[]};
+}
 function clearQueryEvidence(message){
- observedToken++;facetToken++;sweepToken++;limitsToken++;sweepDisplayToken++;
+ observedToken++;facetToken++;limitsToken++;cancelSweep('');
  for(const id of ['direct','concept','overlap','external','details','observed-graph','observed-list','observed-items','observed-status','native-facet-data','native-facet-status','sweep-details','sweep-status']){
-  const node=$(id);node.replaceChildren();node.textContent=message;node.setAttribute?.('data-ui-state','idle');
+  const node=$(id);node.replaceChildren();node.textContent=id.endsWith('-status')?'':message;node.setAttribute?.('data-ui-state','idle');
  }
 }
 async function capabilities(){
@@ -441,19 +519,24 @@ async function capabilities(){
  catch(e){$('mode').textContent='Capability check failed; query planning may still be available.';}
 }
 $('q').addEventListener('submit',async event=>{
- event.preventDefault();const token=++queryToken;clearQueryEvidence('Current query in progress; previous evidence cleared.');const expansions=$('terms').value.split('\n').map(s=>s.trim()).filter(Boolean).map(term=>({term,provenance:'manual-unverified'}));
- const filters={languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[],adult_metadata:$('adult').value};
- if($('minseeders').value!=='')filters.min_seeders=Number($('minseeders').value);
- if($('minleechers').value!=='')filters.min_leechers=Number($('minleechers').value);
- const body={query:$('query').value,expansions,filters,sort:$('sort').value,group_by:$('group').value,include_web:$('web').checked,concept_ids:$('use-concept').checked&&focusConcept?[focusConcept.id]:[]};$('submit').disabled=true;$('status').textContent='Processing bounded request…';$('status').setAttribute?.('data-ui-state','busy');
+ event.preventDefault();clearFormErrors('q');const body=buildQueryRequest();
+ if(!body.query){validateField('query','status','Enter a search phrase before running this request.');return;}
+ if(activeQueryController)activeQueryController.abort();
+ const token=++queryToken;clearQueryEvidence('Current query in progress; previous evidence cleared.');
+ const controller=new AbortController();activeQueryController=controller;
+ const clientDeadline=setTimeout(()=>controller.abort(),80000);
+ $('submit').disabled=true;$('query-cancel').disabled=false;$('results').setAttribute('aria-busy','true');
+ $('result-scope').textContent='Submitted phrase: '+body.query+' · '+body.expansions.length+' manual expansions · '+body.concept_ids.length+' selected concept · '+(body.include_web?'external search opted in':'local search only')+'.';
+ setStatus('status','Processing bounded request…','busy');
  try{const route=canExecute?'/api/v1/query/execute':'/api/v1/query/plan';
- const response=await fetch(route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const response=await fetch(route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
  const data=await response.json();if(token!==queryToken)return;if(!response.ok)throw Error(data.error||('HTTP '+response.status));
- if(!canExecute){displayItems('direct',[]);displayItems('concept',[]);displayItems('overlap',[]);$('status').textContent='Plan generated; execution not configured.';$('details').textContent=JSON.stringify(data,null,2);return;}
+ if(!canExecute){displayItems('direct',[]);displayItems('concept',[]);displayItems('overlap',[]);setStatus('status','Plan generated; execution not configured.','ready');$('details').textContent=JSON.stringify(data,null,2);return;}
  const rows=data.results||[];displayItems('direct',rows.filter(x=>x.tracks?.includes('direct')&&!x.tracks?.includes('concept')));displayItems('concept',rows.filter(x=>x.tracks?.includes('concept')&&!x.tracks?.includes('direct')));displayItems('overlap',rows.filter(x=>x.tracks?.includes('concept')&&x.tracks?.includes('direct')));
- await renderObservedGraph(rows);
+ await renderObservedGraph(rows,controller.signal);
  if(token!==queryToken)return;
- $('status').textContent='State: '+data.state+' · Unique observed: '+rows.length+' · Direct matches: '+(data.track_counts?.direct??0)+' · Concept matches: '+(data.track_counts?.concept??0);$('status').setAttribute?.('data-ui-state','ready');
+ const outcome=data.state==='failed'?'error':data.state==='partial'?'blocked':'ready';
+ setStatus('status','State: '+data.state+' · Unique observed: '+rows.length+' · Direct matches: '+(data.track_counts?.direct??0)+' · Concept matches: '+(data.track_counts?.concept??0)+(outcome!=='ready'?' · Some evidence could not be retrieved. Review request diagnostics; no absence conclusion.':''),outcome);
  $('details').textContent=JSON.stringify({failures:data.failures,warnings:data.warnings,track_counts:data.track_counts,scope:data.filter_scope,before_filters:data.before_filters,after_filters:data.after_filters,groups:data.groups,coverage:data.coverage},null,2);
  $('native-facet-status').textContent='Counts not requested for this search.';$('native-facet-status').setAttribute?.('data-ui-state','idle');
  $('native-facet-data').textContent='';
@@ -462,8 +545,8 @@ $('q').addEventListener('submit',async event=>{
  const external=$('external');external.replaceChildren();
  for(const x of data.external_results||[]){const article=document.createElement('article');article.className='item';const strong=document.createElement('strong');strong.textContent=x.title;const p=document.createElement('div');p.textContent=x.url+' · '+(x.engines||[]).join(', ');article.append(strong,p);external.append(article)}
  if(!(data.external_results||[]).length){external.textContent='No web observations returned. A failed or disabled adapter does not establish absence.'}
- }catch(e){if(token!==queryToken)return;clearQueryEvidence('Current query failed; prior evidence cleared. No absence inference can be drawn from this failure.');$('status').textContent='Query failed: '+e.message;$('status').setAttribute?.('data-ui-state','error');$('details').textContent='No absence inference can be drawn from this failure.';}
- finally{if(token===queryToken)$('submit').disabled=false;}
+ }catch(e){if(token!==queryToken)return;clearQueryEvidence('Current query failed; prior evidence cleared. No absence inference can be drawn from this failure.');setStatus('status',e.name==='AbortError'?'Search timed out. Your inputs are preserved; retry when ready.':'Query failed: '+e.message+' · Your inputs are preserved; retry when ready.','error');$('details').textContent='No absence inference can be drawn from this failure.';}
+ finally{clearTimeout(clientDeadline);if(token===queryToken)finishQuery();}
 });
 // The graph is read-only and uses only a local, digest-pinned provisional projection.
 let conceptCatalog=null,focusConcept=null;
@@ -471,14 +554,14 @@ const ns='http://www.w3.org/2000/svg';
 // The second graph uses ONLY results from the current execution receipt;
 // this HTTP operation never performs a second Bitmagnet retrieval.
 let observedToken=0;
-async function renderObservedGraph(rows){
+async function renderObservedGraph(rows,signal){
  const token=++observedToken,graph=$('observed-graph'),list=$('observed-list'),items=$('observed-items'),status=$('observed-status');
  graph.replaceChildren();list.replaceChildren();items.replaceChildren();
  if(!rows.length){status.textContent='No returned records for an observed concept graph. This does not prove concept absence.';return;}
  const subset=rows.slice(0,200);
  status.textContent='Projecting lexical evidence from '+subset.length+' supplied results…';
  try{
-  const response=await fetch('/api/v1/query/observed-graph',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:subset})});
+  const response=await fetch('/api/v1/query/observed-graph',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({results:subset}),signal});
   const data=await response.json();if(!response.ok)throw Error(data.error||('HTTP '+response.status));
   if(token!==observedToken)return;
   const concepts=data.concepts||[],edges=data.evidence_edges||[];
@@ -577,13 +660,23 @@ function svgElem(tag,attrs){const el=document.createElementNS(ns,tag);for(const 
 function chooseConcept(id,focusOrigin){
  if(!conceptCatalog)return;
  const selected=conceptCatalog.concepts.find(n=>n.id===id);if(!selected)return;
- if(focusConcept?.id!==id)$('use-concept').checked=false;
+ if(focusConcept?.id!==id){$('use-concept').checked=false;resetExternalConsent();}
  focusConcept=selected;
  const n=focusConcept;
- const aliases=(n.lexicalizations||[]).map(x=>x.language+': '+x.term).join(' · ');
  const relations=(n.relations||[]).map(r=>r.predicate+' → '+(conceptCatalog.concepts.find(c=>c.id===r.target_id)?.label||r.target_id)+' ('+r.target_id+')').join(', ');
- $('concept-detail').textContent='Selected provisional concept: '+n.label+' — '+(n.definition||'No description')+' · '+n.id+' · Lexicalizations: '+(aliases||'None in this projection')+' · Relations: '+(relations||'None outgoing in this projection')+' · Search phrase can be prepared; no query was executed.';
- if(focusOrigin!=='initial'||!$('query').value.trim())$('query').value=n.label;
+ const detail=$('concept-detail');detail.replaceChildren();
+ detail.append('Selected provisional concept: '+n.label+' — '+(n.definition||'No description')+' · '+n.id+' · Lexicalizations: ');
+ const aliases=n.lexicalizations||[];
+ if(!aliases.length)detail.append('None in this projection');
+ aliases.forEach((alias,index)=>{
+  if(index)detail.append(' · ');detail.append(alias.language+': ');
+  const term=document.createElement('bdi');term.textContent=alias.term;
+  if(/^[a-zA-Z]{2,8}(?:-[a-zA-Z0-9]{1,8})*$/.test(alias.language))term.lang=alias.language;
+  detail.append(term);
+ });
+ detail.append(' · Relations: '+(relations||'None outgoing in this projection')+' · Search phrase can be prepared; no query was executed.');
+ $('concept-selection-status').textContent='Selected '+n.label+'. Details are below; no query was executed.';
+ if(focusOrigin!=='initial'||!$('query').value.trim()){$('query').value=n.label;clearFieldError($('query'));if(focusOrigin!=='initial')resetExternalConsent();}
  // Pinned lexicalizations enter only through concept_ids after explicit opt-in.
  // Never turn them into unverified manual expansions or overwrite operator terms.
  renderConceptMap();renderConceptMatches();
@@ -650,27 +743,36 @@ function buildSweepRequest(){
  return {query:$('query').value.trim(),concept_ids:($('use-concept').checked&&focusConcept)?[focusConcept.id]:[],
  languages:langs,max_bitmagnet_queries:Number($('sweep-local-budget').value),max_searxng_queries:Number($('sweep-external-budget').value),
  include_searxng:$('sweep-web').checked,external_consent:$('sweep-consent').checked,
- filters:{languages:$('languages').value.split(',').map(x=>x.trim()).filter(Boolean),content_types:$('media').value?[$('media').value]:[]}};
+ filters:buildQueryRequest().filters};
 }
 async function sweepAction(execute){
+ clearFormErrors('sweep');clearFieldError($('query'));
+ const req=buildSweepRequest();
+ if(!req.query&&!req.concept_ids.length){validateField('query','sweep-status','Enter a search phrase or opt in to a selected concept before planning a sweep.');return;}
+ for(const [id,min,max] of [['sweep-local-budget',1,12],['sweep-external-budget',1,3]]){
+  const value=Number($(id).value);
+  if(!Number.isInteger(value)||value<min||value>max){validateField(id,'sweep-status','Enter a whole-number query budget from '+min+' to '+max+'.');return;}
+ }
+ if(req.include_searxng&&!req.external_consent){validateField('sweep-consent','sweep-status','External multilingual sweep requires a separate consent checkbox. Review the terms and opt in, or turn off external search.');return;}
+ if(activeSweepController)cancelSweep();
  const token=++sweepToken,displayToken=++sweepDisplayToken;
  const status=$('sweep-status'),details=$('sweep-details'),btn=$('sweep-run'),preview=$('sweep-plan');
  let clientDeadline;
- btn.disabled=true;preview.disabled=true;details.textContent='';
+ btn.disabled=true;preview.disabled=true;details.textContent='';details.setAttribute('aria-busy','true');$('sweep-cancel').disabled=false;
  try{
-  const req=buildSweepRequest();
-  if(req.include_searxng&&!req.external_consent)throw Error('External multilingual sweep requires a separate consent checkbox.');
   status.textContent=execute?'Executing permitted bounded sweep…':'Preparing bounded sweep plan…';status.setAttribute?.('data-ui-state','busy');
   const path=execute?'/api/v1/sweeps/execute':'/api/v1/sweeps/plan';
-  const controller=new AbortController();
+  const controller=new AbortController();activeSweepController=controller;
   clientDeadline=setTimeout(()=>controller.abort(),80000);
   const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req),signal:controller.signal});
   const data=await res.json();if(token!==sweepToken||displayToken!==sweepDisplayToken)return;if(!res.ok)throw Error(data.error||'sweep request refused');
-  status.textContent=execute?'Sweep state: '+data.state+' · local read-only and candidate evidence only':'Plan ready; '+data.bitmagnet_queries.length+' Bitmagnet / '+data.searxng_queries.length+' SearXNG queries';status.setAttribute?.('data-ui-state','ready');
+  status.textContent=execute?'Sweep state: '+data.state+' · local read-only and candidate evidence only':'Plan ready; '+data.bitmagnet_queries.length+' Bitmagnet / '+data.searxng_queries.length+' SearXNG queries';status.setAttribute?.('data-ui-state',data.state==='failed'?'error':data.state==='partial'?'blocked':'ready');
   details.textContent=JSON.stringify(data,null,2);
- }catch(e){if(token===sweepToken&&displayToken===sweepDisplayToken){status.textContent='Sweep blocked, canceled, or failed: '+e.message+'; no absence conclusion or automatic retry.';status.setAttribute?.('data-ui-state','error');}}
- finally{clearTimeout(clientDeadline);if(token===sweepToken){btn.disabled=false;preview.disabled=false}}
+ }catch(e){if(token===sweepToken&&displayToken===sweepDisplayToken){status.textContent=(e.name==='AbortError'?'Sweep timed out.':('Sweep blocked or failed: '+e.message))+ ' Your inputs are preserved; no absence conclusion or automatic retry.';status.setAttribute?.('data-ui-state','error');}}
+ finally{clearTimeout(clientDeadline);if(token===sweepToken){btn.disabled=false;preview.disabled=false;activeSweepController=null;details.setAttribute('aria-busy','false');if(document.activeElement===$('sweep-cancel'))btn.focus();$('sweep-cancel').disabled=true;}}
 }
+$('query-cancel').addEventListener('click',cancelQuery);
+$('sweep-cancel').addEventListener('click',()=>cancelSweep());
 $('sweep-plan').addEventListener('click',()=>sweepAction(false));
 $('sweep-run').addEventListener('click',()=>sweepAction(true));
 $('sweep-limits').addEventListener('click',async()=>{
@@ -687,8 +789,23 @@ $('sweep-limits').addEventListener('click',async()=>{
 
 // Example phrases fill the search field without silently executing a query.
 document.querySelectorAll('.example-query').forEach(button=>{
- button.addEventListener('click',()=>{const query=$('query');query.value=button.dataset.query||'';query.focus();});
+ button.addEventListener('click',()=>{const query=$('query');query.value=button.dataset.query||'';clearFieldError(query);resetExternalConsent();query.focus();});
 });
+// Consent belongs to the reviewed scope, never to future edits or selections.
+for(const eventName of ['input','change']){
+ $('q').addEventListener(eventName,event=>{if(event.target.id!=='web')resetExternalConsent();});
+ $('media-research-form').addEventListener(eventName,event=>{
+  if(event.target.id==='lookup-consent')return;
+  if(activeLookupController)cancelLookup('Source lookup canceled because its request changed. Review the new scope before submitting.');
+  const wasApproved=$('lookup-consent').checked;$('lookup-consent').checked=false;
+  if(wasApproved)setStatus('lookup-status','Source request changed. External consent is off; review the request and opt in again.');
+ });
+ document.querySelectorAll('input,select,textarea').forEach(field=>field.addEventListener(eventName,()=>clearFieldError(field)));
+}
+$('use-concept').addEventListener('change',()=>resetExternalConsent());
+for(const id of ['sweep-languages','sweep-local-budget','sweep-external-budget']){
+ $(id).addEventListener('input',()=>resetExternalConsent());
+}
 // Theme is an optional presentation preference. The API contract is unchanged.
 (function initWorkbenchTheme(){
  const values=new Set(['system','light','dark']);let saved='system';
@@ -705,9 +822,26 @@ document.querySelectorAll('.example-query').forEach(button=>{
  apply(saved,false);
 })();
 
-let lookupToken=0,feedbackPreviewToken=0;
+let lookupToken=0,feedbackPreviewToken=0,activeLookupController=null,activeFeedbackController=null;
+function finishPanelRequest(prefix,region){
+ $(prefix+'-submit').disabled=false;$(region).setAttribute('aria-busy','false');
+ if(document.activeElement===$(prefix+'-cancel'))$(prefix+'-submit').focus();
+ $(prefix+'-cancel').disabled=true;
+}
+function cancelLookup(message='Source lookup canceled. Your inputs are preserved; no absence conclusion.'){
+ lookupToken++;if(activeLookupController)activeLookupController.abort();activeLookupController=null;
+ finishPanelRequest('lookup','lookup-results');
+ setStatus('lookup-status',message);
+}
+$('lookup-cancel').addEventListener('click',()=>cancelLookup());
+$('feedback-cancel').addEventListener('click',()=>{
+ if(!activeFeedbackController)return;
+ feedbackPreviewToken++;activeFeedbackController.abort();activeFeedbackController=null;
+ finishPanelRequest('feedback','feedback-output');
+ setStatus('feedback-status','Feedback preview canceled. Your inputs are preserved; nothing was submitted to CPE.');
+});
 $('media-research-form').addEventListener('submit',async event=>{
- event.preventDefault();
+ event.preventDefault();clearFormErrors('media-research-form');
  const token=++lookupToken,provider=$('lookup-provider').value,kind=$('lookup-kind').value;
  const title=$('lookup-title').value.trim(),rawID=$('lookup-external-id').value.trim();
  const year=$('lookup-year').value?Number($('lookup-year').value):0;
@@ -717,12 +851,12 @@ $('media-research-form').addEventListener('submit',async event=>{
  container.replaceChildren();
  const payload={kind,providers:[provider],allow_external_lookup:$('lookup-consent').checked,include_related:related};
  if(genres.length){
-  if(title||rawID||year||related){status.textContent='Source-native genre search must be separate from title, year, item ID and related search.';status.setAttribute('data-ui-state','blocked');return;}
+  if(title||rawID||year||related){validateField('lookup-genres','lookup-status','Source-native genre search must be separate from title, year, item ID and related search. Clear those fields or clear the genre filter.');return;}
   if(provider==='tmdb'){
-   if(genres.some(x=>!/^[1-9][0-9]{0,10}$/.test(x))){status.textContent='TMDb genre IDs must be positive decimal numbers.';status.setAttribute('data-ui-state','blocked');return;}
+   if(genres.some(x=>!/^[1-9][0-9]{0,10}$/.test(x))){validateField('lookup-genres','lookup-status','TMDb genre IDs must be positive decimal numbers.');return;}
    payload.tmdb_genre_ids=genres.map(Number);
   }else if(provider==='jellyfin')payload.jellyfin_genres=genres;
-  else{status.textContent='Direct IMDb genre search is not licensed or configured.';status.setAttribute('data-ui-state','blocked');return;}
+  else{validateField('lookup-provider','lookup-status','Direct IMDb genre search is not licensed or configured. Choose a configured source.');return;}
  }else{
   if(title)payload.title=title;
   if(year)payload.year=year;
@@ -732,10 +866,17 @@ $('media-research-form').addEventListener('submit',async event=>{
    else payload.tmdb_id=rawID;
   }
  }
- if(!payload.title&&!rawID&&!genres.length){status.textContent='Enter a title, source ID or native genre to search.';status.setAttribute('data-ui-state','blocked');return;}
- $('lookup-submit').disabled=true;
+ if(!payload.title&&!rawID&&!genres.length){validateField('lookup-title','lookup-status','Enter a title, source ID or native genre to search.');return;}
+ if(related&&!rawID){validateField('lookup-external-id','lookup-status','Related-title lookup needs an explicitly selected source item ID. Select a candidate or enter its provider ID.');return;}
+ if(provider==='imdb'){validateField('lookup-provider','lookup-status','Direct IMDb lookup is not configured. Select local Jellyfin or consent to a TMDb lookup.');return;}
+ if(provider==='tmdb'&&!payload.allow_external_lookup){validateField('lookup-consent','lookup-status','TMDb is an external provider. Review this request and approve sending it, or select local Jellyfin.');return;}
+ if(activeLookupController)activeLookupController.abort();
+ const controller=new AbortController();activeLookupController=controller;
+ const clientDeadline=setTimeout(()=>controller.abort(),80000);
+ $('lookup-scope').textContent='Submitted request: '+provider+' · '+kind+' · '+(title||rawID||genres.join(', '))+(year?' · '+year:'')+(related?' · related titles':'')+'.';
+ $('lookup-submit').disabled=true;$('lookup-cancel').disabled=false;container.setAttribute('aria-busy','true');
  try{
-  const response=await fetch('/api/v1/media/lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const response=await fetch('/api/v1/media/lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
   const result=await response.json();if(token!==lookupToken)return;
   if(!response.ok)throw Error(result.error||('HTTP '+response.status));
   for(const source of result.outcomes||[]){
@@ -747,12 +888,13 @@ $('media-research-form').addEventListener('submit',async event=>{
     if(!items.length)continue;
     const list=document.createElement('ul');
     for(const item of items){
-     const li=document.createElement('li'),text=document.createElement('span');
+     const li=document.createElement('li'),text=document.createElement('span');text.dir='auto';
      text.textContent=(item.title||'Untitled')+' ('+(item.year||'year unknown')+') · '+item.source+' · '+item.match_basis+' · '+item.relationship;
      li.append(text);
      if(item.item_id && (item.source==='jellyfin'||item.source==='tmdb')){
-      const choose=document.createElement('button');choose.type='button';choose.textContent='Select source item for related lookup';
+      const choose=document.createElement('button');choose.type='button';choose.textContent='Select source item for related lookup';choose.setAttribute('aria-label','Select source item for related lookup: '+(item.title||'Untitled')+' ('+item.source+')');
       choose.addEventListener('click',()=>{
+       cancelLookup();clearFormErrors('media-research-form');
        $('lookup-provider').value=item.source;$('lookup-kind').value=item.kind;
        $('lookup-title').value=item.title||'';$('lookup-year').value=item.year||'';
        $('lookup-external-id').value=item.item_id;
@@ -769,26 +911,31 @@ $('media-research-form').addEventListener('submit',async event=>{
   }
   status.textContent='Read-only provider response received; identities, recommendations and source genres remain provisional.';
   status.setAttribute('data-ui-state','ready');
- }catch(e){if(token===lookupToken){status.textContent='Source lookup unavailable: '+e.message+'; no absence inference.';status.setAttribute('data-ui-state','error');}}
- finally{if(token===lookupToken)$('lookup-submit').disabled=false;}
+ }catch(e){if(token===lookupToken){status.textContent=(e.name==='AbortError'?'Source lookup timed out.':'Source lookup unavailable: '+e.message+'.')+' Your inputs are preserved; no absence inference.';status.setAttribute('data-ui-state','error');}}
+ finally{clearTimeout(clientDeadline);if(token===lookupToken){activeLookupController=null;finishPanelRequest('lookup','lookup-results');}}
 });
 $('feedback-preview-form').addEventListener('submit',async event=>{
- event.preventDefault();
+ event.preventDefault();clearFormErrors('feedback-preview-form');clearFormErrors('q');
  const token=++feedbackPreviewToken,status=$('feedback-status'),output=$('feedback-output');
  output.textContent='';
- const query=$('query').value.trim();
- if(!query){status.textContent='Run or enter a Bitmagnet query first; there is no corpus observation to attribute.';status.setAttribute('data-ui-state','blocked');return;}
- status.textContent='Building local, nonpromotable evidence preview…';status.setAttribute('data-ui-state','busy');$('feedback-submit').disabled=true;
+ const query=buildQueryRequest();query.include_web=false;
+ if(!query.query){validateField('query','feedback-status','Enter a Bitmagnet query first; there is no corpus observation to attribute.');return;}
+ if(!$('q').reportValidity())return;
+ if(activeFeedbackController)activeFeedbackController.abort();
+ const controller=new AbortController();activeFeedbackController=controller;
+ const clientDeadline=setTimeout(()=>controller.abort(),80000);
+ status.textContent='Building local, nonpromotable evidence preview…';status.setAttribute('data-ui-state','busy');$('feedback-submit').disabled=true;$('feedback-cancel').disabled=false;output.setAttribute('aria-busy','true');
+ $('feedback-summary').textContent='Submitted phrase: '+query.query+' · candidate: '+$('feedback-candidate').value.trim()+' ('+$('feedback-language').value.trim()+') · '+query.expansions.length+' manual expansions · '+query.concept_ids.length+' selected concept · metadata filters, sorting and grouping preserved · external search off.';
  try{
-  const body={query:{query,include_web:false},proposal_kind:$('feedback-kind').value,candidate_label:$('feedback-candidate').value.trim(),language:$('feedback-language').value.trim()};
-  const response=await fetch('/api/v1/discovery/feedback/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const body={query,proposal_kind:$('feedback-kind').value,candidate_label:$('feedback-candidate').value.trim(),language:$('feedback-language').value.trim()};
+  const response=await fetch('/api/v1/discovery/feedback/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
   const data=await response.json();if(token!==feedbackPreviewToken)return;
   if(!response.ok)throw Error(data.error||('HTTP '+response.status));
   output.textContent=JSON.stringify(data,null,2);
   status.textContent='Research state: '+data.state+' · source observations: '+data.observation_count+' · not sent to or accepted by CPE.';
-  status.setAttribute('data-ui-state','ready');
- }catch(e){if(token===feedbackPreviewToken){status.textContent='Feedback preview unavailable: '+e.message+'; no CPE update or source absence inference.';status.setAttribute('data-ui-state','error');}}
- finally{if(token===feedbackPreviewToken)$('feedback-submit').disabled=false;}
+  status.setAttribute('data-ui-state',data.state==='failed'?'error':data.state==='partial'?'blocked':'ready');
+ }catch(e){if(token===feedbackPreviewToken){status.textContent=(e.name==='AbortError'?'Feedback preview timed out.':'Feedback preview unavailable: '+e.message+'.')+' Your inputs are preserved; no CPE update or source absence inference.';status.setAttribute('data-ui-state','error');}}
+ finally{clearTimeout(clientDeadline);if(token===feedbackPreviewToken){activeFeedbackController=null;finishPanelRequest('feedback','feedback-output');}}
 });
 capabilities();loadCatalog();
 </script></body></html>

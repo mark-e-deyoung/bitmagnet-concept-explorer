@@ -126,7 +126,9 @@ func registerFeedbackPreview(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/discovery/feedback/preview", func(w http.ResponseWriter, r *http.Request) {
 		key := []byte(os.Getenv("BCE_DISCOVERY_HMAC_KEY"))
 		if len(key) < 32 {
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "local feedback HMAC key not configured"})
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+				"error": "local feedback HMAC key not configured", "code": "feedback_not_configured", "state": "not_started",
+			})
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, contracts.SweepDiscoveryJSONBytes)
@@ -142,8 +144,6 @@ func registerFeedbackPreview(mux *http.ServeMux) {
 			writeJSON(w, 400, map[string]string{"error": "trailing feedback request"})
 			return
 		}
-		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
-		defer cancel()
 		var out FeedbackPreviewResponse
 		var err error
 		if input.Sweep != nil {
@@ -151,12 +151,14 @@ func registerFeedbackPreview(mux *http.ServeMux) {
 				writeJSON(w, 422, map[string]string{"error": "specify exactly one bounded query or multilingual sweep"})
 				return
 			}
-			out, err = buildFeedbackSweepPreview(ctx, input, key)
+			out, err = buildFeedbackSweepPreview(r.Context(), input, key)
 		} else {
+			ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+			defer cancel()
 			out, err = buildFeedbackPreview(ctx, input, key)
 		}
 		if err != nil {
-			writeJSON(w, 422, map[string]string{"error": err.Error()})
+			writeSweepExecutionError(w, err)
 			return
 		}
 		writeJSON(w, 200, out)

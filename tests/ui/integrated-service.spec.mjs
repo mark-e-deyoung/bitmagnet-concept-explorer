@@ -122,7 +122,13 @@ test("real Go execute API and CLI retain equivalent observed results without web
 
 test("compiled Go feedback preview API and CLI preserve identical bounded local evidence", async ({request, baseURL}) => {
   const payload = {
-    query: {query: "Animation", include_web: false},
+    query: {
+      query: "Animation", include_web: false,
+      expansions: [{term: "Entwurf", provenance: "manual-unverified"}],
+      concept_ids: ["fixture.media"],
+      filters: {languages: ["en", "de"], content_types: ["movie"], adult_metadata: "no", min_seeders: 2, min_leechers: 0},
+      sort: "seeders_desc", group_by: "track"
+    },
     proposal_kind: "lexicalization_candidate",
     candidate_label: "fictional lexical hypothesis",
     language: "en"
@@ -186,6 +192,8 @@ test("compiled Go media lookup API and CLI agree on disabled external and unconf
 
 
 test("human media and concept feedback controls call actual Go routes without source egress", async ({page}) => {
+  const mediaRequests = [];
+  page.on("request", request => { if (request.url().endsWith("/api/v1/media/lookup")) mediaRequests.push(request); });
   await page.goto("/", {waitUntil: "domcontentloaded"});
   await page.locator("#query").fill("Animation");
   await page.locator("#submit").click();
@@ -196,8 +204,11 @@ test("human media and concept feedback controls call actual Go routes without so
   await expect(page.locator("#lookup-consent")).not.toBeChecked();
   await page.locator("#lookup-provider").selectOption("tmdb");
   await page.locator("#lookup-submit").click();
-  await expect(page.locator("#lookup-status")).toHaveAttribute("data-ui-state","ready");
-  await expect(page.locator("#lookup-results")).toContainText("requires_explicit_external_consent");
+  await expect(page.locator("#lookup-status")).toHaveAttribute("data-ui-state","blocked");
+  await expect(page.locator("#lookup-consent")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#lookup-consent")).toHaveAttribute("aria-describedby", /lookup-status/);
+  await expect(page.locator("#lookup-consent")).toBeFocused();
+  expect(mediaRequests, "external source lookup needs fresh consent before even contacting the local lookup route").toHaveLength(0);
 
   await page.locator("#feedback-candidate").fill("fictional lexical form");
   await page.locator("#feedback-language").fill("de");
@@ -207,6 +218,144 @@ test("human media and concept feedback controls call actual Go routes without so
   await expect(page.locator("#feedback-status")).toContainText("not sent to or accepted by CPE");
   await expect(page.locator("#feedback-output")).toContainText("not_accepted_not_transmitted");
   await expect(page.locator("#feedback-output")).not.toContainText("1111111111111111111111111111111111111111");
+});
+
+test("human feedback preserves the submitted local query scope and never inherits web consent", async ({page, baseURL}) => {
+  const posts = [];
+  const offOrigin = [];
+  page.on("request", request => {
+    if (request.method() === "POST") posts.push(request);
+    if (new URL(request.url()).origin !== new URL(baseURL).origin) offOrigin.push(request.url());
+  });
+  await page.goto("/", {waitUntil: "domcontentloaded"});
+  await page.locator('#concept-matches button[data-concept-id="fixture.media"]').click();
+  await page.locator("#use-concept").check();
+  await page.locator("#query").fill("Animation");
+  await page.locator("#advanced-settings summary").click();
+  await page.locator("#terms").fill(" Entwurf \n เทศกาล ");
+  await page.locator("#languages").fill("en, de");
+  await page.locator("#media").selectOption("movie");
+  await page.locator("#adult").selectOption("no");
+  await page.locator("#minseeders").fill("2");
+  await page.locator("#minleechers").fill("0");
+  await page.locator("#sort").selectOption("seeders_desc");
+  await page.locator("#group").selectOption("track");
+  expect(posts, "editing local scope must not initiate retrieval").toHaveLength(0);
+  const queryRequest = page.waitForRequest(request => request.url().endsWith("/api/v1/query/execute") && request.method() === "POST");
+  await page.locator("#submit").click();
+  const submittedScope = (await queryRequest).postDataJSON();
+  await expect(page.locator("#status")).toHaveAttribute("data-ui-state", "ready");
+  expect(submittedScope).toEqual({
+    query: "Animation",
+    expansions: [{term: "Entwurf", provenance: "manual-unverified"}, {term: "เทศกาล", provenance: "manual-unverified"}],
+    concept_ids: ["fixture.media"],
+    filters: {languages: ["en", "de"], content_types: ["movie"], adult_metadata: "no", min_seeders: 2, min_leechers: 0},
+    sort: "seeders_desc", group_by: "track", include_web: false
+  });
+  // Ordinary web consent is specific to its workflow. A feedback preview is
+  // always local even when this separate checkbox is checked.
+  await page.locator("#web").check();
+  await page.locator("#feedback-candidate").fill("Synthetic lexical hypothesis");
+  await page.locator("#feedback-language").fill("de");
+  const previewRequest = page.waitForRequest(request => request.url().endsWith("/api/v1/discovery/feedback/preview") && request.method() === "POST");
+  await page.locator("#feedback-submit").click();
+  const preview = (await previewRequest).postDataJSON();
+  expect(preview.query).toEqual({...submittedScope, include_web: false});
+  await expect(page.locator("#feedback-status")).toHaveAttribute("data-ui-state", "ready");
+  await expect(page.locator("#feedback-output")).toContainText("not_accepted_not_transmitted");
+  await expect(page.locator("#feedback-submit")).toBeEnabled();
+  expect(offOrigin, "browser requests must stay inside this isolated service fixture").toEqual([]);
+});
+
+function pendingGate() {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return {promise, resolve};
+}
+
+// Deliberately hold only the first synthetic sweep response; query execution
+// and the replacement sweep still use the actual compiled Go service.
+async function holdFirstSweep(page) {
+  const release = pendingGate();
+  const started = pendingGate();
+  const settled = pendingGate();
+  let count = 0;
+  await page.route("**/api/v1/sweeps/plan", async route => {
+    if (++count > 1) { await route.continue(); return; }
+    started.resolve();
+    await release.promise;
+    try {
+      await route.fulfill({status: 200, contentType: "application/json", body: JSON.stringify({state: "planned", bitmagnet_queries: ["stale synthetic query"], searxng_queries: []})});
+    } catch (error) {
+      // The browser may have already canceled this intercepted request. Other
+      // fixture failures must remain visible instead of becoming silent passes.
+      if (!route.request().failure()) throw error;
+    } finally { settled.resolve(); }
+  });
+  return {...release, started: started.promise, settled: settled.promise};
+}
+
+test("ordinary query supersedes a pending sweep and immediately restores usable controls", async ({page}) => {
+  const release = await holdFirstSweep(page);
+  try {
+    await page.goto("/", {waitUntil: "domcontentloaded"});
+    await page.locator("#query").fill("Animation");
+    await page.locator("#sweep-plan").click();
+    await release.started;
+    await expect(page.locator("#sweep-run")).toBeDisabled();
+    await expect(page.locator("#sweep-plan")).toBeDisabled();
+    await page.locator("#submit").click();
+    await expect(page.locator("#sweep-run")).toBeEnabled();
+    await expect(page.locator("#sweep-plan")).toBeEnabled();
+    await expect(page.locator("#status")).toHaveAttribute("data-ui-state", "ready");
+    release.resolve();
+    await release.settled;
+    await expect(page.locator("#sweep-details")).not.toContainText("stale synthetic query");
+    await page.locator("#sweep-plan").click();
+    await expect(page.locator("#sweep-status")).toHaveAttribute("data-ui-state", "ready");
+    await expect(page.locator("#sweep-plan")).toBeEnabled();
+  } finally { release.resolve(); }
+});
+
+test("canceling a pending sweep restores controls and permits a fresh local plan", async ({page}) => {
+  const release = await holdFirstSweep(page);
+  try {
+    await page.goto("/", {waitUntil: "domcontentloaded"});
+    await page.locator("#query").fill("Animation");
+    await page.locator("#sweep-plan").click();
+    await release.started;
+    await expect(page.locator("#sweep-cancel")).toBeEnabled();
+    await page.locator("#sweep-cancel").click();
+    await expect(page.locator("#sweep-run")).toBeEnabled();
+    await expect(page.locator("#sweep-plan")).toBeEnabled();
+    await expect(page.locator("#sweep-status")).toContainText(/cancel/i);
+    release.resolve();
+    await release.settled;
+    await page.locator("#sweep-plan").click();
+    await expect(page.locator("#sweep-status")).toHaveAttribute("data-ui-state", "ready");
+    await expect(page.locator("#sweep-details")).not.toContainText("stale synthetic query");
+  } finally { release.resolve(); }
+});
+
+test("changing request scope clears external consent without automatically making a request", async ({page}) => {
+  const posts = [];
+  page.on("request", request => { if (request.method() === "POST") posts.push(request.url()); });
+  await page.goto("/", {waitUntil: "domcontentloaded"});
+  await page.locator("#advanced-settings summary").click();
+  await page.locator("#query").fill("Animation");
+  await page.locator("#web").check();
+  await page.locator("#sweep-web").check();
+  await page.locator("#sweep-consent").check();
+  await page.locator("#query").fill("Changed synthetic phrase");
+  await expect(page.locator("#web")).not.toBeChecked();
+  await expect(page.locator("#sweep-web")).not.toBeChecked();
+  await expect(page.locator("#sweep-consent")).not.toBeChecked();
+  await page.locator("#lookup-provider").selectOption("tmdb");
+  await page.locator("#lookup-title").fill("Synthetic title");
+  await page.locator("#lookup-consent").check();
+  await page.locator("#lookup-title").fill("Changed synthetic title");
+  await expect(page.locator("#lookup-consent")).not.toBeChecked();
+  expect(posts, "consent and scope changes must not initiate retrieval").toEqual([]);
 });
 
 test("compiled Go metadata comparison and CLI agree without external calls", async ({request, baseURL}) => {
