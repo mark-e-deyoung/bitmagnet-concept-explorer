@@ -50,10 +50,13 @@ jobs:
           unformatted="$(gofmt -l .)"
           if [ -n "$unformatted" ]; then
             printf 'Unformatted Go files:\n%s\n' "$unformatted"
+            gofmt -d .
             exit 1
           fi
       - name: Embedded browser state regression
-        run: node web/query_state.test.mjs
+        run: |
+          node web/query_state.test.mjs
+          node web/feedback_scope.test.mjs
       - name: Evidence workbench semantic and design-system contract
         run: node web/ux_contract.test.mjs
 

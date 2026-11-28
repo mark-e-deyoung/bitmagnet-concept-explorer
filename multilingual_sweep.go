@@ -31,12 +31,40 @@ const (
 	// the 15s ReadTimeout plus the 55s sweep budget and response serialization.
 	sweepHTTPWriteTimeout = 75 * time.Second
 	sweepClientTimeout    = deadline.ClientTimeout
-	maxConcurrentSweeps   = 1
+	maxConcurrentSweeps  = 1
 )
 
 // At most one whole sweep may occupy the local backends at once. This is
 // separate from the existing per-source provider admission limits.
 var activeSweepSlots = make(chan struct{}, maxConcurrentSweeps)
+
+var errSweepBusy = errors.New("sweep capacity is busy; no work started and no automatic retry was made")
+
+// Keep admission and the execution deadline at the shared engine boundary so
+// every caller, including feedback previews, has the same whole-sweep budget.
+// A shorter caller deadline or cancellation is preserved by WithTimeout.
+func beginSweepExecution(ctx context.Context) (context.Context, func(), error) {
+	select {
+	case activeSweepSlots <- struct{}{}:
+		bounded, cancel := context.WithTimeout(ctx, sweepExecutionDeadline)
+		return bounded, func() {
+			cancel()
+			<-activeSweepSlots
+		}, nil
+	default:
+		return nil, nil, errSweepBusy
+	}
+}
+
+func writeSweepExecutionError(w http.ResponseWriter, err error) {
+	if errors.Is(err, errSweepBusy) {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"error": errSweepBusy.Error(), "code": "sweep_busy", "state": "not_started",
+		})
+		return
+	}
+	writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+}
 
 // Sweep requests are one-shot and bounded. There is no daemon, crawler,
 // scheduler, provider account integration, autonomous model invocation, or CPE
@@ -298,6 +326,11 @@ func runSweep(ctx context.Context, req SweepRequest) (SweepResult, error) {
 	if e != nil {
 		return SweepResult{}, e
 	}
+	ctx, release, e := beginSweepExecution(ctx)
+	if e != nil {
+		return SweepResult{}, e
+	}
+	defer release()
 	result := SweepResult{State: "complete", DeadlineSeconds: int(sweepExecutionDeadline / time.Second), Plan: plan, External: []SweepExternalObservation{}, Failures: []string{}, Evidence: []SweepDiscoveryEvidence{}, ResearchProposals: []SweepDiscoveryDraft{}, CPEWrite: false,
 		Warning: "Research/metadata retrieval only. External results are independent neutral observations; enrichment requires CPE #202 review, grounding, counterexamples and promotion authority."}
 	if len(plan.Bitmagnet) > 0 {
@@ -398,18 +431,9 @@ func registerSweeps(mux *http.ServeMux) {
 			writeJSON(w, 200, plan)
 			return
 		}
-		select {
-		case activeSweepSlots <- struct{}{}:
-			defer func() { <-activeSweepSlots }()
-		default:
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "sweep capacity is busy; no work started and no automatic retry was made"})
-			return
-		}
-		ctx, cancel := context.WithTimeout(r.Context(), sweepExecutionDeadline)
-		defer cancel()
-		result, e := runSweep(ctx, request)
+		result, e := runSweep(r.Context(), request)
 		if e != nil {
-			writeJSON(w, 422, map[string]string{"error": e.Error()})
+			writeSweepExecutionError(w, e)
 			return
 		}
 		writeJSON(w, 200, result)

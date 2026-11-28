@@ -54,10 +54,16 @@ await new Promise((resolve, reject) => {
   upstream.once("error", reject);
   upstream.listen(4179, "127.0.0.1", resolve);
 });
+// A developer's BCE_* settings must not redirect a synthetic run to a live
+// listener, provider, graph or credential. Keep runtime/OS variables, then
+// supply this fixture's entire BCE configuration explicitly below.
+const fixtureEnvironment = Object.fromEntries(
+  Object.entries(process.env).filter(([name]) => !name.startsWith("BCE_"))
+);
 const child = spawn(BIN, ["-listen", "127.0.0.1:4178"], {
   cwd: ROOT,
   env: {
-    ...process.env,
+    ...fixtureEnvironment,
     BCE_BITMAGNET_GRAPHQL: "http://127.0.0.1:4179/graphql",
     BCE_CPE_GRAPH_FILE: fixturePath,
     BCE_CPE_GRAPH_SHA256: hash,

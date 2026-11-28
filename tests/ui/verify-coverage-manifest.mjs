@@ -6,16 +6,30 @@ import path from 'node:path';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const htmlPath = path.join(root, 'web/index.html');
 const manifestPath = path.join(root, 'tests/ui/control-inventory.json');
-const testSuitePath = path.join(root, 'tests/ui/crossbrowser-matrix.spec.mjs');
+const testSuiteNames = ['crossbrowser-matrix.spec.mjs', 'accessibility-recovery.spec.mjs'];
+const browserConfigNames = ['playwright.crossbrowser.config.mjs', 'playwright.edge-mobile.config.mjs'];
 
 async function main() {
   process.stdout.write('Checking UI control inventory and cross-engine test coverage...\n');
 
-  const [htmlContent, manifestContent, testSuiteContent] = await Promise.all([
+  const [htmlContent, manifestContent, testSuiteContents, browserConfigs] = await Promise.all([
     readFile(htmlPath, 'utf8'),
     readFile(manifestPath, 'utf8'),
-    readFile(testSuitePath, 'utf8'),
+    Promise.all(testSuiteNames.map(name => readFile(path.join(root, 'tests/ui', name), 'utf8'))),
+    Promise.all(browserConfigNames.map(name => readFile(path.join(root, name), 'utf8'))),
   ]);
+
+  // Coverage in a file omitted by a workflow's testMatch is not cross-engine
+  // coverage. Require both executable suites in both public matrix configs.
+  for (const [index, source] of browserConfigs.entries()) {
+    const match = source.match(/testMatch\s*:\s*(\[[\s\S]*?\]|['"][^'"]+['"])\s*,/);
+    const patterns = [...(match?.[1] || '').matchAll(/['"]([^'"]+)['"]/g)].map(item => item[1]);
+    for (const name of testSuiteNames) {
+      if (!patterns.includes('**/' + name)) {
+        throw new Error(`${browserConfigNames[index]} does not select executable suite ${name}`);
+      }
+    }
+  }
 
   const manifest = JSON.parse(manifestContent);
   const controls = manifest.controls || [];
@@ -51,8 +65,9 @@ async function main() {
   // Do not count comments, fixture strings or function names as executable tests.
   // Only a Playwright test("title [marker]", async (...) => ...) qualifies.
   const executableTestcases = new Set(
-    [...testSuiteContent.matchAll(/test\(\s*['"](?:[^'"]|\\.)*\[([a-z0-9-]+)\]['"]\s*,\s*async\s*\(/g)]
-      .map(match => match[1])
+    testSuiteContents.flatMap(source =>
+      [...source.matchAll(/test\(\s*['"](?:[^'"]|\\.)*\[([a-z0-9-]+)\]['"]\s*,\s*async\s*\(/g)]
+        .map(match => match[1]))
   );
   const missingTests = [...referencedTestcases].filter(tid => !executableTestcases.has(tid));
 
@@ -65,11 +80,11 @@ async function main() {
   }
 
   if (missingTests.length > 0) {
-    throw new Error(`The following testcase_ids are in control-inventory.json but missing from crossbrowser-matrix.spec.mjs: ${missingTests.join(', ')}`);
+    throw new Error(`The following testcase_ids are in control-inventory.json but missing from selected executable suites: ${missingTests.join(', ')}`);
   }
 
   process.stdout.write(
-    `MANIFEST_CHECK_PASS: All ${controls.length} controls mapped across ${referencedTestcases.size} executable testcases for 3 browser engines.\n`
+    `MANIFEST_CHECK_PASS: All ${controls.length} controls mapped across ${referencedTestcases.size} executable testcases in ${testSuiteNames.length} selected suites for 3 browser engines. Mapping is not an execution pass.\n`
   );
 }
 

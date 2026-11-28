@@ -4,7 +4,7 @@ import { defineConfig } from '@playwright/test';
 // Reuses the same synthetic source-shaped real-browser journeys and service.
 export default defineConfig({
   testDir: './tests/ui',
-  testMatch: '**/crossbrowser-matrix.spec.mjs',
+  testMatch: ['**/crossbrowser-matrix.spec.mjs', '**/accessibility-recovery.spec.mjs'],
   timeout: 30000,
   expect: { timeout: 10000 },
   workers: 2,

@@ -1,0 +1,270 @@
+{
+  "schema_version": "bce-proposal-identity-synthetic-v1",
+  "scope": "Synthetic identity vectors only; no provider, corpus, accepted concept or production intake data.",
+  "vectors": [
+    {
+      "name": "plain",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "fictional music",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"fictional music\",\"language\":\"en\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-383c3f35156e86c537fbb3da744dd79c9ac3ae13a29714e92e7c5126a477fe7f"
+    },
+    {
+      "name": "ampersand",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "fictional rock & roll",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"fictional rock \\u0026 roll\",\"language\":\"en\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-18a19c7e2f4f5951fa00bd780707b5c0a13a302fb75b109ab83e001fc206d55a"
+    },
+    {
+      "name": "angle_brackets",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "fictional <stage> music",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"fictional \\u003cstage\\u003e music\",\"language\":\"en\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-0ddc02a153d96a1e743f24bcbfbb1298655e08d8c75175911b65edc9e4b8aa90"
+    },
+    {
+      "name": "line_separator",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "fictional line separator",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"fictional line\\u2028separator\",\"language\":\"en\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-2b42d7dca2b2d2ce0099f175625b0da4932a45833358a184c7fea10ab3dae8a5"
+    },
+    {
+      "name": "paragraph_separator",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "fictional paragraph separator",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"fictional paragraph\\u2029separator\",\"language\":\"en\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-1df07372afd11b7f40dd17f21857cc00458f7a9ed58fedd4e9ded78bff9ca9b2"
+    },
+    {
+      "name": "thai",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "ตัวอย่างสมมติ",
+        "language": "th",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"ตัวอย่างสมมติ\",\"language\":\"th\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-866282a18401156eb13c99dd8cd2b5755f35941966edb277ccbcf3008747ca45"
+    },
+    {
+      "name": "composed",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "fictional café",
+        "language": "fr",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"fictional café\",\"language\":\"fr\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-080fbc8a6107a0ec41cfc69773ee2f7b60488ae5860d7b42d3c6e5f359856813"
+    },
+    {
+      "name": "decomposed",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "fictional café",
+        "language": "fr",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"fictional café\",\"language\":\"fr\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-2aed9bef81e34a9d2210ab3abbf63e1241cc585de4b78009665b123bece272f9"
+    },
+    {
+      "name": "quotes_backslash",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "fictional \"quoted\" \\ path",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"fictional \\\"quoted\\\" \\\\ path\",\"language\":\"en\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-ab752d85f909b5b78b744fbeb5e36bc3eaeeee99514879ab5712c806322cbb82"
+    },
+    {
+      "name": "literal_escape",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "fictional \\u2028 sequence",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"fictional \\\\u2028 sequence\",\"language\":\"en\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-f91ced31b464f14e99eb04a5ab4b685b938ff3a65ba5a7667e5c9c1ecdfde416"
+    },
+    {
+      "name": "non_bmp",
+      "request": {
+        "proposal_kind": "lexicalization_candidate",
+        "candidate_label": "fictional lantern 🏮",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": "fixture.music"
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"lexicalization_candidate\",\"label\":\"fictional lantern 🏮\",\"language\":\"en\",\"concept_id\":\"fixture.music\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-00174d8b61c84d11b577bd7fd7407c4896ef276eed5d2eb1bd1cfe4093f0911f"
+    },
+    {
+      "name": "unmapped_concept_absent",
+      "request": {
+        "proposal_kind": "concept_candidate",
+        "candidate_label": "fictional unmapped concept",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ]
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"concept_candidate\",\"label\":\"fictional unmapped concept\",\"language\":\"en\",\"concept_id\":\"\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-1a3422c262efe97d99ad1a9b3e6f55f6ce1e5936833e14a2ce3ccc35af64336e"
+    },
+    {
+      "name": "unmapped_concept_empty",
+      "request": {
+        "proposal_kind": "concept_candidate",
+        "candidate_label": "fictional unmapped concept",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "concept_id": ""
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"concept_candidate\",\"label\":\"fictional unmapped concept\",\"language\":\"en\",\"concept_id\":\"\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-1a3422c262efe97d99ad1a9b3e6f55f6ce1e5936833e14a2ce3ccc35af64336e"
+    },
+    {
+      "name": "unmapped_residual",
+      "request": {
+        "proposal_kind": "unknown_residual_cluster",
+        "candidate_label": "fictional residual cluster",
+        "language": "en",
+        "projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence": [
+          {
+            "source": "bitmagnet",
+            "evidence_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "ancestry_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ]
+      },
+      "canonical_utf8": "{\"version\":\"cpe-discovery-proposal-research-v1\",\"kind\":\"unknown_residual_cluster\",\"label\":\"fictional residual cluster\",\"language\":\"en\",\"concept_id\":\"\",\"projection\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"evidence\":[{\"source\":\"bitmagnet\",\"evidence_ref\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"ancestry_ref\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\"}]}",
+      "proposal_id": "bce-sweep-v1-77388a4ce68ec2789d6c054f0ed656670c0c902013a1474032280ffeea4f81b1"
+    }
+  ]
+}

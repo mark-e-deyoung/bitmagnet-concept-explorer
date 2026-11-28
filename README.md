@@ -2,6 +2,33 @@
 
 A read-only Go application for exploring metadata indexed by Bitmagnet. It provides a web UI, HTTP API, and CLI for bounded keyword and concept exploration. It does not download payloads or write tags or metadata to Bitmagnet.
 
+## Choose an interface
+
+- **Human research:** open the workbench, enter a search phrase, and run a bounded
+  search. Optional refinements and concept expansion remain explicit choices.
+  Search, sweep, source lookup, and feedback preview each have a cancel action;
+  cancellation and failures preserve the inputs for a deliberate retry.
+- **Accessible interaction:** use native browser controls, the skip link and
+  task navigation. Graph actions have equivalent full-name buttons. Validation
+  identifies the field to correct, and request status is available without
+  moving focus. System appearance, reduced motion, forced colors, text scaling
+  and narrow reflow are part of the [accessibility and platform contract](docs/ux/accessibility-platform-contract.md).
+- **CLI and automation:** begin with the [route and audience contract](docs/route-audience-contract.md)
+  and `bce -help`. Preserve structured partial/failed outcomes, inspect CLI exit
+  codes, and use a new explicit request for recovery. Capability discovery
+  describes configuration, not dependency health or semantic acceptance.
+
+External consent applies to the selected scope: changing search inputs or a
+source selection clears the corresponding external opt-in. Feedback preview
+runs a fresh local search using the current phrase, selected concept, manual
+expansions, filters, sort and grouping, with external search disabled. The
+structured preview remains available in a disclosure for inspection.
+
+Automated keyboard, browser semantics, reflow and contrast checks are evidence
+for the exact revision tested. They do not establish native screen-reader
+acceptance; the platform contract records the separate VoiceOver, Narrator,
+NVDA, TalkBack and Orca task checks needed for those support claims.
+
 ## Security and network behavior
 
 - Network-facing routes require Basic Auth. Set `BCE_AUTH_USER` and `BCE_AUTH_PASSWORD` together; the password must contain at least 16 bytes.
@@ -26,7 +53,7 @@ When updating the projection, replace the versioned file and update its digest t
 
 ## Sweep time and admission
 
-Sweep execution has a 55-second handler deadline, one active sweep per process, and a 75-second HTTP write allowance. The write allowance includes the HTTP server's 15-second request-body read window plus handler execution and response serialization. The browser and command-line client share an 80-second timeout. Each sweep is bounded to at most 12 Bitmagnet terms (fanout four, eight seconds per request) and three sequential SearXNG requests (eight seconds per request, existing two-second pacing, process-local quota). The configured handler deadline covers the conservative 52-second sum of those limits plus scheduling and serialization margin. A saturated server rejects a new sweep with HTTP 503 before backend work starts; clients do not retry automatically. Other Bitmagnet API traffic shares the local backend admission slots, so the deadline may yield an explicit partial or failed result under contention rather than guaranteeing full completion.
+Sweep execution has a shared 55-second engine deadline, one active sweep per process, and a 75-second HTTP write allowance. Both direct execution and feedback-preview sweeps share these bounds. The write allowance includes the HTTP server's 15-second request-body read window plus handler execution and response serialization. The browser and command-line client share an 80-second timeout. Each sweep is bounded to at most 12 Bitmagnet terms (fanout four, eight seconds per request) and three sequential SearXNG requests (eight seconds per request, existing two-second pacing, process-local quota). The configured deadline covers the conservative 52-second sum of those limits plus scheduling and serialization margin. A saturated server rejects a new sweep with HTTP 503 and `code: sweep_busy`, `state: not_started` before backend work starts; clients do not retry automatically. Other Bitmagnet API traffic shares the local backend admission slots, so the deadline may yield an explicit partial or failed result under contention rather than guaranteeing full completion.
 
 If the deadline expires after some source results arrive, the API returns a `partial` result with failures and the explicit deadline. If no source result arrives it returns `failed`. A disconnected or canceled caller receives no final response; cancellation propagates to in-flight source requests and is not retried. None of these outcomes establishes corpus absence.
 

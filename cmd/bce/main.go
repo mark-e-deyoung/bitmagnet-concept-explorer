@@ -23,18 +23,18 @@ const maxCLIResponseBytes = 4 << 20
 // allowance so callers receive the final full/partial response when available.
 func main() {
 	service := flag.String("server", "http://127.0.0.1:3086", "Concept Explorer origin")
-	query := flag.String("query", "", "Literal query for plan/execute")
-	expansions := flag.String("expand", "", "Comma-separated exploratory terms")
+	query := flag.String("query", "", "Query for concepts, plan, execute or facets; JSON-input operations read their query from -input")
+	expansions := flag.String("expand", "", "Comma-separated exploratory terms for plan/execute")
 	operation := flag.String("operation", "capabilities", "capabilities, limits, concepts, concept, plan, execute, facets, observed-graph, cpe-preflight, infer, sweep-plan, sweep, discovery-preview, feedback-preview, media-lookup or metadata-compare")
 	languages := flag.String("languages", "", "Comma-separated observed language IDs")
 	media := flag.String("media", "", "Native Bitmagnet media type")
 	minSeeders := flag.Int("min-seeders", -1, "Minimum observed seeders (-1 unset)")
 	minLeechers := flag.Int("min-leechers", -1, "Minimum observed leechers (-1 unset)")
 	adult := flag.String("adult-metadata", "any", "any, yes, no or unknown (not a policy verdict)")
-	sortBy := flag.String("sort", "info_hash", "seeders_desc, leechers_desc, title_asc etc")
+	sortBy := flag.String("sort", "info_hash", "info_hash, seeders_desc, seeders_asc, leechers_desc, leechers_asc, title_asc or title_desc")
 	groupBy := flag.String("group", "none", "none, media_type, language, adult_metadata or track")
-	useWeb := flag.Bool("web", false, "Explicitly send literal query to configured SearXNG")
-	conceptID := flag.String("concept-id", "", "Exact concept ID for inspect operation")
+	useWeb := flag.Bool("web", false, "Explicitly include configured SearXNG for plan/execute; JSON-input operations use consent fields in -input")
+	conceptID := flag.String("concept-id", "", "Exact concept ID for -operation concept")
 	selectedConcepts := flag.String("concept-ids", "", "Comma-separated exact IDs from pinned provisional graph, opt-in")
 	facetGroups := flag.String("facet-groups", "contentType,language,genre", "Comma-separated native groups for -operation facets (1-4)")
 	inputJSON := flag.String("input", "-", "JSON input file or - for stdin for observed-graph, cpe-preflight, infer, sweep-plan, sweep, discovery-preview, feedback-preview, media-lookup and metadata-compare")
@@ -177,7 +177,9 @@ func main() {
 		os.Exit(3)
 	}
 	fmt.Println(string(output))
-	if resp.StatusCode >= 400 {
+	// Redirects are intentionally not followed; they are not successful API
+	// responses and must not look successful to a shell or agent caller.
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		os.Exit(4)
 	}
 }
