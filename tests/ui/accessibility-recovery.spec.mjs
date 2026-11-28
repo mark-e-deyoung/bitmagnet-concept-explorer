@@ -573,9 +573,10 @@ test('light and dark control boundaries retain nontext contrast [accessible-cont
       expect(await control.evaluate(el => el.getBoundingClientRect().toJSON()),
         'Control geometry must not move during pixel capture').toEqual(boundary.rect);
       const rendered = await page.evaluate(async ({encoded, x, y}) => {
-        const source = new Image();
-        source.src = 'data:image/png;base64,' + encoded;
-        await source.decode();
+        // Decode supplied bytes without an image URL: the production/fixture
+        // CSP deliberately disallows image sources and must remain intact.
+        const bytes = Uint8Array.from(atob(encoded), character => character.charCodeAt(0));
+        const source = await createImageBitmap(new Blob([bytes], {type: 'image/png'}));
         const canvas = document.createElement('canvas');
         canvas.width = source.width; canvas.height = source.height;
         const context = canvas.getContext('2d', {willReadFrequently: true});
@@ -585,8 +586,10 @@ test('light and dark control boundaries retain nontext contrast [accessible-cont
         const crop = document.createElement('canvas');
         crop.width = 12; crop.height = 7;
         crop.getContext('2d').drawImage(source, x - 2, y - 3, 12, 7, 0, 0, 12, 7);
-        return {samples, width: source.width, height: source.height,
+        const result = {samples, width: source.width, height: source.height,
           crop: crop.toDataURL('image/png').split(',')[1]};
+        source.close();
+        return result;
       }, {encoded: screenshot.toString('base64'), x, y});
       expect(rendered.width).toBe(boundary.viewport.width);
       expect(rendered.height).toBe(boundary.viewport.height);
