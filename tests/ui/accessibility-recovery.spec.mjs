@@ -519,62 +519,92 @@ test('reduced motion retains immediate feedback and keyboard focus [accessible-r
   await expect(page.locator('#status')).toHaveAttribute('role', 'status');
 });
 
-test('light and dark control boundaries retain nontext contrast [accessible-control-contrast]', async ({page}) => {
+test('light and dark control boundaries retain nontext contrast [accessible-control-contrast]', async ({page}, info) => {
   await page.emulateMedia({forcedColors: 'none', reducedMotion: 'reduce'});
   await open(page);
+  const measurements = [];
+  const luminance = channels => channels.map(channel => {
+    const c = channel / 255;
+    return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;
+  }).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
   for (const theme of ['Light', 'Dark']) {
     await page.getByRole('radio', {name: theme + ' theme'}).check();
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme.toLowerCase());
-    // Let the applied theme reach a rendered frame before reading its colors;
-    // retain the same 3:1 threshold and identify any native control exception.
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const controls = page.locator('#query, #lookup-title, #lookup-provider, #feedback-candidate, #submit, #sweep-local-budget');
     for (let index = 0; index < await controls.count(); index++) {
       const control = controls.nth(index);
-      // Measure a rendered, on-screen control; a batch of off-screen styles
-      // does not establish the visible boundary being qualified.
       await control.scrollIntoViewIfNeeded();
       await expect(control).toBeVisible();
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      expect(await control.evaluate(el => {
-        const r = el.getBoundingClientRect();
-        return r.top < innerHeight && r.bottom > 0 && r.left < innerWidth && r.right > 0;
-      }), 'The contrast sample must intersect the rendered viewport').toBe(true);
-      const color = await control.evaluate((el, themeName) => {
-      const rgba = value => {
-        const match = value.match(/^rgba?\((.+)\)$/);
-        if (!match) throw new Error('Unsupported computed color in contrast assertion: ' + value);
-        const parts = match[1].split(/[,\s/]+/).filter(Boolean).map(Number);
-        return {rgb: parts.slice(0, 3), alpha: parts[3] ?? 1};
-      };
-      const luminance = channels => channels.map(channel => {
-        const c = channel / 255;
-        return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4;
-      }).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
-        const style = getComputedStyle(el), border = rgba(style.borderTopColor);
-        let adjacent = el.parentElement, background, backgroundColor;
+      const boundary = await control.evaluate(el => {
+        const style = getComputedStyle(el), rect = el.getBoundingClientRect();
+        const match = style.borderLeftColor.match(/^rgba?\((.+)\)$/);
+        if (!match) throw new Error('Unsupported computed boundary color: ' + style.borderLeftColor);
+        const channels = match[1].split(/[,\s/]+/).filter(Boolean).map(Number);
         const ancestors = [];
-        while (adjacent) {
-          const candidateColor = getComputedStyle(adjacent).backgroundColor;
-          const candidate = rgba(candidateColor);
-          ancestors.push((adjacent.id || adjacent.tagName) + ': ' + candidateColor);
-          if (candidate.alpha === 1) { background = candidate; backgroundColor = candidateColor; break; }
-          adjacent = adjacent.parentElement;
+        for (let adjacent = el.parentElement; adjacent; adjacent = adjacent.parentElement) {
+          ancestors.push({id: adjacent.id || adjacent.tagName, background: getComputedStyle(adjacent).backgroundColor});
         }
-        if (!background || border.alpha !== 1) throw new Error(themeName + ' #' + el.id +
-          ': expected opaque boundary/background; border=' + style.borderTopColor + '; ancestors=' + ancestors.join(' / ') +
-          '; rect=' + JSON.stringify(el.getBoundingClientRect().toJSON()));
-        const a = luminance(border.rgb), b = luminance(background.rgb);
-        return {id: el.id, ratio: (Math.max(a, b) + .05) / (Math.min(a, b) + .05),
-          width: parseFloat(style.borderTopWidth), borderStyle: style.borderTopStyle,
-          borderColor: style.borderTopColor, backgroundColor};
-      }, theme);
-      expect(color.ratio, theme + ' #' + color.id + ' actual boundary ' + color.borderColor +
-        ' against adjacent ' + color.backgroundColor).toBeGreaterThanOrEqual(3);
-      expect(color.width).toBeGreaterThan(0);
-      expect(color.borderStyle).not.toBe('none');
+        return {id: el.id, rgb: channels.slice(0, 3), alpha: channels[3] ?? 1,
+          width: parseFloat(style.borderLeftWidth), borderStyle: style.borderLeftStyle,
+          rect: rect.toJSON(), ancestors, viewport: {width: innerWidth, height: innerHeight},
+          visualViewport: {scale: visualViewport.scale, left: visualViewport.offsetLeft, top: visualViewport.offsetTop}};
+      });
+      expect(boundary.visualViewport).toEqual({scale: 1, left: 0, top: 0});
+      expect(boundary.alpha, theme + ' #' + boundary.id + ': opaque control boundary').toBe(1);
+      expect(boundary.width).toBeGreaterThan(0);
+      expect(boundary.borderStyle).not.toBe('none');
+      const x = Math.floor(boundary.rect.left) - 2;
+      const y = Math.floor((boundary.rect.top + boundary.rect.bottom) / 2);
+      expect(x, 'Adjacent pixels must be inside the rendered viewport').toBeGreaterThanOrEqual(2);
+      expect(y).toBeGreaterThanOrEqual(3);
+      expect(y + 3).toBeLessThan(boundary.viewport.height);
+      expect(await control.evaluate((el, {x, y}) => [-2, -1, 0, 1, 2].every(dy => {
+        const atPoint = document.elementFromPoint(x + .5, y + dy + .5);
+        return atPoint && atPoint !== el && atPoint.contains(el);
+      }), {x, y}), 'Each sampled pixel must belong to an ancestor surface, not a neighbor or overlay').toBe(true);
+      // Read the actual painted adjacent surface in every browser. macOS
+      // mobile WebKit can report transparent ancestor CSSOM backgrounds while
+      // painting opaque surfaces. Never substitute a theme token or white.
+      // Keep the authored opaque boundary color: raster antialiasing does not
+      // redefine that color. The PNG crop also records the rendered edge.
+      // https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html
+      const screenshot = await page.screenshot({scale: 'css', animations: 'disabled'});
+      expect(await control.evaluate(el => el.getBoundingClientRect().toJSON()),
+        'Control geometry must not move during pixel capture').toEqual(boundary.rect);
+      const rendered = await page.evaluate(async ({encoded, x, y}) => {
+        const source = new Image();
+        source.src = 'data:image/png;base64,' + encoded;
+        await source.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = source.width; canvas.height = source.height;
+        const context = canvas.getContext('2d', {willReadFrequently: true});
+        context.drawImage(source, 0, 0);
+        const samples = [-2, -1, 0, 1, 2].map(dy =>
+          Array.from(context.getImageData(x, y + dy, 1, 1).data));
+        const crop = document.createElement('canvas');
+        crop.width = 12; crop.height = 7;
+        crop.getContext('2d').drawImage(source, x - 2, y - 3, 12, 7, 0, 0, 12, 7);
+        return {samples, width: source.width, height: source.height,
+          crop: crop.toDataURL('image/png').split(',')[1]};
+      }, {encoded: screenshot.toString('base64'), x, y});
+      expect(rendered.width).toBe(boundary.viewport.width);
+      expect(rendered.height).toBe(boundary.viewport.height);
+      for (const sample of rendered.samples) {
+        expect(sample[3], 'Actual adjacent screenshot pixels must be opaque').toBe(255);
+        expect(sample.slice(0, 3), 'The five adjacent samples must form one stable surface').toEqual(rendered.samples[0].slice(0, 3));
+      }
+      const a = luminance(boundary.rgb), b = luminance(rendered.samples[0].slice(0, 3));
+      const ratio = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+      measurements.push({theme, ...boundary, adjacentPixels: rendered.samples, ratio});
+      await info.attach(theme.toLowerCase() + '-' + boundary.id + '-painted-edge',
+        {body: Buffer.from(rendered.crop, 'base64'), contentType: 'image/png'});
+      expect(ratio, theme + ' #' + boundary.id + ': boundary ' + boundary.rgb +
+        ' against painted adjacent ' + rendered.samples[0].slice(0, 3)).toBeGreaterThanOrEqual(3);
     }
   }
+  await info.attach('control-contrast-measurements',
+    {body: JSON.stringify(measurements, null, 2), contentType: 'application/json'});
 });
 
 test('forced colors retains focus and selected-state semantics [accessible-forced-colors]', async ({page}) => {
